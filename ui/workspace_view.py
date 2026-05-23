@@ -945,7 +945,11 @@ class WorkspaceView(QWidget):
         duplicates = FileManager.find_duplicates(mode=mode)
         if not duplicates:
             self.duplicates_list.clear()
-            QMessageBox.information(self, "重复检测", "未发现重复文件。")
+            empty_item = QListWidgetItem("未发现重复文件。")
+            empty_item.setFlags(Qt.NoItemFlags)
+            self.duplicates_list.addItem(empty_item)
+            if activate:
+                self.preview_tabs.setCurrentWidget(self.duplicates_list)
             return
         self.duplicates_list.clear()
         for group_key, records in duplicates.items():
