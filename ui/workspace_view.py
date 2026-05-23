@@ -707,8 +707,8 @@ class WorkspaceView(QWidget):
         self.duplicate_delete_btn = QPushButton("删除重复文件")
         self.duplicate_delete_btn.clicked.connect(self.delete_duplicate_selected)
         duplicate_tools_layout.addWidget(self.duplicate_delete_btn)
-        self.keep_one_btn = QPushButton("保留首个")
-        self.keep_one_btn.clicked.connect(self.keep_first_duplicate)
+        self.keep_one_btn = QPushButton("删除文件")
+        self.keep_one_btn.clicked.connect(self.delete_selected_duplicate_files)
         duplicate_tools_layout.addWidget(self.keep_one_btn)
         preview_layout.addWidget(self.duplicate_tools)
 
@@ -973,41 +973,17 @@ class WorkspaceView(QWidget):
         if not selected:
             QMessageBox.information(self, "提示", "请先在重复检测列表中选择要删除的文件。")
             return
-        reply = QMessageBox.question(self, "确认删除重复文件",
-                                     f"确认删除选中的 {len(selected)} 个重复文件吗？\n此操作会永久删除磁盘上的文件。",
-                                     QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
-        if reply != QMessageBox.Yes:
-            return
-
-        deleted = 0
-        for rel_path in selected:
-            try:
-                FileManager.delete_file(rel_path)
-                deleted += 1
-            except Exception:
-                continue
-
-        self.clear_preview_resources()
-        self.run_search()
-        self.show_duplicates()
-        self.refresh_other_views_signal.emit()
-        QMessageBox.information(self, "完成", f"已删除 {deleted} 个重复文件。")
-
-    def keep_first_duplicate(self):
-        selected = self._get_duplicate_selected_paths()
-        if not selected:
-            QMessageBox.information(self, "提示", "请先在重复检测列表中选择一组重复文件。")
-            return
         keep = selected[0]
         delete_paths = selected[1:]
         if not delete_paths:
-            QMessageBox.information(self, "提示", "所选重复组只包含 1 个文件。")
+            QMessageBox.information(self, "提示", "请至少选择同组中的 2 个文件。")
             return
-        reply = QMessageBox.question(self, "确认保留首个",
+        reply = QMessageBox.question(self, "确认删除重复文件",
                                      f"将保留：\n{keep}\n\n并删除另外 {len(delete_paths)} 个重复文件，是否继续？",
                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
         if reply != QMessageBox.Yes:
             return
+
         deleted = 0
         for rel_path in delete_paths:
             try:
@@ -1015,11 +991,35 @@ class WorkspaceView(QWidget):
                 deleted += 1
             except Exception:
                 continue
+
         self.clear_preview_resources()
         self.run_search()
         self.show_duplicates()
         self.refresh_other_views_signal.emit()
         QMessageBox.information(self, "完成", f"已删除 {deleted} 个重复文件，保留首个文件。")
+
+    def delete_selected_duplicate_files(self):
+        selected = self._get_duplicate_selected_paths()
+        if not selected:
+            QMessageBox.information(self, "提示", "请先在重复检测列表中选择要删除的文件。")
+            return
+        reply = QMessageBox.question(self, "确认删除文件",
+                                     f"确认删除选中的 {len(selected)} 个文件吗？\n此操作会永久删除磁盘上的文件。",
+                                     QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        if reply != QMessageBox.Yes:
+            return
+        deleted = 0
+        for rel_path in selected:
+            try:
+                FileManager.delete_file(rel_path)
+                deleted += 1
+            except Exception:
+                continue
+        self.clear_preview_resources()
+        self.run_search()
+        self.show_duplicates()
+        self.refresh_other_views_signal.emit()
+        QMessageBox.information(self, "完成", f"已删除 {deleted} 个文件。")
 
     def create_new_file(self):
         dialog = CreateFileDialog(self.current_folder_rel, self)
