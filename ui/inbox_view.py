@@ -14,14 +14,14 @@ STYLE_PREVIEW_NORMAL = """
     QLineEdit {
         font-size: 14px;
         font-weight: bold;
-        color: #4A6FA6;
+        color: #6366F1;
         background-color: rgba(99, 102, 241, 0.05);
         border: 1px solid rgba(99, 102, 241, 0.3);
         border-radius: 6px;
         padding: 6px 10px;
     }
     QLineEdit:focus {
-        border: 1px solid #4A6FA6;
+        border: 1px solid #4F46E5;
         background-color: rgba(99, 102, 241, 0.10);
     }
 """
@@ -30,14 +30,14 @@ STYLE_PREVIEW_WARNING = """
     QLineEdit {
         font-size: 14px;
         font-weight: bold;
-        color: #2E5A6F;
+        color: #EF4444;
         background-color: rgba(239, 68, 68, 0.05);
         border: 1px solid rgba(239, 68, 68, 0.4);
         border-radius: 6px;
         padding: 6px 10px;
     }
     QLineEdit:focus {
-        border: 1px solid #2E5A6F;
+        border: 1px solid #EF4444;
         background-color: rgba(239, 68, 68, 0.10);
     }
 """
@@ -92,7 +92,7 @@ class InboxView(QWidget):
         ph_layout = QVBoxLayout(self.placeholder_view)
         ph_label = QLabel("请从左侧列表选择一个文件进行分类整理\n或者点击“扫描收集箱”刷新")
         ph_label.setAlignment(Qt.AlignCenter)
-        ph_label.setStyleSheet("color: #85B3CB; font-size: 14px; line-height: 1.6;")
+        ph_label.setStyleSheet("color: #94A3B8; font-size: 14px; line-height: 1.6;")
         ph_layout.addWidget(ph_label)
         self.right_stack.addWidget(self.placeholder_view)
 
@@ -126,7 +126,7 @@ class InboxView(QWidget):
 
         # Current name display
         self.lbl_curr_name = QLabel("原文件名: ")
-        self.lbl_curr_name.setStyleSheet("color: #85B3CB; font-size: 12px;")
+        self.lbl_curr_name.setStyleSheet("color: #94A3B8; font-size: 12px;")
         form_layout.addWidget(self.lbl_curr_name)
 
         # Naming Presets Dropdown
@@ -178,7 +178,7 @@ class InboxView(QWidget):
         
         # Real-time warnings label
         self.lbl_naming_warning = QLabel("")
-        self.lbl_naming_warning.setStyleSheet("color: #618EA5; font-size: 11px; font-weight: bold;")
+        self.lbl_naming_warning.setStyleSheet("color: #EF4444; font-size: 11px; font-weight: bold;")
         self.lbl_naming_warning.setWordWrap(True)
         preview_layout.addWidget(self.lbl_naming_warning)
 
@@ -584,7 +584,7 @@ class InboxView(QWidget):
         is_violation, depth = FileManager.check_folder_depth_violation(dest_rel_path)
         if is_violation:
             warnings.append(f"⚠️ 层级警告：当前目录深度为 {depth} 层，已超过规范建议的 ≤4 层！保存后可能会拦截。")
-            self.organize_btn.setStyleSheet("background-color: #618EA5; border: none; color: #FFFFFF;")
+            self.organize_btn.setStyleSheet("background-color: #EF4444; border: none; color: #FFFFFF;")
         else:
             self.organize_btn.setStyleSheet("") # Default QSS style
 

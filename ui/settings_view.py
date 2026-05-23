@@ -81,6 +81,10 @@ class SettingsView(QWidget):
         self.cb_monitor_dl.stateChanged.connect(self.save_monitored)
         dir_layout.addWidget(self.cb_monitor_dl)
 
+        self.theme_hint = QLabel(f"当前主题: {config.theme}")
+        self.theme_hint.setStyleSheet("color: #85B3CB; font-size: 11px;")
+        dir_layout.addWidget(self.theme_hint)
+
         # Initializer Button
         init_layout = QHBoxLayout()
         self.btn_init_ws = QPushButton("一键初始化/修复标准目录结构")
@@ -103,11 +107,11 @@ class SettingsView(QWidget):
         wizard_layout.setSpacing(15)
 
         wizard_title = QLabel("新建工作空间向导 (一键生成中/英文规范)")
-        wizard_title.setStyleSheet("font-size: 14px; font-weight: bold; color: #4A6FA6;")
+        wizard_title.setStyleSheet("font-size: 14px; font-weight: bold; color: #6366F1;")
         wizard_layout.addWidget(wizard_title)
 
         wizard_desc = QLabel("选择任意盘符或目录，系统将在此目录下创建 'Workspace' 文件夹，并自动初始化 12 个分类模板目录。")
-        wizard_desc.setStyleSheet("color: #85B3CB; font-size: 11px;")
+        wizard_desc.setStyleSheet("color: #94A3B8; font-size: 11px;")
         wizard_layout.addWidget(wizard_desc)
 
         wiz_grid = QGridLayout()
@@ -151,7 +155,7 @@ class SettingsView(QWidget):
         tag_layout.addWidget(tag_title)
 
         tag_desc = QLabel("以逗号分隔输入标签；写不写 # 都可以，系统会自动兼容。")
-        tag_desc.setStyleSheet("color: #85B3CB; font-size: 11px;")
+        tag_desc.setStyleSheet("color: #94A3B8; font-size: 11px;")
         tag_layout.addWidget(tag_desc)
 
         tag_grid = QGridLayout()
@@ -195,11 +199,11 @@ class SettingsView(QWidget):
         custom_layout.setSpacing(15)
 
         custom_title = QLabel("自建分类目录模板与规范")
-        custom_title.setStyleSheet("font-size: 14px; font-weight: bold; color: #618EA5;")
+        custom_title.setStyleSheet("font-size: 14px; font-weight: bold; color: #10B981;")
         custom_layout.addWidget(custom_title)
 
         custom_desc = QLabel("启用自建模板后，系统将使用您自定义的分类文件夹结构。各个文件夹以英文逗号分隔。")
-        custom_desc.setStyleSheet("color: #85B3CB; font-size: 11px;")
+        custom_desc.setStyleSheet("color: #94A3B8; font-size: 11px;")
         custom_layout.addWidget(custom_desc)
 
         self.cb_use_custom_dirs = QCheckBox("启用自建分类模板 (不勾选则默认使用标准中/英文模板)")

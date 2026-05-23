@@ -89,7 +89,7 @@ class DashboardView(QWidget):
         desktop_layout.addWidget(self.desktop_status_lbl)
 
         self.desktop_desc_lbl = QLabel("仅保留快捷方式、待处理文件和临时文件。")
-        self.desktop_desc_lbl.setStyleSheet("color: #85B3CB; font-size: 12px;")
+        self.desktop_desc_lbl.setStyleSheet("color: #94A3B8; font-size: 12px;")
         desktop_layout.addWidget(self.desktop_desc_lbl)
 
         desktop_btn_layout = QHBoxLayout()
@@ -178,7 +178,7 @@ class DashboardView(QWidget):
         val_lbl.setObjectName("CardValue")
         
         desc_lbl = QLabel(description)
-        desc_lbl.setStyleSheet("color: #85B3CB; font-size: 11px;")
+        desc_lbl.setStyleSheet("color: #94A3B8; font-size: 11px;")
         desc_lbl.setWordWrap(True)
         
         layout.addWidget(title_lbl)
@@ -235,12 +235,12 @@ class DashboardView(QWidget):
         desktop_count = len(desktop_files)
         if desktop_count <= 10:
             self.desktop_status_lbl.setText(f"优秀 (桌面有 {desktop_count} 个文件)")
-            self.desktop_status_lbl.setStyleSheet("color: #618EA5; font-size: 16px; font-weight: bold;")
+            self.desktop_status_lbl.setStyleSheet("color: #10B981; font-size: 16px; font-weight: bold;")
             self.desktop_desc_lbl.setText("您的桌面非常整洁，符合规范！")
             self.clean_desktop_btn.setEnabled(desktop_count > 0)
         else:
             self.desktop_status_lbl.setText(f"警告: 建议整理 (有 {desktop_count} 个文件)")
-            self.desktop_status_lbl.setStyleSheet("color: #2E5A6F; font-size: 16px; font-weight: bold;")
+            self.desktop_status_lbl.setStyleSheet("color: #EF4444; font-size: 16px; font-weight: bold;")
             self.desktop_desc_lbl.setText("桌面文件数已超过规范建议的 10 个！建议立即清理。")
             self.clean_desktop_btn.setEnabled(True)
 
@@ -255,11 +255,11 @@ class DashboardView(QWidget):
         self.backup_score_lbl.setText(f"备份健康度: {score}/100")
         
         if score == 100:
-            self.backup_score_lbl.setStyleSheet("color: #618EA5; font-size: 16px; font-weight: bold;")
+            self.backup_score_lbl.setStyleSheet("color: #10B981; font-size: 16px; font-weight: bold;")
         elif score >= 66:
-            self.backup_score_lbl.setStyleSheet("color: #85B3CB; font-size: 16px; font-weight: bold;")
+            self.backup_score_lbl.setStyleSheet("color: #F59E0B; font-size: 16px; font-weight: bold;")
         else:
-            self.backup_score_lbl.setStyleSheet("color: #2E5A6F; font-size: 16px; font-weight: bold;")
+            self.backup_score_lbl.setStyleSheet("color: #EF4444; font-size: 16px; font-weight: bold;")
 
         # Update disk label
         if has_disk:
@@ -268,26 +268,26 @@ class DashboardView(QWidget):
             disk_ok = any(b["backup_type"] == "disk" and b["status"] == "success" for b in recent_backups)
             if disk_ok:
                 self.backup_disk_status.setText(f"2. 外部介质 (移动硬盘): 已配置并备份 ✅")
-                self.backup_disk_status.setStyleSheet("color: #618EA5; font-size: 12px;")
+                self.backup_disk_status.setStyleSheet("color: #10B981; font-size: 12px;")
             else:
                 self.backup_disk_status.setText(f"2. 外部介质 (移动硬盘): 已配置但尚未运行备份 ⚠️")
-                self.backup_disk_status.setStyleSheet("color: #85B3CB; font-size: 12px;")
+                self.backup_disk_status.setStyleSheet("color: #F59E0B; font-size: 12px;")
         else:
             self.backup_disk_status.setText("2. 外部介质 (移动硬盘): 未配置 ⚠️")
-            self.backup_disk_status.setStyleSheet("color: #2E5A6F; font-size: 12px;")
+            self.backup_disk_status.setStyleSheet("color: #EF4444; font-size: 12px;")
 
         # Update cloud label
         if has_cloud:
             cloud_ok = any(b["backup_type"] == "cloud" and b["status"] == "success" for b in recent_backups)
             if cloud_ok:
                 self.backup_cloud_status.setText(f"3. 异地备份 (云盘同步): 已配置并备份 ✅")
-                self.backup_cloud_status.setStyleSheet("color: #618EA5; font-size: 12px;")
+                self.backup_cloud_status.setStyleSheet("color: #10B981; font-size: 12px;")
             else:
                 self.backup_cloud_status.setText(f"3. 异地备份 (云盘同步): 已配置但尚未运行备份 ⚠️")
-                self.backup_cloud_status.setStyleSheet("color: #85B3CB; font-size: 12px;")
+                self.backup_cloud_status.setStyleSheet("color: #F59E0B; font-size: 12px;")
         else:
             self.backup_cloud_status.setText("3. 异地备份 (云盘同步): 未配置 ⚠️")
-            self.backup_cloud_status.setStyleSheet("color: #2E5A6F; font-size: 12px;")
+            self.backup_cloud_status.setStyleSheet("color: #EF4444; font-size: 12px;")
 
         # 5. Populate Recent Files
         self.populate_recent_table(all_files)

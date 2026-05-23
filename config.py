@@ -54,7 +54,7 @@ class AppConfig:
         self.downloads_dir = str(Path.home() / "Downloads")
         self.backup_disk_dir = ""
         self.backup_cloud_dir = ""
-        self.theme = "dark"  # "dark" or "light"
+        self.theme = "dark"  # "dark", "light", or "zhongguose"
         self.monitored_downloads = True
         self.tags = DEFAULT_TAGS.copy()
         self.workspace_lang = "en"  # "en" or "cn"

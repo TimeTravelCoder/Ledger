@@ -223,7 +223,12 @@ class MainWindow(QMainWindow):
             self.view_backup.refresh_history()
 
     def toggle_theme(self):
-        new_theme = "light" if config.theme == "dark" else "dark"
+        if config.theme == "dark":
+            new_theme = "light"
+        elif config.theme == "light":
+            new_theme = "zhongguose"
+        else:
+            new_theme = "dark"
         config.theme = new_theme
         config.save()
         
@@ -237,6 +242,8 @@ class MainWindow(QMainWindow):
     def update_theme_btn_text(self):
         if config.theme == "dark":
             self.btn_theme_toggle.setText("☀️ 切换浅色模式")
+        elif config.theme == "light":
+            self.btn_theme_toggle.setText("🌿 切换幽竹清溪")
         else:
             self.btn_theme_toggle.setText("🌙 切换深色模式")
 
@@ -340,7 +347,7 @@ class MainWindow(QMainWindow):
         msg = (
             "👋 <b>欢迎使用电脑文档分类与管理系统！</b><br><br>"
             "检测到您是第一次启动本软件，系统已为您自动初始化并创建了符合规范的专属工作空间（Workspace）以及 12 个日常分类标准的文件夹：<br>"
-            f"<font color='#4A6FA6'><b>👉 {ws_dir}</b></font><br><br>"
+            f"<font color='#6366F1'><b>👉 {ws_dir}</b></font><br><br>"
             "<b>💡 快速上手整理建议：</b><br>"
             f"1. 可将您浏览器下载目录中的文件、或桌面堆积的杂乱文件，移动进 <b>{config.get_inbox_name()}（收集箱）</b> 中。<br>"
             "2. 在左侧切换至 <b>📥 智能收集箱</b> 面板，体验自动根据规范模板改名、勾选中文分类标签、一键物理归档分流！<br>"
