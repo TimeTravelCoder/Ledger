@@ -659,14 +659,9 @@ class InboxView(QWidget):
                     src_file = inactive_dir / f
                     if src_file.is_file():
                         dest_file = active_dir / f
-                        counter = 1
-                        while dest_file.exists():
-                            stem = src_file.stem
-                            ext = src_file.suffix
-                            dest_file = active_dir / f"{stem}_{counter}{ext}"
-                            counter += 1
                         import shutil
-                        shutil.move(str(src_file), str(dest_file))
+                        from file_manager import FileManager
+                        FileManager.move_replace(src_file, dest_file)
                         moved_count += 1
                 
                 # Delete empty inactive dir

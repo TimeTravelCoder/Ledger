@@ -29,6 +29,34 @@ AUTO_RULES = [
 
 class FileManager:
     @staticmethod
+    def _delete_workspace_record(abs_path):
+        try:
+            ws_root = Path(config.workspace_dir).resolve()
+            abs_path = Path(abs_path).resolve()
+            rel_path = str(abs_path.relative_to(ws_root)).replace("\\", "/")
+            if db.get_file_info(rel_path):
+                db.delete_file_record(rel_path)
+        except Exception:
+            pass
+
+    @staticmethod
+    def move_replace(src_path, dest_path):
+        """Move a file and replace any existing destination file."""
+        src = Path(src_path)
+        dest = Path(dest_path)
+        dest.parent.mkdir(parents=True, exist_ok=True)
+
+        if dest.exists():
+            FileManager._delete_workspace_record(dest)
+            if dest.is_dir():
+                shutil.rmtree(dest)
+            else:
+                dest.unlink()
+
+        shutil.move(str(src), str(dest))
+        return dest
+
+    @staticmethod
     def get_desktop_path():
         """Returns the user's desktop path on Windows."""
         return str(Path.home() / "Desktop")
@@ -190,17 +218,8 @@ class FileManager:
         for file_info in desktop_files:
             src = Path(file_info["path"])
             dest = inbox_dir / src.name
-            
-            # Resolve name conflicts
-            counter = 1
-            while dest.exists():
-                stem = src.stem
-                ext = src.suffix
-                dest = inbox_dir / f"{stem}_{counter}{ext}"
-                counter += 1
-                
             try:
-                shutil.move(str(src), str(dest))
+                FileManager.move_replace(src, dest)
                 moved_count += 1
             except Exception as e:
                 errors.append(f"无法移动 {src.name}: {str(e)}")
@@ -255,6 +274,9 @@ class FileManager:
         ws_root = Path(config.workspace_dir)
         src = Path(src_path)
         dest = ws_root / dest_rel_path
+
+        if src.resolve() == dest.resolve():
+            return str(dest.relative_to(ws_root)).replace("\\", "/")
         
         # 1. Banned word check
         if FileManager.is_banned_name(new_filename):
@@ -267,17 +289,15 @@ class FileManager:
             
         # 3. Create parent directories
         dest.parent.mkdir(parents=True, exist_ok=True)
-        
-        # 4. Resolve name conflicts
-        counter = 1
-        original_dest = dest
-        while dest.exists():
-            stem = Path(new_filename).stem
-            ext = Path(new_filename).suffix
-            dest = original_dest.parent / f"{stem}_{counter}{ext}"
-            new_filename = dest.name
-            counter += 1
-            
+
+        # 4. Replace existing destination instead of creating duplicates
+        if dest.exists():
+            FileManager._delete_workspace_record(dest)
+            if dest.is_file():
+                dest.unlink()
+            else:
+                shutil.rmtree(dest)
+
         # 5. Physical Move
         shutil.move(str(src), str(dest))
         

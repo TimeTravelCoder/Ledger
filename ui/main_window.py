@@ -303,16 +303,10 @@ class MainWindow(QMainWindow):
             inbox_dir.mkdir(parents=True, exist_ok=True)
             
             dest = inbox_dir / filename
-            counter = 1
-            while dest.exists():
-                stem = Path(file_path).stem
-                ext = Path(file_path).suffix
-                dest = inbox_dir / f"{stem}_{counter}{ext}"
-                counter += 1
-                
             try:
                 import shutil
-                shutil.move(file_path, str(dest))
+                from file_manager import FileManager
+                FileManager.move_replace(file_path, dest)
                 
                 # Toast notification
                 self.tray_icon.showMessage(
