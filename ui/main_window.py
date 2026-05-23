@@ -258,6 +258,7 @@ class MainWindow(QMainWindow):
         self.view_workspace.setup_models() # Relink model if path changed
         self.view_workspace.refresh_tags_cloud()
         self.view_workspace.refresh_status_combo()
+        self.view_workspace.refresh_rule_hint_for_current_selection()
         self.view_workspace.run_search()
         self.view_backup.refresh_history()
 

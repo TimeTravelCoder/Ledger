@@ -245,9 +245,16 @@ class SettingsView(QWidget):
         self.cb_auto_rule.stateChanged.connect(self.save_auto_rule_enabled)
         rule_layout.addWidget(self.cb_auto_rule)
 
-        self.rule_list = QListWidget()
-        self.rule_list.setMinimumHeight(180)
-        rule_layout.addWidget(self.rule_list)
+        self.rule_scroll = QScrollArea()
+        self.rule_scroll.setWidgetResizable(True)
+        self.rule_scroll.setFrameShape(QFrame.NoFrame)
+        self.rule_scroll.setMinimumHeight(220)
+        self.rule_scroll_content = QWidget()
+        self.rule_scroll_layout = QVBoxLayout(self.rule_scroll_content)
+        self.rule_scroll_layout.setContentsMargins(0, 0, 0, 0)
+        self.rule_scroll_layout.setSpacing(8)
+        self.rule_scroll.setWidget(self.rule_scroll_content)
+        rule_layout.addWidget(self.rule_scroll)
 
         self.populate_rule_list()
 
@@ -418,12 +425,39 @@ class SettingsView(QWidget):
         self.refresh_other_views_signal.emit()
 
     def populate_rule_list(self):
-        self.rule_list.clear()
+        while self.rule_scroll_layout.count():
+            item = self.rule_scroll_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+
+        self.rule_widgets = []
         for rule in config.auto_rules:
-            text = f"{rule.get('name', '')} | 关键词: {', '.join(rule.get('keywords', []))} | 后缀: {', '.join(rule.get('extensions', []))} | 目录前缀: {rule.get('target_prefix', '')}"
-            item = QListWidgetItem(text)
-            item.setData(Qt.UserRole, rule)
-            self.rule_list.addItem(item)
+            row = QFrame()
+            row.setObjectName("CardPanel")
+            row_layout = QGridLayout(row)
+            row_layout.setContentsMargins(10, 10, 10, 10)
+            row_layout.setHorizontalSpacing(8)
+            row_layout.setVerticalSpacing(8)
+
+            name = QLineEdit(rule.get("name", ""))
+            keywords = QLineEdit(", ".join(rule.get("keywords", [])))
+            exts = QLineEdit(", ".join(rule.get("extensions", [])))
+            prefix = QLineEdit(rule.get("target_prefix", ""))
+
+            row_layout.addWidget(QLabel("名称"), 0, 0)
+            row_layout.addWidget(name, 0, 1)
+            row_layout.addWidget(QLabel("关键词"), 0, 2)
+            row_layout.addWidget(keywords, 0, 3)
+            row_layout.addWidget(QLabel("后缀"), 1, 0)
+            row_layout.addWidget(exts, 1, 1)
+            row_layout.addWidget(QLabel("前缀"), 1, 2)
+            row_layout.addWidget(prefix, 1, 3)
+
+            row.setProperty("rule_widgets", (name, keywords, exts, prefix))
+            self.rule_scroll_layout.addWidget(row)
+            self.rule_widgets.append(row)
+
+        self.rule_scroll_layout.addStretch()
 
     def save_auto_rule_enabled(self, state):
         config.auto_rule_enabled = bool(state)
@@ -431,6 +465,19 @@ class SettingsView(QWidget):
         self.refresh_other_views_signal.emit()
 
     def save_auto_rules(self):
+        rules = []
+        for row in self.rule_widgets:
+            widgets = row.property("rule_widgets")
+            if not widgets:
+                continue
+            name_w, keywords_w, exts_w, prefix_w = widgets
+            rules.append({
+                "name": name_w.text().strip() or "未命名规则",
+                "keywords": [p.strip() for p in keywords_w.text().split(",") if p.strip()],
+                "extensions": [p.strip().lower() if p.strip().startswith(".") else f".{p.strip().lower()}" for p in exts_w.text().split(",") if p.strip()],
+                "target_prefix": prefix_w.text().strip() or "01",
+            })
+        config.auto_rules = rules
         config.save()
         QMessageBox.information(self, "成功", "规则归类配置已保存。")
         self.refresh_other_views_signal.emit()

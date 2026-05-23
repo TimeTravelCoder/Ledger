@@ -1004,6 +1004,10 @@ class WorkspaceView(QWidget):
         self.refresh_other_views_signal.emit()
         QMessageBox.information(self, "完成", f"已按规则归类 {moved} 个文件。")
 
+    def refresh_rule_hint_for_current_selection(self):
+        if self.current_preview_rel_path:
+            self.refresh_rule_hint(self.current_preview_rel_path)
+
     def show_duplicates(self, activate=True):
         modes = {"文件名": "filename", "大小": "size", "哈希": "hash"}
         mode = modes[self.duplicate_mode_combo.currentText()]
