@@ -284,14 +284,15 @@ class MainWindow(QMainWindow):
         filename = Path(file_path).name
         
         # Don't show if active workspace directory is inside downloads or something
+        inbox_name = config.get_inbox_name()
         reply = QMessageBox.question(self, "检测到新文件下载 📥", 
                                      f"系统检测到新下载的文件:\n'{filename}'\n\n"
-                                     f"是否立即将其导入 00_Inbox 收集箱并运行文件规范重命名和标签分类？",
+                                     f"是否立即将其导入 {inbox_name} 收集箱并运行文件规范重命名和标签分类？",
                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
                                      
         if reply == QMessageBox.Yes:
-            # Move file to 00_Inbox
-            inbox_dir = Path(config.workspace_dir) / "00_Inbox"
+            # Move file to active inbox
+            inbox_dir = Path(config.workspace_dir) / inbox_name
             inbox_dir.mkdir(parents=True, exist_ok=True)
             
             dest = inbox_dir / filename
@@ -341,7 +342,7 @@ class MainWindow(QMainWindow):
             "检测到您是第一次启动本软件，系统已为您自动初始化并创建了符合规范的专属工作空间（Workspace）以及 12 个日常分类标准的文件夹：<br>"
             f"<font color='#6366F1'><b>👉 {ws_dir}</b></font><br><br>"
             "<b>💡 快速上手整理建议：</b><br>"
-            "1. 可将您浏览器下载目录中的文件、或桌面堆积的杂乱文件，移动进 <b>00_Inbox（收集箱）</b> 中。<br>"
+            f"1. 可将您浏览器下载目录中的文件、或桌面堆积的杂乱文件，移动进 <b>{config.get_inbox_name()}（收集箱）</b> 中。<br>"
             "2. 在左侧切换至 <b>📥 智能收集箱</b> 面板，体验自动根据规范模板改名、勾选中文分类标签、一键物理归档分流！<br>"
             "3. 建议在 <b>⚙️ 软件参数设置</b> 中配置您所习惯的常用路径与自定义标签字典。<br><br>"
             "现在，开启您的高效知识管理与备份之旅吧！"

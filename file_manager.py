@@ -50,6 +50,7 @@ class FileManager:
     @staticmethod
     def init_project_structure(project_name):
         """Helper to initialize standard structure for a new project in 03_Projects."""
+        ws_root = Path(config.workspace_dir)
         proj_folder = config.get_standard_dirs()[3]
         proj_dir = ws_root / proj_folder / project_name
         
