@@ -56,10 +56,17 @@ class AppConfig:
         self.backup_cloud_dir = ""
         self.theme = "dark"  # "dark", "light", or "zhongguose"
         self.monitored_downloads = True
+        self.auto_rule_enabled = False
         self.tags = DEFAULT_TAGS.copy()
         self.workspace_lang = "en"  # "en" or "cn"
         self.use_custom_dirs = False
         self.custom_standard_dirs = []
+        self.auto_rules = [
+            {"name": "论文文档", "keywords": ["paper", "论文", "arxiv"], "extensions": [".pdf"], "target_prefix": "05"},
+            {"name": "演示文稿", "keywords": ["ppt", "presentation", "汇报"], "extensions": [".ppt", ".pptx"], "target_prefix": "08"},
+            {"name": "代码文件", "keywords": ["code", "script"], "extensions": [".py", ".js", ".ts", ".cpp", ".java"], "target_prefix": "04"},
+            {"name": "图片素材", "keywords": ["image", "photo", "截图"], "extensions": [".png", ".jpg", ".jpeg"], "target_prefix": "07"},
+        ]
         
         # Default workspace setup in the same folder if not set
         default_ws = Path(__file__).parent / "Workspace"
@@ -100,6 +107,8 @@ class AppConfig:
                     self.workspace_lang = data.get("workspace_lang", self.workspace_lang)
                     self.use_custom_dirs = data.get("use_custom_dirs", self.use_custom_dirs)
                     self.custom_standard_dirs = data.get("custom_standard_dirs", self.custom_standard_dirs)
+                    self.auto_rule_enabled = data.get("auto_rule_enabled", self.auto_rule_enabled)
+                    self.auto_rules = data.get("auto_rules", self.auto_rules)
                     # Migration: if tags are the old English defaults, upgrade to Chinese
                     if self.tags.get("primary") == ["#AI", "#Quantum", "#Math", "#OS", "#Network", "#English"]:
                         self.tags = DEFAULT_TAGS.copy()
@@ -119,7 +128,9 @@ class AppConfig:
                 "tags": self.tags,
                 "workspace_lang": self.workspace_lang,
                 "use_custom_dirs": self.use_custom_dirs,
-                "custom_standard_dirs": self.custom_standard_dirs
+                "custom_standard_dirs": self.custom_standard_dirs,
+                "auto_rule_enabled": self.auto_rule_enabled,
+                "auto_rules": self.auto_rules
             }
             with open(CONFIG_FILE, "w", encoding="utf-8") as f:
                 json.dump(data, f, ensure_ascii=False, indent=4)

@@ -81,6 +81,7 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.is_first_run = is_first_run
         self.watcher_thread = None
+        self.sidebar_collapsed = False
         self.init_ui()
         self.setup_downloads_watcher()
         
@@ -335,6 +336,21 @@ class MainWindow(QMainWindow):
         self.tray_icon.setIcon(icon)
         self.tray_icon.setToolTip("电脑文档规范分类与管理系统")
         self.tray_icon.show()
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self.apply_responsive_layout()
+
+    def apply_responsive_layout(self):
+        width = self.width()
+        should_collapse = width < 1100
+        if should_collapse == self.sidebar_collapsed:
+            return
+        self.sidebar_collapsed = should_collapse
+        if should_collapse:
+            self.sidebar.setVisible(False)
+        else:
+            self.sidebar.setVisible(True)
 
     def show_first_run_welcome(self):
         ws_dir = config.workspace_dir

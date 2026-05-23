@@ -9,6 +9,9 @@ from config import config
 from db import db
 from file_manager import FileManager
 
+def display_name(tag):
+    return tag[1:] if str(tag).startswith("#") else str(tag)
+
 class DashboardView(QWidget):
     # Signal emitted when user wants to switch to the Inbox tab (for quick cleanup)
     switch_to_inbox_signal = Signal()
@@ -177,6 +180,15 @@ class DashboardView(QWidget):
         self.recent_progress.setFormat("近7天整理进度")
         recent_layout.addWidget(self.recent_progress)
 
+        self.bar_title = QLabel("标签概览")
+        self.bar_title.setObjectName("CardTitle")
+        recent_layout.addWidget(self.bar_title)
+        self.bar_container = QFrame()
+        self.bar_container_layout = QVBoxLayout(self.bar_container)
+        self.bar_container_layout.setContentsMargins(0, 0, 0, 0)
+        self.bar_container_layout.setSpacing(6)
+        recent_layout.addWidget(self.bar_container)
+
         main_layout.addWidget(recent_card)
 
         self.refresh_data()
@@ -259,6 +271,7 @@ class DashboardView(QWidget):
         self.tags_summary.setText(f"标签分布: {tag_summary_text}")
         self.tag_progress.setValue(tag_coverage)
         self.recent_progress.setValue(recent_progress)
+        self.render_tag_bars(top_tags)
 
         # 3. Check Desktop Cleanliness
         desktop_files = FileManager.scan_desktop_files()
@@ -391,3 +404,27 @@ class DashboardView(QWidget):
             f"💾 空间占用: {size_str}\n\n"
             f"所有其他功能视图已同步刷新！"
         )
+
+    def render_tag_bars(self, tag_items):
+        while self.bar_container_layout.count():
+            item = self.bar_container_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+        if not tag_items:
+            self.bar_container_layout.addWidget(QLabel("暂无标签数据"))
+            return
+        total = sum(count for _, count in tag_items) or 1
+        for tag, count in tag_items:
+            row = QFrame()
+            row_layout = QHBoxLayout(row)
+            row_layout.setContentsMargins(0, 0, 0, 0)
+            row_layout.setSpacing(8)
+            name = QLabel(display_name(tag))
+            name.setFixedWidth(90)
+            bar = QProgressBar()
+            bar.setRange(0, total)
+            bar.setValue(count)
+            bar.setFormat(str(count))
+            row_layout.addWidget(name)
+            row_layout.addWidget(bar, 1)
+            self.bar_container_layout.addWidget(row)

@@ -663,6 +663,14 @@ class WorkspaceView(QWidget):
         self.duplicate_check_btn.clicked.connect(self.show_duplicates)
         batch_layout.addWidget(self.duplicate_check_btn, 3, 2)
 
+        batch_layout.addWidget(QLabel("规则建议:"), 4, 0)
+        self.rule_hint_label = QLabel("自动归类未启用")
+        self.rule_hint_label.setWordWrap(True)
+        batch_layout.addWidget(self.rule_hint_label, 4, 1)
+        self.rule_apply_btn = QPushButton("按建议归类")
+        self.rule_apply_btn.clicked.connect(self.apply_rule_suggestion)
+        batch_layout.addWidget(self.rule_apply_btn, 4, 2)
+
         grid_layout.addWidget(batch_panel)
         self.main_splitter.addWidget(grid_container)
 
@@ -850,6 +858,7 @@ class WorkspaceView(QWidget):
         self.current_preview_rel_path = first_rel
         self.load_preview(first_rel)
         self.selection_status_label.setText(f"当前已选择 {len(selected)} 个文件")
+        self.refresh_rule_hint(first_rel)
 
     def load_preview(self, rel_path):
         ws_root = Path(config.workspace_dir)
@@ -909,6 +918,16 @@ class WorkspaceView(QWidget):
         else:
             self.preview_text.setPlainText("暂不支持该格式的内嵌预览，可点击下方按钮在系统中打开。")
 
+    def refresh_rule_hint(self, rel_path):
+        if not getattr(config, "auto_rule_enabled", False):
+            self.rule_hint_label.setText("自动归类未启用")
+            return
+        name, target_dir = FileManager.suggest_rule_target(Path(rel_path).name)
+        if target_dir:
+            self.rule_hint_label.setText(f"建议: {name} -> {target_dir}")
+        else:
+            self.rule_hint_label.setText("未匹配到规则")
+
     def clear_preview_resources(self, keep_label=False):
         try:
             old_doc = self.preview_pdf.document()
@@ -963,6 +982,27 @@ class WorkspaceView(QWidget):
         QMessageBox.information(self, "完成", f"已批量移动 {len(moved)} 个文件到 {target_dir}。")
         self.run_search()
         self.refresh_other_views_signal.emit()
+
+    def apply_rule_suggestion(self):
+        if not getattr(config, "auto_rule_enabled", False):
+            QMessageBox.information(self, "提示", "请先在设置页启用规则归类。")
+            return
+        rel_paths = self.get_selected_rel_paths()
+        if not rel_paths:
+            QMessageBox.information(self, "提示", "请先选择一个文件。")
+            return
+        moved = 0
+        for rel_path in rel_paths:
+            name, target_dir = FileManager.suggest_rule_target(Path(rel_path).name)
+            if target_dir:
+                try:
+                    FileManager.bulk_move_files([rel_path], target_dir)
+                    moved += 1
+                except Exception:
+                    pass
+        self.run_search()
+        self.refresh_other_views_signal.emit()
+        QMessageBox.information(self, "完成", f"已按规则归类 {moved} 个文件。")
 
     def show_duplicates(self, activate=True):
         modes = {"文件名": "filename", "大小": "size", "哈希": "hash"}

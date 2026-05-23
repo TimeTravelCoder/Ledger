@@ -20,13 +20,6 @@ PROJECT_SUBDIRS = [
 
 BANNED_KEYWORDS = ["最终版", "最终版2", "最新最终版", "新建文档", "新建文本文档", "新建文件夹", "最终修改版", "最最新版"]
 
-AUTO_RULES = [
-    {"name": "论文文档", "keywords": ["paper", "论文", "arxiv"], "extensions": [".pdf"], "target_prefix": "05"},
-    {"name": "演示文稿", "keywords": ["ppt", "presentation", "汇报"], "extensions": [".ppt", ".pptx"], "target_prefix": "08"},
-    {"name": "代码文件", "keywords": ["code", "script"], "extensions": [".py", ".js", ".ts", ".cpp", ".java"], "target_prefix": "04"},
-    {"name": "图片素材", "keywords": ["image", "photo", "截图"], "extensions": [".png", ".jpg", ".jpeg"], "target_prefix": "07"},
-]
-
 class FileManager:
     @staticmethod
     def _delete_workspace_record(abs_path):
@@ -446,7 +439,8 @@ class FileManager:
         lower_name = filename.lower()
         ext = Path(filename).suffix.lower()
 
-        for rule in AUTO_RULES:
+        rules = getattr(config, "auto_rules", [])
+        for rule in rules:
             if ext in rule["extensions"] or any(keyword in lower_name for keyword in rule["keywords"]):
                 for directory in config.get_standard_dirs():
                     if directory.startswith(rule["target_prefix"]):

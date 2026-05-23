@@ -3,7 +3,7 @@ from pathlib import Path
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, 
                              QLabel, QLineEdit, QPushButton, QFrame, 
                              QCheckBox, QMessageBox, QFileDialog, QTextEdit, 
-                             QComboBox, QScrollArea)
+                             QComboBox, QScrollArea, QListWidget, QListWidgetItem)
 from PySide6.QtCore import Qt, Signal
 from config import config, DEFAULT_TAGS, normalize_tags, display_tag
 from file_manager import FileManager
@@ -229,6 +229,37 @@ class SettingsView(QWidget):
 
         inner_layout.addWidget(custom_card)
 
+        # 4. Auto Rule Routing Card
+        rule_card = QFrame()
+        rule_card.setObjectName("CardPanel")
+        rule_layout = QVBoxLayout(rule_card)
+        rule_layout.setContentsMargins(15, 15, 15, 15)
+        rule_layout.setSpacing(12)
+
+        rule_title = QLabel("规则归类自动化")
+        rule_title.setStyleSheet("font-size: 14px; font-weight: bold; color: #6366F1;")
+        rule_layout.addWidget(rule_title)
+
+        self.cb_auto_rule = QCheckBox("启用关键词 / 后缀自动归类")
+        self.cb_auto_rule.setChecked(config.auto_rule_enabled)
+        self.cb_auto_rule.stateChanged.connect(self.save_auto_rule_enabled)
+        rule_layout.addWidget(self.cb_auto_rule)
+
+        self.rule_list = QListWidget()
+        self.rule_list.setMinimumHeight(180)
+        rule_layout.addWidget(self.rule_list)
+
+        self.populate_rule_list()
+
+        rule_btn_layout = QHBoxLayout()
+        self.btn_save_rules = QPushButton("保存规则")
+        self.btn_save_rules.setObjectName("PrimaryBtn")
+        self.btn_save_rules.clicked.connect(self.save_auto_rules)
+        rule_btn_layout.addWidget(self.btn_save_rules)
+        rule_layout.addLayout(rule_btn_layout)
+
+        inner_layout.addWidget(rule_card)
+
         inner_layout.addStretch()
 
     def browse_workspace(self):
@@ -384,6 +415,24 @@ class SettingsView(QWidget):
     def save_use_custom_dirs(self, state):
         config.use_custom_dirs = bool(state)
         config.save()
+        self.refresh_other_views_signal.emit()
+
+    def populate_rule_list(self):
+        self.rule_list.clear()
+        for rule in config.auto_rules:
+            text = f"{rule.get('name', '')} | 关键词: {', '.join(rule.get('keywords', []))} | 后缀: {', '.join(rule.get('extensions', []))} | 目录前缀: {rule.get('target_prefix', '')}"
+            item = QListWidgetItem(text)
+            item.setData(Qt.UserRole, rule)
+            self.rule_list.addItem(item)
+
+    def save_auto_rule_enabled(self, state):
+        config.auto_rule_enabled = bool(state)
+        config.save()
+        self.refresh_other_views_signal.emit()
+
+    def save_auto_rules(self):
+        config.save()
+        QMessageBox.information(self, "成功", "规则归类配置已保存。")
         self.refresh_other_views_signal.emit()
 
     def save_custom_dirs(self):
