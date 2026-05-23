@@ -248,6 +248,25 @@ class InboxView(QWidget):
             self.preset_combo.addItem(preset["label"])
         self.preset_combo.blockSignals(False)
 
+    def render_template_name(self, fmt):
+        date = self.input_date.text().strip() if hasattr(self, "input_date") else ""
+        topic = self.input_topic.text().strip() if hasattr(self, "input_topic") else ""
+        ver = self.input_version.text().strip() if hasattr(self, "input_version") else ""
+        status = self.input_status.currentText().strip() if hasattr(self, "input_status") else ""
+        stem = Path(self.selected_file_path).stem if self.selected_file_path else ""
+
+        mapping = {
+            "{date}": date,
+            "{topic}": topic,
+            "{version}": ver,
+            "{status}": status,
+            "{stem}": stem
+        }
+        result = fmt
+        for key, value in mapping.items():
+            result = result.replace(key, value)
+        return "_".join([p for p in result.split("_") if p])
+
     def scan_inbox(self):
         self.file_list_widget.clear()
         
@@ -526,26 +545,7 @@ class InboxView(QWidget):
         preset_idx = self.preset_combo.currentIndex()
         preset = self.preset_defs[preset_idx]
         
-        new_stem = ""
-        fmt = preset["format"]
-        if preset["key"] == "keep":
-            new_stem = Path(self.selected_file_path).stem
-        else:
-            date = self.input_date.text().strip()
-            topic = self.input_topic.text().strip()
-            ver = self.input_version.text().strip()
-            status = self.input_status.currentText().strip()
-            mapping = {
-                "{date}": date,
-                "{topic}": topic,
-                "{version}": ver,
-                "{status}": status,
-                "{stem}": Path(self.selected_file_path).stem
-            }
-            new_stem = fmt
-            for key, value in mapping.items():
-                new_stem = new_stem.replace(key, value)
-            new_stem = "_".join([p for p in new_stem.split("_") if p])
+        new_stem = self.render_template_name(preset["format"])
 
         new_filename = new_stem + ext
         self.lbl_name_preview.blockSignals(True)

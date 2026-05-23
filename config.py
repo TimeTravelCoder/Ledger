@@ -116,6 +116,30 @@ NAME_PRESET_BASES = [
         "default_format": "{date}_{topic}"
     },
     {
+        "key": "homework",
+        "label": "课程作业",
+        "prefix": "01",
+        "default_format": "{date}_{topic}_{version}"
+    },
+    {
+        "key": "summary",
+        "label": "研究总结",
+        "prefix": "02",
+        "default_format": "{date}_{topic}"
+    },
+    {
+        "key": "reading",
+        "label": "读书笔记",
+        "prefix": "06",
+        "default_format": "{date}_{topic}"
+    },
+    {
+        "key": "literature",
+        "label": "文献笔记",
+        "prefix": "05",
+        "default_format": "{topic}_{version}"
+    },
+    {
         "key": "keep",
         "label": "保持原名",
         "prefix": "00",
