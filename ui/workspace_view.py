@@ -620,6 +620,7 @@ class WorkspaceView(QWidget):
         self.files_table.setSelectionBehavior(QTableWidget.SelectRows)
         self.files_table.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.files_table.setMinimumHeight(260)
+        self.files_table.setAlternatingRowColors(True)
         self.files_table.left_double_clicked.connect(self.on_table_left_double_clicked)
         self.files_table.right_double_clicked.connect(self.on_table_right_double_clicked)
         self.files_table.itemSelectionChanged.connect(self.on_table_selection_changed)
@@ -678,6 +679,19 @@ class WorkspaceView(QWidget):
         self.preview_file_label = QLabel("请选择文件")
         self.preview_file_label.setWordWrap(True)
         preview_layout.addWidget(self.preview_file_label)
+
+        self.preview_info_card = QFrame()
+        self.preview_info_card.setObjectName("CardPanel")
+        preview_info_layout = QVBoxLayout(self.preview_info_card)
+        preview_info_layout.setContentsMargins(8, 6, 8, 6)
+        preview_info_layout.setSpacing(4)
+        self.preview_info_type = QLabel("类型: --")
+        self.preview_info_size = QLabel("大小: --")
+        self.preview_info_path = QLabel("路径: --")
+        for lbl in [self.preview_info_type, self.preview_info_size, self.preview_info_path]:
+            lbl.setWordWrap(True)
+            preview_info_layout.addWidget(lbl)
+        preview_layout.addWidget(self.preview_info_card)
 
         self.preview_tabs = QTabWidget()
         preview_layout.addWidget(self.preview_tabs, 1)
@@ -825,6 +839,9 @@ class WorkspaceView(QWidget):
         if not selected:
             self.clear_preview_resources()
             self.preview_file_label.setText("请选择文件")
+            self.preview_info_type.setText("类型: --")
+            self.preview_info_size.setText("大小: --")
+            self.preview_info_path.setText("路径: --")
             self.selection_status_label.setText("当前未选择文件")
             self.current_preview_rel_path = ""
             return
@@ -838,6 +855,14 @@ class WorkspaceView(QWidget):
         ws_root = Path(config.workspace_dir)
         abs_path = ws_root / rel_path
         self.preview_file_label.setText(f"{abs_path.name}\n{rel_path}")
+        self.preview_info_type.setText(f"类型: {abs_path.suffix.lower() or '--'}")
+        try:
+            size = abs_path.stat().st_size
+            size_str = f"{size / 1024:.1f} KB" if size < 1024 * 1024 else f"{size / (1024 * 1024):.1f} MB"
+        except Exception:
+            size_str = "--"
+        self.preview_info_size.setText(f"大小: {size_str}")
+        self.preview_info_path.setText(f"路径: {rel_path}")
         self.clear_preview_resources(keep_label=True)
         self.preview_text.show()
         self.preview_image.hide()

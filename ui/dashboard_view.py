@@ -3,7 +3,7 @@ import datetime
 from pathlib import Path
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, 
                              QLabel, QPushButton, QTableWidget, QTableWidgetItem, 
-                             QHeaderView, QFrame, QMessageBox, QScrollArea)
+                             QHeaderView, QFrame, QMessageBox, QScrollArea, QProgressBar)
 from PySide6.QtCore import Qt, Signal
 from config import config
 from db import db
@@ -165,6 +165,18 @@ class DashboardView(QWidget):
         self.tags_summary.setStyleSheet("color: #94A3B8; font-size: 11px;")
         recent_layout.addWidget(self.tags_summary)
 
+        self.tag_progress = QProgressBar()
+        self.tag_progress.setRange(0, 100)
+        self.tag_progress.setValue(0)
+        self.tag_progress.setFormat("标签覆盖度")
+        recent_layout.addWidget(self.tag_progress)
+
+        self.recent_progress = QProgressBar()
+        self.recent_progress.setRange(0, 100)
+        self.recent_progress.setValue(0)
+        self.recent_progress.setFormat("近7天整理进度")
+        recent_layout.addWidget(self.recent_progress)
+
         main_layout.addWidget(recent_card)
 
         self.refresh_data()
@@ -235,6 +247,8 @@ class DashboardView(QWidget):
         tag_distribution = db.get_tag_distribution()
         top_tags = sorted(tag_distribution.items(), key=lambda item: item[1], reverse=True)[:5]
         tag_summary_text = "、".join(f"{tag}({count})" for tag, count in top_tags) if top_tags else "--"
+        tag_coverage = min(100, int((tags_count / max(1, total_count)) * 100))
+        recent_progress = min(100, int((recent_count / max(1, total_count)) * 100))
 
         # Update card values
         self.card_total_files.value_label.setText(str(total_count))
@@ -243,6 +257,8 @@ class DashboardView(QWidget):
         self.card_tags_count.value_label.setText(str(tags_count))
         self.card_recent_count.value_label.setText(str(recent_count))
         self.tags_summary.setText(f"标签分布: {tag_summary_text}")
+        self.tag_progress.setValue(tag_coverage)
+        self.recent_progress.setValue(recent_progress)
 
         # 3. Check Desktop Cleanliness
         desktop_files = FileManager.scan_desktop_files()

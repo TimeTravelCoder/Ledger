@@ -294,6 +294,10 @@ def get_stylesheet(theme="dark"):
         background-color: {bg_tertiary};
     }}
 
+    QTableWidget::item:alternate {{
+        background-color: {bg_primary};
+    }}
+
     /* Tree View Styling (Directory Explorer) */
     QTreeView {{
         background-color: {bg_secondary};
@@ -360,6 +364,19 @@ def get_stylesheet(theme="dark"):
     QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {{
         border: none;
         background: none;
+    }}
+
+    QProgressBar {{
+        border: 1px solid {border_color};
+        border-radius: 6px;
+        text-align: center;
+        background: {bg_primary};
+        color: {text_primary};
+        height: 18px;
+    }}
+    QProgressBar::chunk {{
+        background-color: {accent_color};
+        border-radius: 5px;
     }}
     
     /* Dialogs / Message Boxes */
