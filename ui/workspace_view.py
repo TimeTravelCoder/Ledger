@@ -937,7 +937,7 @@ class WorkspaceView(QWidget):
         self.run_search()
         self.refresh_other_views_signal.emit()
 
-    def show_duplicates(self):
+    def show_duplicates(self, activate=True):
         modes = {"文件名": "filename", "大小": "size", "哈希": "hash"}
         mode = modes[self.duplicate_mode_combo.currentText()]
         duplicates = FileManager.find_duplicates(mode=mode)
@@ -954,9 +954,9 @@ class WorkspaceView(QWidget):
                 item = QListWidgetItem(f"  {record['filepath']}")
                 item.setData(Qt.UserRole, record["filepath"])
                 self.duplicates_list.addItem(item)
-        self.preview_tabs.setCurrentWidget(self.duplicates_list)
         self.selection_status_label.setText(f"发现 {len(duplicates)} 组重复文件。")
-        self.preview_tabs.setCurrentWidget(self.duplicates_list)
+        if activate:
+            self.preview_tabs.setCurrentWidget(self.duplicates_list)
 
     def on_duplicate_item_double_clicked(self, item):
         rel_path = item.data(Qt.UserRole)
@@ -974,37 +974,35 @@ class WorkspaceView(QWidget):
                 selected.append(rel_path)
         return selected
 
-    def _selected_duplicate_group_paths(self):
-        items = self.duplicates_list.selectedItems()
-        selected = []
-        for item in items:
-            rel_path = item.data(Qt.UserRole)
-            if rel_path:
-                selected.append(rel_path)
-        return selected
-
     def delete_selected_duplicate_files(self):
-        selected = self._selected_duplicate_group_paths()
-        if not selected:
-            QMessageBox.information(self, "提示", "请先在重复检测列表中选择要删除的文件。")
+        target_rel_path = self.current_preview_rel_path or self.get_selected_rel_paths()[:1]
+        if isinstance(target_rel_path, list):
+            target_rel_path = target_rel_path[0] if target_rel_path else None
+        if not target_rel_path:
+            for item in self.duplicates_list.selectedItems():
+                rel_path = item.data(Qt.UserRole)
+                if rel_path:
+                    target_rel_path = rel_path
+                    break
+        if not target_rel_path:
+            QMessageBox.information(self, "提示", "请先选择一个文件。")
             return
         reply = QMessageBox.question(self, "确认删除文件",
-                                     f"确认删除选中的 {len(selected)} 个文件吗？\n此操作会永久删除磁盘上的文件。",
+                                     f"确认删除当前文件吗？\n{target_rel_path}\n此操作会永久删除磁盘上的文件。",
                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
         if reply != QMessageBox.Yes:
             return
-        deleted = 0
-        for rel_path in selected:
-            try:
-                FileManager.delete_file(rel_path)
-                deleted += 1
-            except Exception:
-                continue
+        try:
+            FileManager.delete_file(target_rel_path)
+        except Exception as e:
+            QMessageBox.critical(self, "错误", f"删除文件失败: {str(e)}")
+            return
         self.clear_preview_resources()
+        self.current_preview_rel_path = ""
         self.run_search()
-        self.show_duplicates()
+        self.show_duplicates(activate=False)
         self.refresh_other_views_signal.emit()
-        QMessageBox.information(self, "完成", f"已删除 {deleted} 个文件。")
+        QMessageBox.information(self, "完成", "已删除 1 个文件。")
 
     def create_new_file(self):
         dialog = CreateFileDialog(self.current_folder_rel, self)
