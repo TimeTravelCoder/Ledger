@@ -214,6 +214,35 @@ class FileManager:
         return file_list
 
     @staticmethod
+    def scan_desktop_summary():
+        """Return desktop summary for UX feedback."""
+        desktop = Path(FileManager.get_desktop_path())
+        summary = {
+            "normal_files": 0,
+            "folders": 0,
+            "shortcuts": 0,
+            "temporary_files": 0
+        }
+        if not desktop.exists():
+            return summary
+
+        try:
+            for entry in os.scandir(desktop):
+                if entry.is_dir():
+                    summary["folders"] += 1
+                    continue
+                ext = Path(entry.name).suffix.lower()
+                if entry.name.startswith("~$"):
+                    summary["temporary_files"] += 1
+                elif ext in [".lnk", ".ini", ".url"]:
+                    summary["shortcuts"] += 1
+                else:
+                    summary["normal_files"] += 1
+        except Exception as e:
+            print(f"Error scanning desktop summary: {e}")
+        return summary
+
+    @staticmethod
     def clean_desktop_to_inbox():
         """Move non-shortcut files from Desktop to Inbox."""
         desktop_files = FileManager.scan_desktop_files()

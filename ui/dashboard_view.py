@@ -275,12 +275,15 @@ class DashboardView(QWidget):
 
         # 3. Check Desktop Cleanliness
         desktop_files = FileManager.scan_desktop_files()
+        desktop_summary = FileManager.scan_desktop_summary()
         desktop_count = len(desktop_files)
         if desktop_count <= 10:
             self.desktop_status_lbl.setText(f"优秀 (桌面有 {desktop_count} 个文件)")
             self.desktop_status_lbl.setStyleSheet("color: #10B981; font-size: 16px; font-weight: bold;")
-            self.desktop_desc_lbl.setText("您的桌面非常整洁，符合规范！")
-            self.clean_desktop_btn.setEnabled(desktop_count > 0)
+            self.desktop_desc_lbl.setText(
+                f"普通文件 {desktop_summary['normal_files']} 个，文件夹 {desktop_summary['folders']} 个，快捷方式 {desktop_summary['shortcuts']} 个。"
+            )
+            self.clean_desktop_btn.setEnabled(True)
         else:
             self.desktop_status_lbl.setText(f"警告: 建议整理 (有 {desktop_count} 个文件)")
             self.desktop_status_lbl.setStyleSheet("color: #EF4444; font-size: 16px; font-weight: bold;")
@@ -367,6 +370,17 @@ class DashboardView(QWidget):
             self.recent_table.setItem(i, 3, item_mtime)
 
     def clean_desktop(self):
+        summary = FileManager.scan_desktop_summary()
+        if summary["normal_files"] == 0:
+            QMessageBox.information(
+                self, "暂无可导入文件",
+                f"桌面当前没有可导入收集箱的普通文件。\n\n"
+                f"文件夹: {summary['folders']} 个\n"
+                f"快捷方式: {summary['shortcuts']} 个\n"
+                f"临时文件: {summary['temporary_files']} 个"
+            )
+            return
+
         reply = QMessageBox.question(self, "确认清理", 
                                      "是否确认将桌面上所有的普通文件移动到 00_Inbox 收集箱进行统一整理？\n(桌面快捷方式 .lnk 文件将被忽略)",
                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
