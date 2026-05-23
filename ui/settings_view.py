@@ -585,6 +585,24 @@ class SettingsView(QWidget):
         QMessageBox.information(self, "成功", "命名模板已保存。")
         self.refresh_other_views_signal.emit()
 
+    def save_auto_rules(self):
+        rules = []
+        for row in self.rule_widgets:
+            widgets = row.property("rule_widgets")
+            if not widgets:
+                continue
+            name_w, keywords_w, exts_w, prefix_w = widgets
+            rules.append({
+                "name": name_w.text().strip() or "未命名规则",
+                "keywords": [p.strip() for p in keywords_w.text().split(",") if p.strip()],
+                "extensions": [p.strip().lower() if p.strip().startswith(".") else f".{p.strip().lower()}" for p in exts_w.text().split(",") if p.strip()],
+                "target_prefix": prefix_w.text().strip() or "01",
+            })
+        config.auto_rules = rules
+        config.save()
+        QMessageBox.information(self, "成功", "规则归类配置已保存。")
+        self.refresh_other_views_signal.emit()
+
     def save_custom_dirs(self):
         raw_dirs = self.input_custom_dirs.text().strip()
         if not raw_dirs:

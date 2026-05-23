@@ -248,6 +248,44 @@ class InboxView(QWidget):
             self.preset_combo.addItem(preset["label"])
         self.preset_combo.blockSignals(False)
 
+    def _clear_dynamic_fields(self):
+        for i in reversed(range(self.fields_layout.count())):
+            item = self.fields_layout.takeAt(i)
+            widget = item.widget()
+            if widget:
+                widget.deleteLater()
+            layout = item.layout()
+            if layout:
+                while layout.count():
+                    child = layout.takeAt(0)
+                    child_widget = child.widget()
+                    if child_widget:
+                        child_widget.deleteLater()
+
+    def _add_field_row(self, label_text, widget):
+        row = QHBoxLayout()
+        row.addWidget(QLabel(label_text))
+        row.addWidget(widget)
+        self.fields_layout.addLayout(row)
+
+    def _preset_default_value(self, preset_key, field_key):
+        today = datetime.datetime.now()
+        defaults = {
+            "date": today.strftime("%Y-%m-%d"),
+            "topic": "",
+            "version": "v1",
+            "status": ""
+        }
+        if preset_key == "paper" and field_key == "date":
+            defaults["date"] = today.strftime("%Y")
+        elif preset_key == "exp" and field_key == "date":
+            defaults["date"] = "Exp01"
+        elif preset_key == "image" and field_key == "date":
+            defaults["date"] = today.strftime("%Y%m%d")
+        elif preset_key == "image" and field_key == "version":
+            defaults["version"] = "01"
+        return defaults[field_key]
+
     def render_template_name(self, fmt):
         date = self.input_date.text().strip() if hasattr(self, "input_date") else ""
         topic = self.input_topic.text().strip() if hasattr(self, "input_topic") else ""
@@ -367,173 +405,60 @@ class InboxView(QWidget):
 
     def on_preset_changed(self, idx):
         # Clear old dynamic inputs
-        for i in reversed(range(self.fields_layout.count())): 
-            self.fields_layout.itemAt(i).widget().setParent(None)
-
-        self.input_status.disconnect() if hasattr(self, 'input_status') else None
-        
+        self._clear_dynamic_fields()
         preset = self.preset_defs[idx]
-        # Create fields based on selection
-        if preset["key"] == "regular":
-            h1 = QHBoxLayout()
-            h1.addWidget(QLabel("日期:"))
-            self.input_date = QLineEdit(datetime.datetime.now().strftime("%Y-%m-%d"))
-            h1.addWidget(self.input_date)
-            
-            h2 = QHBoxLayout()
-            h2.addWidget(QLabel("主题名称 (建议无空格):"))
-            self.input_topic = QLineEdit()
-            h2.addWidget(self.input_topic)
-            
-            h3 = QHBoxLayout()
-            h3.addWidget(QLabel("版本 (如 v1/v2/v1.0):"))
-            self.input_version = QLineEdit("v1")
-            h3.addWidget(self.input_version)
-            
-            h4 = QHBoxLayout()
-            h4.addWidget(QLabel("状态:"))
-            self.input_status = QComboBox()
-            self.input_status.addItems(["", "Draft", "Review", "Done", "Final", "Release"])
-            h4.addWidget(self.input_status, 1)
+        fmt = preset["format"]
+        key = preset["key"]
 
-            self.fields_layout.addLayout(h1)
-            self.fields_layout.addLayout(h2)
-            self.fields_layout.addLayout(h3)
-            self.fields_layout.addLayout(h4)
+        self.input_date = QLineEdit(self._preset_default_value(key, "date"))
+        self.input_topic = QLineEdit("")
+        self.input_version = QLineEdit(self._preset_default_value(key, "version"))
+        self.input_status = QComboBox()
+        self.input_status.addItems(["", "Draft", "Review", "Done", "Final", "Release"])
 
-            # Auto connections
+        if "{date}" in fmt:
+            self._add_field_row("日期 / 年份:", self.input_date)
             self.input_date.textChanged.connect(self.update_name_preview)
+
+        if "{topic}" in fmt:
+            self._add_field_row("主题 / 标题:", self.input_topic)
             self.input_topic.textChanged.connect(self.update_name_preview)
+
+        if "{version}" in fmt:
+            version_label = "版本:" if key not in ["image"] else "序号:"
+            self._add_field_row(version_label, self.input_version)
             self.input_version.textChanged.connect(self.update_name_preview)
+
+        if "{status}" in fmt:
+            self._add_field_row("状态:", self.input_status)
             self.input_status.currentIndexChanged.connect(self.update_name_preview)
-            
-            self.select_combo_by_prefix(self.dir_combo, preset["prefix"])
 
-        elif preset["key"] == "paper":
-            h1 = QHBoxLayout()
-            h1.addWidget(QLabel("发表年份:"))
-            self.input_date = QLineEdit(datetime.datetime.now().strftime("%Y"))
-            h1.addWidget(self.input_date)
-            
-            h2 = QHBoxLayout()
-            h2.addWidget(QLabel("论文标题 (首字母大写CamelCase):"))
-            self.input_topic = QLineEdit()
-            h2.addWidget(self.input_topic)
-            
-            h3 = QHBoxLayout()
-            h3.addWidget(QLabel("第一作者姓氏 (英文):"))
-            self.input_version = QLineEdit()
-            h3.addWidget(self.input_version)
+        if key == "keep":
+            self.fields_layout.addWidget(QLabel("保持原有文件名称，只进行物理分类与标签元数据录入。"))
+        else:
+            if self.selected_file_path and "{topic}" in fmt:
+                stem = Path(self.selected_file_path).stem
+                clean_stem = stem.replace(" ", "_").replace("-", "_")
+                self.input_topic.setText(clean_stem)
+            elif self.selected_file_path and "{date}" in fmt and key == "paper":
+                self.input_date.setText(datetime.datetime.now().strftime("%Y"))
+            elif self.selected_file_path and "{date}" in fmt and key == "image":
+                self.input_date.setText(datetime.datetime.now().strftime("%Y%m%d"))
+            elif self.selected_file_path and "{date}" in fmt and key == "exp":
+                self.input_date.setText("Exp01")
+            elif self.selected_file_path:
+                self.input_date.setText(datetime.datetime.now().strftime("%Y-%m-%d"))
 
-            self.fields_layout.addLayout(h1)
-            self.fields_layout.addLayout(h2)
-            self.fields_layout.addLayout(h3)
+        self.select_combo_by_prefix(self.dir_combo, preset["prefix"])
 
-            self.input_date.textChanged.connect(self.update_name_preview)
-            self.input_topic.textChanged.connect(self.update_name_preview)
-            self.input_version.textChanged.connect(self.update_name_preview)
-            
-            self.select_combo_by_prefix(self.dir_combo, preset["prefix"])
-            
-            # Set default tag
+        if key == "paper":
             for cb in self.secondary_checkboxes:
                 if cb.property("tag_value") == normalize_tag("学术论文"):
                     cb.setChecked(True)
-
-        elif preset["key"] == "exp":
-            h1 = QHBoxLayout()
-            h1.addWidget(QLabel("实验编号 (如 Exp01):"))
-            self.input_date = QLineEdit("Exp01")
-            h1.addWidget(self.input_date)
-            
-            h2 = QHBoxLayout()
-            h2.addWidget(QLabel("学科与实验名称 (如 MPI_VectorAdd):"))
-            self.input_topic = QLineEdit()
-            h2.addWidget(self.input_topic)
-            
-            h3 = QHBoxLayout()
-            h3.addWidget(QLabel("版本 (如 v1/v2):"))
-            self.input_version = QLineEdit("v1")
-            h3.addWidget(self.input_version)
-
-            self.fields_layout.addLayout(h1)
-            self.fields_layout.addLayout(h2)
-            self.fields_layout.addLayout(h3)
-
-            self.input_date.textChanged.connect(self.update_name_preview)
-            self.input_topic.textChanged.connect(self.update_name_preview)
-            self.input_version.textChanged.connect(self.update_name_preview)
-            
-            self.select_combo_by_prefix(self.dir_combo, preset["prefix"])
-            
-            # Set default tag
+        elif key == "exp":
             for cb in self.secondary_checkboxes:
                 if cb.property("tag_value") == normalize_tag("实验报告"):
                     cb.setChecked(True)
-
-        elif preset["key"] == "slides":
-            h1 = QHBoxLayout()
-            h1.addWidget(QLabel("汇报日期:"))
-            self.input_date = QLineEdit(datetime.datetime.now().strftime("%Y-%m-%d"))
-            h1.addWidget(self.input_date)
-            
-            h2 = QHBoxLayout()
-            h2.addWidget(QLabel("汇报主题/幻灯片名:"))
-            self.input_topic = QLineEdit()
-            h2.addWidget(self.input_topic)
-            
-            h3 = QHBoxLayout()
-            h3.addWidget(QLabel("版本 (如 v1/v2):"))
-            self.input_version = QLineEdit("v1")
-            h3.addWidget(self.input_version)
-
-            self.fields_layout.addLayout(h1)
-            self.fields_layout.addLayout(h2)
-            self.fields_layout.addLayout(h3)
-
-            self.input_date.textChanged.connect(self.update_name_preview)
-            self.input_topic.textChanged.connect(self.update_name_preview)
-            self.input_version.textChanged.connect(self.update_name_preview)
-            
-            self.select_combo_by_prefix(self.dir_combo, preset["prefix"])
-
-        elif preset["key"] == "image":
-            h1 = QHBoxLayout()
-            h1.addWidget(QLabel("拍摄/生成日期:"))
-            self.input_date = QLineEdit(datetime.datetime.now().strftime("%Y%m%d"))
-            h1.addWidget(self.input_date)
-            
-            h2 = QHBoxLayout()
-            h2.addWidget(QLabel("图片描述名称 (英文):"))
-            self.input_topic = QLineEdit()
-            h2.addWidget(self.input_topic)
-            
-            h3 = QHBoxLayout()
-            h3.addWidget(QLabel("序号 (如 01/02):"))
-            self.input_version = QLineEdit("01")
-            h3.addWidget(self.input_version)
-
-            self.fields_layout.addLayout(h1)
-            self.fields_layout.addLayout(h2)
-            self.fields_layout.addLayout(h3)
-
-            self.input_date.textChanged.connect(self.update_name_preview)
-            self.input_topic.textChanged.connect(self.update_name_preview)
-            self.input_version.textChanged.connect(self.update_name_preview)
-            
-            self.select_combo_by_prefix(self.dir_combo, preset["prefix"])
-
-        elif preset["key"] == "keep":
-            self.fields_layout.addWidget(QLabel("保持原有文件名称，只进行物理分类与标签元数据录入。"))
-            if self.selected_file_path:
-                self.input_topic = QLineEdit(Path(self.selected_file_path).stem)
-
-        if self.selected_file_path:
-            # Re-sanitize topic inputs
-            stem = Path(self.selected_file_path).stem
-            clean_stem = stem.replace(" ", "_").replace("-", "_")
-            if preset["key"] != "keep" and hasattr(self, 'input_topic'):
-                self.input_topic.setText(clean_stem)
 
         self.update_name_preview()
 

@@ -253,6 +253,7 @@ class MainWindow(QMainWindow):
         # Prevent database locks or recursive refreshes by executing quietly
         self.view_dashboard.refresh_data()
         self.view_inbox.scan_inbox()
+        self.view_inbox.refresh_preset_combo()
         self.view_inbox.build_tags_checklist()
         self.view_inbox.refresh_directory_combo()
         self.view_workspace.setup_models() # Relink model if path changed
