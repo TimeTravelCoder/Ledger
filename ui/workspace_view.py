@@ -697,6 +697,7 @@ class WorkspaceView(QWidget):
         self.preview_tabs.addTab(self.preview_stack, "文件预览")
 
         self.duplicates_list = QListWidget()
+        self.duplicates_list.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.duplicates_list.itemDoubleClicked.connect(self.on_duplicate_item_double_clicked)
         self.preview_tabs.addTab(self.duplicates_list, "重复检测")
 
@@ -968,8 +969,17 @@ class WorkspaceView(QWidget):
                 selected.append(rel_path)
         return selected
 
+    def _selected_duplicate_group_paths(self):
+        items = self.duplicates_list.selectedItems()
+        selected = []
+        for item in items:
+            rel_path = item.data(Qt.UserRole)
+            if rel_path:
+                selected.append(rel_path)
+        return selected
+
     def delete_duplicate_selected(self):
-        selected = self._get_duplicate_selected_paths()
+        selected = self._selected_duplicate_group_paths()
         if not selected:
             QMessageBox.information(self, "提示", "请先在重复检测列表中选择要删除的文件。")
             return
@@ -999,7 +1009,7 @@ class WorkspaceView(QWidget):
         QMessageBox.information(self, "完成", f"已删除 {deleted} 个重复文件，保留首个文件。")
 
     def delete_selected_duplicate_files(self):
-        selected = self._get_duplicate_selected_paths()
+        selected = self._selected_duplicate_group_paths()
         if not selected:
             QMessageBox.information(self, "提示", "请先在重复检测列表中选择要删除的文件。")
             return
