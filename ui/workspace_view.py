@@ -2,12 +2,17 @@ import os
 import datetime
 import shutil
 from pathlib import Path
+from urllib.parse import quote
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QTreeView, 
                              QTableWidget, QTableWidgetItem, QHeaderView, 
                              QLabel, QLineEdit, QPushButton, QFrame, 
                              QFileSystemModel, QDialog, QCheckBox, QTextEdit, 
-                             QMessageBox, QComboBox, QGridLayout, QInputDialog)
-from PySide6.QtCore import Qt, QModelIndex, Signal, QDir
+                             QMessageBox, QComboBox, QGridLayout, QInputDialog,
+                             QListWidget, QListWidgetItem, QSplitter, QAbstractItemView)
+from PySide6.QtCore import Qt, QModelIndex, Signal, QDir, QUrl
+from PySide6.QtGui import QDesktopServices, QPixmap
+from PySide6.QtPdf import QPdfDocument
+from PySide6.QtPdfWidgets import QPdfView
 from config import config, display_tag, normalize_tag
 from db import db
 from file_manager import FileManager
@@ -361,6 +366,7 @@ class WorkspaceView(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.current_folder_rel = ""
+        self.current_preview_rel_path = ""
         self.init_ui()
 
     def init_ui(self):
@@ -561,9 +567,10 @@ class WorkspaceView(QWidget):
 
         main_layout.addWidget(top_panel)
 
-        # 2. Main Content Split View (Left Tree, Right Table)
+        # 2. Main Content Split View (Left Tree, Center Table, Right Preview)
         split_layout = QHBoxLayout()
         split_layout.setSpacing(15)
+        self.main_splitter = QSplitter(Qt.Horizontal)
 
         # Left: Directory Tree
         tree_container = QFrame()
@@ -584,9 +591,9 @@ class WorkspaceView(QWidget):
         self.dir_tree.clicked.connect(self.on_tree_directory_clicked)
         tree_layout.addWidget(self.dir_tree)
         
-        split_layout.addWidget(tree_container, 1)
+        self.main_splitter.addWidget(tree_container)
 
-        # Right: Files Grid
+        # Center: Files Grid + Batch tools
         grid_container = QFrame()
         grid_container.setObjectName("CardPanel")
         grid_layout = QVBoxLayout(grid_container)
@@ -603,11 +610,115 @@ class WorkspaceView(QWidget):
         self.files_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
         self.files_table.setEditTriggers(QTableWidget.NoEditTriggers)
         self.files_table.setSelectionBehavior(QTableWidget.SelectRows)
+        self.files_table.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.files_table.left_double_clicked.connect(self.on_table_left_double_clicked)
         self.files_table.right_double_clicked.connect(self.on_table_right_double_clicked)
+        self.files_table.itemSelectionChanged.connect(self.on_table_selection_changed)
         grid_layout.addWidget(self.files_table)
 
-        split_layout.addWidget(grid_container, 2)
+        batch_panel = QFrame()
+        batch_panel.setObjectName("CardPanel")
+        batch_layout = QGridLayout(batch_panel)
+        batch_layout.setContentsMargins(12, 12, 12, 12)
+        batch_layout.setHorizontalSpacing(10)
+        batch_layout.setVerticalSpacing(10)
+
+        batch_layout.addWidget(QLabel("批量标签:"), 0, 0)
+        self.batch_tags_input = QLineEdit()
+        self.batch_tags_input.setPlaceholderText("如：论文, 课程学习")
+        batch_layout.addWidget(self.batch_tags_input, 0, 1)
+        self.batch_apply_tags_btn = QPushButton("追加标签")
+        self.batch_apply_tags_btn.clicked.connect(self.apply_batch_tags)
+        batch_layout.addWidget(self.batch_apply_tags_btn, 0, 2)
+
+        batch_layout.addWidget(QLabel("移动到:"), 1, 0)
+        self.batch_target_dir = QComboBox()
+        for d in config.get_standard_dirs():
+            if d != config.get_inbox_name():
+                self.batch_target_dir.addItem(d)
+        batch_layout.addWidget(self.batch_target_dir, 1, 1)
+        self.batch_move_btn = QPushButton("批量移动")
+        self.batch_move_btn.clicked.connect(self.apply_batch_move)
+        batch_layout.addWidget(self.batch_move_btn, 1, 2)
+
+        batch_layout.addWidget(QLabel("前后缀:"), 2, 0)
+        rename_row = QHBoxLayout()
+        self.batch_prefix_input = QLineEdit()
+        self.batch_prefix_input.setPlaceholderText("前缀")
+        self.batch_suffix_input = QLineEdit()
+        self.batch_suffix_input.setPlaceholderText("后缀")
+        rename_row.addWidget(self.batch_prefix_input)
+        rename_row.addWidget(self.batch_suffix_input)
+        batch_layout.addLayout(rename_row, 2, 1)
+        self.batch_rename_btn = QPushButton("批量重命名")
+        self.batch_rename_btn.clicked.connect(self.apply_batch_rename)
+        batch_layout.addWidget(self.batch_rename_btn, 2, 2)
+
+        batch_layout.addWidget(QLabel("重复检测:"), 3, 0)
+        self.duplicate_mode_combo = QComboBox()
+        self.duplicate_mode_combo.addItems(["文件名", "大小", "哈希"])
+        batch_layout.addWidget(self.duplicate_mode_combo, 3, 1)
+        self.duplicate_check_btn = QPushButton("扫描重复")
+        self.duplicate_check_btn.clicked.connect(self.show_duplicates)
+        batch_layout.addWidget(self.duplicate_check_btn, 3, 2)
+
+        batch_layout.addWidget(QLabel("规则建议:"), 4, 0)
+        self.rule_hint_label = QLabel("选中文件后显示建议")
+        self.rule_hint_label.setWordWrap(True)
+        batch_layout.addWidget(self.rule_hint_label, 4, 1)
+        self.apply_rule_btn = QPushButton("按建议归类")
+        self.apply_rule_btn.clicked.connect(self.apply_rule_suggestion)
+        batch_layout.addWidget(self.apply_rule_btn, 4, 2)
+
+        grid_layout.addWidget(batch_panel)
+        self.main_splitter.addWidget(grid_container)
+
+        # Right: Preview Panel
+        preview_container = QFrame()
+        preview_container.setObjectName("CardPanel")
+        preview_layout = QVBoxLayout(preview_container)
+        preview_layout.setContentsMargins(10, 10, 10, 10)
+
+        self.preview_title = QLabel("预览面板")
+        self.preview_title.setObjectName("CardTitle")
+        preview_layout.addWidget(self.preview_title)
+
+        self.preview_file_label = QLabel("请选择文件")
+        self.preview_file_label.setWordWrap(True)
+        preview_layout.addWidget(self.preview_file_label)
+
+        self.preview_stack = QFrame()
+        preview_stack_layout = QVBoxLayout(self.preview_stack)
+        preview_stack_layout.setContentsMargins(0, 0, 0, 0)
+
+        self.preview_text = QTextEdit()
+        self.preview_text.setReadOnly(True)
+        preview_stack_layout.addWidget(self.preview_text)
+
+        self.preview_image = QLabel("图片预览")
+        self.preview_image.setAlignment(Qt.AlignCenter)
+        self.preview_image.setMinimumHeight(260)
+        self.preview_image.hide()
+        preview_stack_layout.addWidget(self.preview_image)
+
+        self.preview_pdf_doc = QPdfDocument(self)
+        self.preview_pdf = QPdfView()
+        self.preview_pdf.setDocument(self.preview_pdf_doc)
+        self.preview_pdf.hide()
+        preview_stack_layout.addWidget(self.preview_pdf)
+
+        preview_layout.addWidget(self.preview_stack, 1)
+
+        self.preview_open_btn = QPushButton("在系统中打开")
+        self.preview_open_btn.clicked.connect(self.open_current_preview_file)
+        preview_layout.addWidget(self.preview_open_btn)
+
+        self.main_splitter.addWidget(preview_container)
+        self.main_splitter.setStretchFactor(0, 2)
+        self.main_splitter.setStretchFactor(1, 4)
+        self.main_splitter.setStretchFactor(2, 3)
+
+        split_layout.addWidget(self.main_splitter)
         main_layout.addLayout(split_layout)
 
         # Populate
@@ -686,6 +797,153 @@ class WorkspaceView(QWidget):
         self.dir_tree.clearSelection()
         
         self.run_search()
+
+    def get_selected_rel_paths(self):
+        rows = sorted({index.row() for index in self.files_table.selectionModel().selectedRows()})
+        rel_paths = []
+        for row in rows:
+            item = self.files_table.item(row, 0)
+            if item:
+                rel = item.data(Qt.UserRole)
+                if rel:
+                    rel_paths.append(rel)
+        return rel_paths
+
+    def on_table_selection_changed(self):
+        selected = self.get_selected_rel_paths()
+        if not selected:
+            self.preview_file_label.setText("请选择文件")
+            self.preview_text.clear()
+            self.preview_image.hide()
+            self.preview_pdf.hide()
+            self.rule_hint_label.setText("选中文件后显示建议")
+            self.current_preview_rel_path = ""
+            return
+
+        first_rel = selected[0]
+        self.current_preview_rel_path = first_rel
+        self.load_preview(first_rel)
+
+        if len(selected) == 1:
+            suggestion_name, suggestion_dir = FileManager.suggest_rule_target(Path(first_rel).name)
+            if suggestion_dir:
+                self.rule_hint_label.setText(f"{suggestion_name}: 建议移动到 {suggestion_dir}")
+            else:
+                self.rule_hint_label.setText("当前没有匹配到规则建议")
+        else:
+            self.rule_hint_label.setText(f"已选择 {len(selected)} 个文件，可执行批量操作")
+
+    def load_preview(self, rel_path):
+        ws_root = Path(config.workspace_dir)
+        abs_path = ws_root / rel_path
+        self.preview_file_label.setText(f"{abs_path.name}\n{rel_path}")
+        self.preview_text.show()
+        self.preview_image.hide()
+        self.preview_pdf.hide()
+        self.preview_text.clear()
+
+        if not abs_path.exists():
+            self.preview_text.setPlainText("文件不存在。")
+            return
+
+        ext = abs_path.suffix.lower()
+        if ext in [".md", ".txt", ".py", ".json", ".csv"]:
+            try:
+                self.preview_text.setPlainText(abs_path.read_text(encoding="utf-8")[:4000])
+            except UnicodeDecodeError:
+                self.preview_text.setPlainText(abs_path.read_text(encoding="gbk", errors="ignore")[:4000])
+        elif ext in [".png", ".jpg", ".jpeg"]:
+            pixmap = QPixmap(str(abs_path))
+            if not pixmap.isNull():
+                self.preview_text.hide()
+                self.preview_image.setPixmap(pixmap.scaled(420, 320, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+                self.preview_image.show()
+            else:
+                self.preview_text.setPlainText("无法加载图片预览。")
+        elif ext == ".pdf":
+            self.preview_text.hide()
+            self.preview_pdf_doc.load(str(abs_path))
+            self.preview_pdf.show()
+        elif ext == ".docx":
+            self.preview_text.setPlainText("DOCX 预览暂以系统打开方式支持。\n点击下方按钮可在默认程序中打开。")
+        else:
+            self.preview_text.setPlainText("暂不支持该格式的内嵌预览，可点击下方按钮在系统中打开。")
+
+    def open_current_preview_file(self):
+        if not self.current_preview_rel_path:
+            return
+        ws_root = Path(config.workspace_dir)
+        abs_path = ws_root / self.current_preview_rel_path
+        if abs_path.exists():
+            QDesktopServices.openUrl(QUrl.fromLocalFile(str(abs_path)))
+
+    def apply_batch_tags(self):
+        rel_paths = self.get_selected_rel_paths()
+        if not rel_paths:
+            QMessageBox.information(self, "提示", "请先选择至少一个文件。")
+            return
+        raw = self.batch_tags_input.text().strip()
+        tags = [normalize_tag(tag.strip()) for tag in raw.replace(";", ",").split(",") if tag.strip()]
+        if not tags:
+            QMessageBox.information(self, "提示", "请输入要追加的标签。")
+            return
+        FileManager.bulk_update_tags(rel_paths, tags, mode="append")
+        self.run_search()
+        self.refresh_other_views_signal.emit()
+
+    def apply_batch_move(self):
+        rel_paths = self.get_selected_rel_paths()
+        if not rel_paths:
+            QMessageBox.information(self, "提示", "请先选择至少一个文件。")
+            return
+        target_dir = self.batch_target_dir.currentText().strip()
+        moved = FileManager.bulk_move_files(rel_paths, target_dir)
+        QMessageBox.information(self, "完成", f"已批量移动 {len(moved)} 个文件。")
+        self.run_search()
+        self.refresh_other_views_signal.emit()
+
+    def apply_batch_rename(self):
+        rel_paths = self.get_selected_rel_paths()
+        if not rel_paths:
+            QMessageBox.information(self, "提示", "请先选择至少一个文件。")
+            return
+        renamed = FileManager.bulk_rename_files(
+            rel_paths,
+            prefix=self.batch_prefix_input.text().strip(),
+            suffix=self.batch_suffix_input.text().strip()
+        )
+        QMessageBox.information(self, "完成", f"已批量重命名 {len(renamed)} 个文件。")
+        self.run_search()
+        self.refresh_other_views_signal.emit()
+
+    def show_duplicates(self):
+        modes = {"文件名": "filename", "大小": "size", "哈希": "hash"}
+        mode = modes[self.duplicate_mode_combo.currentText()]
+        duplicates = FileManager.find_duplicates(mode=mode)
+        if not duplicates:
+            QMessageBox.information(self, "重复检测", "未发现重复文件。")
+            return
+        lines = []
+        for _, records in list(duplicates.items())[:20]:
+            lines.append(" / ".join(r["filepath"] for r in records))
+        QMessageBox.information(self, "重复检测", "发现重复文件：\n\n" + "\n".join(lines))
+
+    def apply_rule_suggestion(self):
+        rel_paths = self.get_selected_rel_paths()
+        if not rel_paths:
+            QMessageBox.information(self, "提示", "请先选择文件。")
+            return
+
+        moved_count = 0
+        for rel_path in rel_paths:
+            suggestion_name, suggestion_dir = FileManager.suggest_rule_target(Path(rel_path).name)
+            if suggestion_dir:
+                FileManager.bulk_move_files([rel_path], suggestion_dir)
+                moved_count += 1
+
+        QMessageBox.information(self, "规则归类", f"已按规则建议处理 {moved_count} 个文件。")
+        self.run_search()
+        self.refresh_other_views_signal.emit()
 
     def create_new_file(self):
         dialog = CreateFileDialog(self.current_folder_rel, self)

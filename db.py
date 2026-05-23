@@ -1,4 +1,5 @@
 import sqlite3
+import datetime
 from pathlib import Path
 from config import config
 
@@ -160,6 +161,30 @@ class DatabaseManager:
         cursor.execute(sql, params)
         rows = cursor.fetchall()
         return [dict(row) for row in rows]
+
+    def get_recent_files(self, days=7):
+        """Return files modified within the recent N days."""
+        conn = self.get_conn()
+        cursor = conn.cursor()
+        cutoff = datetime.datetime.now().timestamp() - days * 24 * 60 * 60
+        cursor.execute(
+            "SELECT * FROM files WHERE modified_time >= ? ORDER BY modified_time DESC",
+            (cutoff,)
+        )
+        rows = cursor.fetchall()
+        return [dict(row) for row in rows]
+
+    def get_tag_distribution(self):
+        """Return tag counts as a dict."""
+        counts = {}
+        for record in self.search_files():
+            tags = record.get("tags", "")
+            for tag in tags.split(","):
+                tag = tag.strip()
+                if not tag:
+                    continue
+                counts[tag] = counts.get(tag, 0) + 1
+        return counts
 
     def mark_as_backed_up(self, rel_paths, backup_type):
         """Mark specific files as backed up in the db."""

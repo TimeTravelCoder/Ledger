@@ -61,11 +61,13 @@ class DashboardView(QWidget):
         self.card_total_size = self.create_stat_card("存储容量", "0.00 MB", "工作空间占用的磁盘空间大小")
         self.card_unorganized = self.create_stat_card("收集箱未整理", "0", "00_Inbox 目录中等待整理的文件")
         self.card_tags_count = self.create_stat_card("使用标签数", "0", "当前已在文件上打上的标签总数")
+        self.card_recent_count = self.create_stat_card("近7天整理量", "0", "最近 7 天内更新或整理过的文件数")
 
         stats_grid.addWidget(self.card_total_files, 0, 0)
         stats_grid.addWidget(self.card_total_size, 0, 1)
         stats_grid.addWidget(self.card_unorganized, 0, 2)
         stats_grid.addWidget(self.card_tags_count, 0, 3)
+        stats_grid.addWidget(self.card_recent_count, 1, 0)
 
         main_layout.addLayout(stats_grid)
 
@@ -158,6 +160,11 @@ class DashboardView(QWidget):
         self.recent_table.setFixedHeight(180)
         recent_layout.addWidget(self.recent_table)
 
+        self.tags_summary = QLabel("标签分布: --")
+        self.tags_summary.setWordWrap(True)
+        self.tags_summary.setStyleSheet("color: #94A3B8; font-size: 11px;")
+        recent_layout.addWidget(self.tags_summary)
+
         main_layout.addWidget(recent_card)
 
         self.refresh_data()
@@ -223,12 +230,19 @@ class DashboardView(QWidget):
                     if t.strip():
                         unique_tags.add(t.strip())
         tags_count = len(unique_tags)
+        recent_files = db.get_recent_files(days=7)
+        recent_count = len(recent_files)
+        tag_distribution = db.get_tag_distribution()
+        top_tags = sorted(tag_distribution.items(), key=lambda item: item[1], reverse=True)[:5]
+        tag_summary_text = "、".join(f"{tag}({count})" for tag, count in top_tags) if top_tags else "--"
 
         # Update card values
         self.card_total_files.value_label.setText(str(total_count))
         self.card_total_size.value_label.setText(size_str)
         self.card_unorganized.value_label.setText(str(inbox_count))
         self.card_tags_count.value_label.setText(str(tags_count))
+        self.card_recent_count.value_label.setText(str(recent_count))
+        self.tags_summary.setText(f"标签分布: {tag_summary_text}")
 
         # 3. Check Desktop Cleanliness
         desktop_files = FileManager.scan_desktop_files()

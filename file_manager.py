@@ -1,6 +1,7 @@
 import os
 import shutil
 import datetime
+import hashlib
 from pathlib import Path
 from config import config
 from db import db
@@ -18,6 +19,13 @@ PROJECT_SUBDIRS = [
 ]
 
 BANNED_KEYWORDS = ["最终版", "最终版2", "最新最终版", "新建文档", "新建文本文档", "新建文件夹", "最终修改版", "最最新版"]
+
+AUTO_RULES = [
+    {"name": "论文文档", "keywords": ["paper", "论文", "arxiv"], "extensions": [".pdf"], "target_prefix": "05"},
+    {"name": "演示文稿", "keywords": ["ppt", "presentation", "汇报"], "extensions": [".ppt", ".pptx"], "target_prefix": "08"},
+    {"name": "代码文件", "keywords": ["code", "script"], "extensions": [".py", ".js", ".ts", ".cpp", ".java"], "target_prefix": "04"},
+    {"name": "图片素材", "keywords": ["image", "photo", "截图"], "extensions": [".png", ".jpg", ".jpeg"], "target_prefix": "07"},
+]
 
 class FileManager:
     @staticmethod
@@ -357,3 +365,101 @@ class FileManager:
         
         size_mb = copied_bytes_count / (1024 * 1024)
         return True, f"备份成功！同步了 {copied_files_count} 个文件 ({size_mb:.2f} MB)。"
+
+    @staticmethod
+    def calculate_file_hash(file_path, chunk_size=1024 * 1024):
+        """Calculate SHA256 for duplicate detection."""
+        file_path = Path(file_path)
+        hasher = hashlib.sha256()
+        with open(file_path, "rb") as f:
+            while True:
+                chunk = f.read(chunk_size)
+                if not chunk:
+                    break
+                hasher.update(chunk)
+        return hasher.hexdigest()
+
+    @staticmethod
+    def find_duplicates(mode="filename"):
+        """Find duplicate files by filename, size, or hash."""
+        ws_root = Path(config.workspace_dir)
+        records = db.search_files()
+        grouped = {}
+
+        for record in records:
+            abs_path = ws_root / record["filepath"]
+            if not abs_path.exists():
+                continue
+
+            if mode == "filename":
+                key = record["filename"].lower()
+            elif mode == "size":
+                key = record["file_size"]
+            else:
+                try:
+                    key = FileManager.calculate_file_hash(abs_path)
+                except Exception:
+                    continue
+
+            grouped.setdefault(key, []).append(record)
+
+        return {k: v for k, v in grouped.items() if len(v) > 1}
+
+    @staticmethod
+    def suggest_rule_target(filename):
+        """Suggest a target directory by keyword and extension."""
+        lower_name = filename.lower()
+        ext = Path(filename).suffix.lower()
+
+        for rule in AUTO_RULES:
+            if ext in rule["extensions"] or any(keyword in lower_name for keyword in rule["keywords"]):
+                for directory in config.get_standard_dirs():
+                    if directory.startswith(rule["target_prefix"]):
+                        return rule["name"], directory
+        return None, None
+
+    @staticmethod
+    def bulk_update_tags(rel_paths, tags_list, mode="replace"):
+        """Bulk update tags for multiple records."""
+        for rel_path in rel_paths:
+            info = db.get_file_info(rel_path)
+            if not info:
+                continue
+            current = [t.strip() for t in info.get("tags", "").split(",") if t.strip()]
+            if mode == "append":
+                merged = current[:]
+                for tag in tags_list:
+                    if tag not in merged:
+                        merged.append(tag)
+                db.update_file_tags(rel_path, merged)
+            else:
+                db.update_file_tags(rel_path, tags_list)
+
+    @staticmethod
+    def bulk_move_files(rel_paths, target_dir, subfolder=""):
+        """Bulk move files into a target directory."""
+        ws_root = Path(config.workspace_dir)
+        moved = []
+        subfolder = subfolder.strip().replace("\\", "/").strip("/")
+        for rel_path in rel_paths:
+            src_abs = ws_root / rel_path
+            if not src_abs.exists():
+                continue
+            new_rel = f"{target_dir}/{subfolder}/{src_abs.name}" if subfolder else f"{target_dir}/{src_abs.name}"
+            final_rel = FileManager.organize_file(str(src_abs), new_rel, src_abs.name)
+            moved.append(final_rel)
+        return moved
+
+    @staticmethod
+    def bulk_rename_files(rel_paths, prefix="", suffix=""):
+        """Bulk rename files by adding prefix and suffix to stem."""
+        ws_root = Path(config.workspace_dir)
+        renamed = []
+        for rel_path in rel_paths:
+            src_abs = ws_root / rel_path
+            if not src_abs.exists():
+                continue
+            new_name = f"{prefix}{src_abs.stem}{suffix}{src_abs.suffix}"
+            final_rel = FileManager.organize_file(str(src_abs), rel_path, new_name)
+            renamed.append(final_rel)
+        return renamed
