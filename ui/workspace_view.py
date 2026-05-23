@@ -10,7 +10,7 @@ from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QTreeView,
                              QFileSystemModel, QDialog, QCheckBox, QTextEdit, 
                              QMessageBox, QComboBox, QGridLayout, QInputDialog,
                              QListWidget, QListWidgetItem, QSplitter, QAbstractItemView,
-                             QTabWidget)
+                             QTabWidget, QSizePolicy)
 from PySide6.QtCore import Qt, QModelIndex, Signal, QDir, QUrl
 from PySide6.QtGui import QDesktopServices, QPixmap
 from PySide6.QtPdf import QPdfDocument
@@ -380,6 +380,8 @@ class WorkspaceView(QWidget):
         # ── Toolbar Panel ─────────────────────────────────────────────────────
         top_panel = QFrame()
         top_panel.setObjectName("CardPanel")
+        top_panel.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Maximum)
+        top_panel.setMaximumHeight(210)
         top_vbox = QVBoxLayout(top_panel)
         top_vbox.setContentsMargins(14, 10, 14, 8)
         top_vbox.setSpacing(6)
@@ -727,8 +729,8 @@ class WorkspaceView(QWidget):
 
         split_layout.addWidget(self.main_splitter)
         main_layout.addLayout(split_layout)
-        main_layout.setStretch(0, 1)
-        main_layout.setStretch(1, 4)
+        main_layout.setStretch(0, 0)
+        main_layout.setStretch(1, 1)
 
         # Populate
         self.setup_models()
