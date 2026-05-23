@@ -8,7 +8,8 @@ from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QTreeView,
                              QLabel, QLineEdit, QPushButton, QFrame, 
                              QFileSystemModel, QDialog, QCheckBox, QTextEdit, 
                              QMessageBox, QComboBox, QGridLayout, QInputDialog,
-                             QListWidget, QListWidgetItem, QSplitter, QAbstractItemView)
+                             QListWidget, QListWidgetItem, QSplitter, QAbstractItemView,
+                             QTabWidget)
 from PySide6.QtCore import Qt, QModelIndex, Signal, QDir, QUrl
 from PySide6.QtGui import QDesktopServices, QPixmap
 from PySide6.QtPdf import QPdfDocument
@@ -623,25 +624,29 @@ class WorkspaceView(QWidget):
         batch_layout.setHorizontalSpacing(10)
         batch_layout.setVerticalSpacing(10)
 
-        batch_layout.addWidget(QLabel("批量标签:"), 0, 0)
+        self.selection_status_label = QLabel("当前未选择文件")
+        self.selection_status_label.setWordWrap(True)
+        batch_layout.addWidget(self.selection_status_label, 0, 0, 1, 3)
+
+        batch_layout.addWidget(QLabel("批量标签:"), 1, 0)
         self.batch_tags_input = QLineEdit()
         self.batch_tags_input.setPlaceholderText("如：论文, 课程学习")
-        batch_layout.addWidget(self.batch_tags_input, 0, 1)
+        batch_layout.addWidget(self.batch_tags_input, 1, 1)
         self.batch_apply_tags_btn = QPushButton("追加标签")
         self.batch_apply_tags_btn.clicked.connect(self.apply_batch_tags)
-        batch_layout.addWidget(self.batch_apply_tags_btn, 0, 2)
+        batch_layout.addWidget(self.batch_apply_tags_btn, 1, 2)
 
-        batch_layout.addWidget(QLabel("移动到:"), 1, 0)
+        batch_layout.addWidget(QLabel("移动到:"), 2, 0)
         self.batch_target_dir = QComboBox()
         for d in config.get_standard_dirs():
             if d != config.get_inbox_name():
                 self.batch_target_dir.addItem(d)
-        batch_layout.addWidget(self.batch_target_dir, 1, 1)
+        batch_layout.addWidget(self.batch_target_dir, 2, 1)
         self.batch_move_btn = QPushButton("批量移动")
         self.batch_move_btn.clicked.connect(self.apply_batch_move)
-        batch_layout.addWidget(self.batch_move_btn, 1, 2)
+        batch_layout.addWidget(self.batch_move_btn, 2, 2)
 
-        batch_layout.addWidget(QLabel("前后缀:"), 2, 0)
+        batch_layout.addWidget(QLabel("前后缀:"), 3, 0)
         rename_row = QHBoxLayout()
         self.batch_prefix_input = QLineEdit()
         self.batch_prefix_input.setPlaceholderText("前缀")
@@ -649,26 +654,26 @@ class WorkspaceView(QWidget):
         self.batch_suffix_input.setPlaceholderText("后缀")
         rename_row.addWidget(self.batch_prefix_input)
         rename_row.addWidget(self.batch_suffix_input)
-        batch_layout.addLayout(rename_row, 2, 1)
+        batch_layout.addLayout(rename_row, 3, 1)
         self.batch_rename_btn = QPushButton("批量重命名")
         self.batch_rename_btn.clicked.connect(self.apply_batch_rename)
-        batch_layout.addWidget(self.batch_rename_btn, 2, 2)
+        batch_layout.addWidget(self.batch_rename_btn, 3, 2)
 
-        batch_layout.addWidget(QLabel("重复检测:"), 3, 0)
+        batch_layout.addWidget(QLabel("重复检测:"), 4, 0)
         self.duplicate_mode_combo = QComboBox()
         self.duplicate_mode_combo.addItems(["文件名", "大小", "哈希"])
-        batch_layout.addWidget(self.duplicate_mode_combo, 3, 1)
+        batch_layout.addWidget(self.duplicate_mode_combo, 4, 1)
         self.duplicate_check_btn = QPushButton("扫描重复")
         self.duplicate_check_btn.clicked.connect(self.show_duplicates)
-        batch_layout.addWidget(self.duplicate_check_btn, 3, 2)
+        batch_layout.addWidget(self.duplicate_check_btn, 4, 2)
 
-        batch_layout.addWidget(QLabel("规则建议:"), 4, 0)
+        batch_layout.addWidget(QLabel("规则建议:"), 5, 0)
         self.rule_hint_label = QLabel("选中文件后显示建议")
         self.rule_hint_label.setWordWrap(True)
-        batch_layout.addWidget(self.rule_hint_label, 4, 1)
+        batch_layout.addWidget(self.rule_hint_label, 5, 1)
         self.apply_rule_btn = QPushButton("按建议归类")
         self.apply_rule_btn.clicked.connect(self.apply_rule_suggestion)
-        batch_layout.addWidget(self.apply_rule_btn, 4, 2)
+        batch_layout.addWidget(self.apply_rule_btn, 5, 2)
 
         grid_layout.addWidget(batch_panel)
         self.main_splitter.addWidget(grid_container)
@@ -687,10 +692,12 @@ class WorkspaceView(QWidget):
         self.preview_file_label.setWordWrap(True)
         preview_layout.addWidget(self.preview_file_label)
 
+        self.preview_tabs = QTabWidget()
+        preview_layout.addWidget(self.preview_tabs, 1)
+
         self.preview_stack = QFrame()
         preview_stack_layout = QVBoxLayout(self.preview_stack)
         preview_stack_layout.setContentsMargins(0, 0, 0, 0)
-
         self.preview_text = QTextEdit()
         self.preview_text.setReadOnly(True)
         preview_stack_layout.addWidget(self.preview_text)
@@ -706,8 +713,11 @@ class WorkspaceView(QWidget):
         self.preview_pdf.setDocument(self.preview_pdf_doc)
         self.preview_pdf.hide()
         preview_stack_layout.addWidget(self.preview_pdf)
+        self.preview_tabs.addTab(self.preview_stack, "文件预览")
 
-        preview_layout.addWidget(self.preview_stack, 1)
+        self.duplicates_list = QListWidget()
+        self.duplicates_list.itemDoubleClicked.connect(self.on_duplicate_item_double_clicked)
+        self.preview_tabs.addTab(self.duplicates_list, "重复检测")
 
         self.preview_open_btn = QPushButton("在系统中打开")
         self.preview_open_btn.clicked.connect(self.open_current_preview_file)
@@ -817,12 +827,14 @@ class WorkspaceView(QWidget):
             self.preview_image.hide()
             self.preview_pdf.hide()
             self.rule_hint_label.setText("选中文件后显示建议")
+            self.selection_status_label.setText("当前未选择文件")
             self.current_preview_rel_path = ""
             return
 
         first_rel = selected[0]
         self.current_preview_rel_path = first_rel
         self.load_preview(first_rel)
+        self.selection_status_label.setText(f"当前已选择 {len(selected)} 个文件")
 
         if len(selected) == 1:
             suggestion_name, suggestion_dir = FileManager.suggest_rule_target(Path(first_rel).name)
@@ -890,6 +902,7 @@ class WorkspaceView(QWidget):
         FileManager.bulk_update_tags(rel_paths, tags, mode="append")
         self.run_search()
         self.refresh_other_views_signal.emit()
+        QMessageBox.information(self, "完成", f"已为 {len(rel_paths)} 个文件追加标签。")
 
     def apply_batch_move(self):
         rel_paths = self.get_selected_rel_paths()
@@ -898,7 +911,8 @@ class WorkspaceView(QWidget):
             return
         target_dir = self.batch_target_dir.currentText().strip()
         moved = FileManager.bulk_move_files(rel_paths, target_dir)
-        QMessageBox.information(self, "完成", f"已批量移动 {len(moved)} 个文件。")
+        self.selection_status_label.setText(f"批量移动完成，共 {len(moved)} 个文件。")
+        QMessageBox.information(self, "完成", f"已批量移动 {len(moved)} 个文件到 {target_dir}。")
         self.run_search()
         self.refresh_other_views_signal.emit()
 
@@ -912,6 +926,7 @@ class WorkspaceView(QWidget):
             prefix=self.batch_prefix_input.text().strip(),
             suffix=self.batch_suffix_input.text().strip()
         )
+        self.selection_status_label.setText(f"批量重命名完成，共 {len(renamed)} 个文件。")
         QMessageBox.information(self, "完成", f"已批量重命名 {len(renamed)} 个文件。")
         self.run_search()
         self.refresh_other_views_signal.emit()
@@ -921,12 +936,20 @@ class WorkspaceView(QWidget):
         mode = modes[self.duplicate_mode_combo.currentText()]
         duplicates = FileManager.find_duplicates(mode=mode)
         if not duplicates:
+            self.duplicates_list.clear()
             QMessageBox.information(self, "重复检测", "未发现重复文件。")
             return
-        lines = []
-        for _, records in list(duplicates.items())[:20]:
-            lines.append(" / ".join(r["filepath"] for r in records))
-        QMessageBox.information(self, "重复检测", "发现重复文件：\n\n" + "\n".join(lines))
+        self.duplicates_list.clear()
+        for group_key, records in duplicates.items():
+            header = QListWidgetItem(f"重复组: {group_key} ({len(records)} 个)")
+            header.setFlags(Qt.NoItemFlags)
+            self.duplicates_list.addItem(header)
+            for record in records:
+                item = QListWidgetItem(f"  {record['filepath']}")
+                item.setData(Qt.UserRole, record["filepath"])
+                self.duplicates_list.addItem(item)
+        self.preview_tabs.setCurrentWidget(self.duplicates_list)
+        self.selection_status_label.setText(f"发现 {len(duplicates)} 组重复文件。")
 
     def apply_rule_suggestion(self):
         rel_paths = self.get_selected_rel_paths()
@@ -944,6 +967,14 @@ class WorkspaceView(QWidget):
         QMessageBox.information(self, "规则归类", f"已按规则建议处理 {moved_count} 个文件。")
         self.run_search()
         self.refresh_other_views_signal.emit()
+
+    def on_duplicate_item_double_clicked(self, item):
+        rel_path = item.data(Qt.UserRole)
+        if not rel_path:
+            return
+        self.current_preview_rel_path = rel_path
+        self.load_preview(rel_path)
+        self.preview_tabs.setCurrentWidget(self.preview_stack)
 
     def create_new_file(self):
         dialog = CreateFileDialog(self.current_folder_rel, self)
