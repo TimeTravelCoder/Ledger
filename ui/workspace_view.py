@@ -375,18 +375,18 @@ class WorkspaceView(QWidget):
     def init_ui(self):
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(0, 0, 0, 0)
-        main_layout.setSpacing(10)
+        main_layout.setSpacing(8)
 
         # ── Toolbar Panel ─────────────────────────────────────────────────────
         top_panel = QFrame()
         top_panel.setObjectName("CardPanel")
         top_vbox = QVBoxLayout(top_panel)
-        top_vbox.setContentsMargins(16, 12, 16, 10)
-        top_vbox.setSpacing(8)
+        top_vbox.setContentsMargins(14, 10, 14, 8)
+        top_vbox.setSpacing(6)
 
         # ── Row 1: Search + Status + Reset ────────────────────────────────────
         row1 = QHBoxLayout()
-        row1.setSpacing(8)
+        row1.setSpacing(6)
 
         # Search icon + input wrapper
         search_wrapper = QFrame()
@@ -411,7 +411,7 @@ class WorkspaceView(QWidget):
         """)
         self.search_input.textChanged.connect(self.run_search)
         search_inner.addWidget(self.search_input, 1)
-        search_wrapper.setFixedHeight(44)
+        search_wrapper.setFixedHeight(40)
         row1.addWidget(search_wrapper, 1)
 
         # Status combo
@@ -419,7 +419,7 @@ class WorkspaceView(QWidget):
         status_lbl.setStyleSheet("color: #94A3B8; font-size: 13px; font-weight: 500;")
         row1.addWidget(status_lbl)
         self.status_combo = QComboBox()
-        self.status_combo.setFixedHeight(34)
+        self.status_combo.setFixedHeight(32)
         self.status_combo.setMinimumWidth(110)
         self.refresh_status_combo()
         self.status_combo.currentIndexChanged.connect(self.run_search)
@@ -431,7 +431,7 @@ class WorkspaceView(QWidget):
 
         # Reset button
         self.reset_search_btn = QPushButton("↺  重置筛选")
-        self.reset_search_btn.setFixedHeight(34)
+        self.reset_search_btn.setFixedHeight(32)
         self.reset_search_btn.setStyleSheet("""
             QPushButton {
                 background: transparent;
@@ -454,17 +454,18 @@ class WorkspaceView(QWidget):
 
         # ── Divider ────────────────────────────────────────────────────────────
         hdiv1 = QFrame(); hdiv1.setFrameShape(QFrame.HLine)
+        hdiv1.setFixedHeight(1)
         hdiv1.setStyleSheet("color: #1E293B;"); top_vbox.addWidget(hdiv1)
 
         # ── Row 2: Large action buttons (centered) ────────────────────────────
         row2 = QHBoxLayout()
-        row2.setSpacing(12)
+        row2.setSpacing(10)
         row2.setContentsMargins(0, 0, 0, 0)
         row2.addStretch()
 
         self.create_file_btn = QPushButton("📄   新建文件")
-        self.create_file_btn.setFixedHeight(40)
-        self.create_file_btn.setMinimumWidth(160)
+        self.create_file_btn.setFixedHeight(38)
+        self.create_file_btn.setMinimumWidth(150)
         self.create_file_btn.setStyleSheet("""
             QPushButton {
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
@@ -489,8 +490,8 @@ class WorkspaceView(QWidget):
         row2.addWidget(self.create_file_btn)
 
         self.create_folder_btn = QPushButton("📁   新建文件夹")
-        self.create_folder_btn.setFixedHeight(40)
-        self.create_folder_btn.setMinimumWidth(160)
+        self.create_folder_btn.setFixedHeight(38)
+        self.create_folder_btn.setMinimumWidth(150)
         self.create_folder_btn.setStyleSheet("""
             QPushButton {
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
@@ -519,11 +520,12 @@ class WorkspaceView(QWidget):
 
         # ── Divider ────────────────────────────────────────────────────────────
         hdiv2 = QFrame(); hdiv2.setFrameShape(QFrame.HLine)
+        hdiv2.setFixedHeight(1)
         hdiv2.setStyleSheet("color: #1E293B;"); top_vbox.addWidget(hdiv2)
 
         # ── Row 3: Tag chips (scrollable) ─────────────────────────────────────
         row3 = QHBoxLayout()
-        row3.setSpacing(8)
+        row3.setSpacing(6)
         row3.setContentsMargins(0, 0, 0, 0)
 
         tag_lbl = QLabel("标签筛选")
@@ -539,7 +541,7 @@ class WorkspaceView(QWidget):
         self._tag_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         self._tag_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self._tag_scroll.setWidgetResizable(True)
-        self._tag_scroll.setFixedHeight(30)
+        self._tag_scroll.setFixedHeight(28)
         self._tag_scroll.setStyleSheet("""
             QScrollArea { background: transparent; border: none; }
             QScrollBar:horizontal {
@@ -572,8 +574,9 @@ class WorkspaceView(QWidget):
 
         # 2. Main Content Split View (Left Tree, Center Table, Right Preview)
         split_layout = QHBoxLayout()
-        split_layout.setSpacing(10)
+        split_layout.setSpacing(8)
         self.main_splitter = QSplitter(Qt.Horizontal)
+        self.main_splitter.setHandleWidth(4)
 
         # Left: Directory Tree
         tree_container = QFrame()
@@ -716,16 +719,16 @@ class WorkspaceView(QWidget):
         self.preview_open_btn.clicked.connect(self.open_current_preview_file)
         preview_layout.addWidget(self.preview_open_btn)
 
-        self.main_splitter.setSizes([260, 780, 420])
-
         self.main_splitter.addWidget(preview_container)
         self.main_splitter.setStretchFactor(0, 2)
-        self.main_splitter.setStretchFactor(1, 4)
-        self.main_splitter.setStretchFactor(2, 3)
+        self.main_splitter.setStretchFactor(1, 5)
+        self.main_splitter.setStretchFactor(2, 4)
         self.main_splitter.setChildrenCollapsible(False)
 
         split_layout.addWidget(self.main_splitter)
         main_layout.addLayout(split_layout)
+        main_layout.setStretch(0, 1)
+        main_layout.setStretch(1, 4)
 
         # Populate
         self.setup_models()
