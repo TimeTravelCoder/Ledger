@@ -52,7 +52,7 @@ class BackupView(QWidget):
         guide_layout.setSpacing(6)
 
         g_title = QLabel("💡 什么是 3-2-1 备份原则？")
-        g_title.setStyleSheet("font-size: 14px; font-weight: bold; color: #6366F1;")
+        g_title.setStyleSheet("font-size: 14px; font-weight: bold; color: #4A6FA6;")
         guide_layout.addWidget(g_title)
 
         g_desc = QLabel(
@@ -62,7 +62,7 @@ class BackupView(QWidget):
             "• <b>1 份异地</b>: 至少1份备份托管在异地或云端（例如利用 OneDrive/Google Drive 目录同步）。"
         )
         g_desc.setTextFormat(Qt.RichText)
-        g_desc.setStyleSheet("color: #94A3B8; font-size: 12px; line-height: 1.6;")
+        g_desc.setStyleSheet("color: #85B3CB; font-size: 12px; line-height: 1.6;")
         g_desc.setWordWrap(True)
         guide_layout.addWidget(g_desc)
         main_layout.addWidget(guide_card)

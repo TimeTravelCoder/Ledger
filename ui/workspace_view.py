@@ -44,7 +44,7 @@ class CreateFileDialog(QDialog):
 
         # Title Label
         title_lbl = QLabel("📂 新建工作空间文档")
-        title_lbl.setStyleSheet("font-size: 16px; font-weight: bold; color: #6366F1; margin-bottom: 5px;")
+        title_lbl.setStyleSheet("font-size: 16px; font-weight: bold; color: #4A6FA6; margin-bottom: 5px;")
         layout.addWidget(title_lbl)
 
         # 1. Target Directory display
@@ -225,13 +225,13 @@ class CreateFolderDialog(QDialog):
         # ── Title ──────────────────────────────────────────────────────────
         title_lbl = QLabel("📁 在工作空间中新建文件夹")
         title_lbl.setStyleSheet(
-            "font-size: 16px; font-weight: bold; color: #6366F1; margin-bottom: 4px;"
+            "font-size: 16px; font-weight: bold; color: #4A6FA6; margin-bottom: 4px;"
         )
         layout.addWidget(title_lbl)
 
         sep = QFrame()
         sep.setFrameShape(QFrame.HLine)
-        sep.setStyleSheet("color: #334155;")
+        sep.setStyleSheet("color: #4A6FA6;")
         layout.addWidget(sep)
 
         # ── Form grid ──────────────────────────────────────────────────────
@@ -288,7 +288,7 @@ class CreateFolderDialog(QDialog):
 
         # ── Depth hint label ───────────────────────────────────────────────
         self.hint_lbl = QLabel("📏 最终路径预览: —")
-        self.hint_lbl.setStyleSheet("color: #94A3B8; font-size: 12px; padding-left: 4px;")
+        self.hint_lbl.setStyleSheet("color: #85B3CB; font-size: 12px; padding-left: 4px;")
         layout.addWidget(self.hint_lbl)
 
         # Connect live preview
@@ -327,7 +327,7 @@ class CreateFolderDialog(QDialog):
             self.hint_lbl.setText("📏 最终路径预览: —")
             return
         depth = len([p for p in rel.split("/") if p])
-        color = "#F97316" if depth > 4 else "#34D399"
+        color = "#618EA5" if depth > 4 else "#85B3CB"
         self.hint_lbl.setText(
             f"📏 最终路径: <b style='color:{color};'>{rel}</b>  "
             f"<span style='color:{color};'>(深度 {depth}/4 层)</span>"
@@ -383,8 +383,8 @@ class WorkspaceView(QWidget):
         search_wrapper = QFrame()
         search_wrapper.setStyleSheet("""
             QFrame {
-                background-color: #0F172A;
-                border: 1.5px solid #334155;
+                background-color: #22495C;
+                border: 1.5px solid #4A6FA6;
                 border-radius: 10px;
             }
         """)
@@ -398,7 +398,7 @@ class WorkspaceView(QWidget):
         self.search_input.setPlaceholderText("搜索文件名、备注关键词...")
         self.search_input.setFixedHeight(38)
         self.search_input.setStyleSheet("""
-            QLineEdit { background: transparent; border: none; font-size: 14px; color: #F8FAFC; }
+            QLineEdit { background: transparent; border: none; font-size: 14px; color: #D1FFFF; }
         """)
         self.search_input.textChanged.connect(self.run_search)
         search_inner.addWidget(self.search_input, 1)
@@ -407,7 +407,7 @@ class WorkspaceView(QWidget):
 
         # Status combo
         status_lbl = QLabel("状态筛选")
-        status_lbl.setStyleSheet("color: #94A3B8; font-size: 13px; font-weight: 500;")
+        status_lbl.setStyleSheet("color: #85B3CB; font-size: 13px; font-weight: 500;")
         row1.addWidget(status_lbl)
         self.status_combo = QComboBox()
         self.status_combo.setFixedHeight(42)
@@ -418,7 +418,7 @@ class WorkspaceView(QWidget):
 
         # Divider
         sep1 = QFrame(); sep1.setFrameShape(QFrame.VLine)
-        sep1.setStyleSheet("color: #2D3748;"); row1.addWidget(sep1)
+        sep1.setStyleSheet("color: #4A6FA6;"); row1.addWidget(sep1)
 
         # Reset button
         self.reset_search_btn = QPushButton("↺  重置筛选")
@@ -426,17 +426,17 @@ class WorkspaceView(QWidget):
         self.reset_search_btn.setStyleSheet("""
             QPushButton {
                 background: transparent;
-                border: 1.5px solid #334155;
+                border: 1.5px solid #4A6FA6;
                 border-radius: 10px;
                 padding: 0 18px;
-                color: #94A3B8;
+                color: #85B3CB;
                 font-size: 13px;
                 font-weight: 500;
             }
             QPushButton:hover {
-                border-color: #6366F1;
-                color: #C7D2FE;
-                background: rgba(99,102,241,0.08);
+                border-color: #4A6FA6;
+                color: #D1FFFF;
+                background: rgba(74,111,166,0.12);
             }
         """)
         self.reset_search_btn.clicked.connect(self.reset_filters)
@@ -445,7 +445,7 @@ class WorkspaceView(QWidget):
 
         # ── Divider ────────────────────────────────────────────────────────────
         hdiv1 = QFrame(); hdiv1.setFrameShape(QFrame.HLine)
-        hdiv1.setStyleSheet("color: #1E293B;"); top_vbox.addWidget(hdiv1)
+        hdiv1.setStyleSheet("color: #2E5A6F;"); top_vbox.addWidget(hdiv1)
 
         # ── Row 2: Large action buttons (centered) ────────────────────────────
         row2 = QHBoxLayout()
@@ -459,7 +459,7 @@ class WorkspaceView(QWidget):
         self.create_file_btn.setStyleSheet("""
             QPushButton {
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
-                    stop:0 #818CF8, stop:0.5 #6366F1, stop:1 #4F46E5);
+                    stop:0 #AAD9F2, stop:0.5 #85B3CB, stop:1 #4A6FA6);
                 border: none;
                 border-radius: 12px;
                 padding: 0 28px;
@@ -470,10 +470,10 @@ class WorkspaceView(QWidget):
             }
             QPushButton:hover {
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
-                    stop:0 #A5B4FC, stop:0.5 #818CF8, stop:1 #6366F1);
+                    stop:0 #D1FFFF, stop:0.5 #AAD9F2, stop:1 #85B3CB);
             }
             QPushButton:pressed {
-                background: #4338CA;
+                background: #618EA5;
             }
         """)
         self.create_file_btn.clicked.connect(self.create_new_file)
@@ -485,7 +485,7 @@ class WorkspaceView(QWidget):
         self.create_folder_btn.setStyleSheet("""
             QPushButton {
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
-                    stop:0 #38BDF8, stop:0.5 #0EA5E9, stop:1 #0284C7);
+                    stop:0 #AEEBFF, stop:0.5 #AAD9F2, stop:1 #4A6FA6);
                 border: none;
                 border-radius: 12px;
                 padding: 0 28px;
@@ -496,10 +496,10 @@ class WorkspaceView(QWidget):
             }
             QPushButton:hover {
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
-                    stop:0 #7DD3FC, stop:0.5 #38BDF8, stop:1 #0EA5E9);
+                    stop:0 #D1FFFF, stop:0.5 #AEEBFF, stop:1 #AAD9F2);
             }
             QPushButton:pressed {
-                background: #0369A1;
+                background: #2E5A6F;
             }
         """)
         self.create_folder_btn.clicked.connect(self.create_new_folder)
@@ -510,7 +510,7 @@ class WorkspaceView(QWidget):
 
         # ── Divider ────────────────────────────────────────────────────────────
         hdiv2 = QFrame(); hdiv2.setFrameShape(QFrame.HLine)
-        hdiv2.setStyleSheet("color: #1E293B;"); top_vbox.addWidget(hdiv2)
+        hdiv2.setStyleSheet("color: #2E5A6F;"); top_vbox.addWidget(hdiv2)
 
         # ── Row 3: Tag chips (scrollable) ─────────────────────────────────────
         row3 = QHBoxLayout()
@@ -519,7 +519,7 @@ class WorkspaceView(QWidget):
 
         tag_lbl = QLabel("标签筛选")
         tag_lbl.setStyleSheet(
-            "color: #64748B; font-size: 12px; font-weight: 600; letter-spacing: 0.5px;"
+            "color: #618EA5; font-size: 12px; font-weight: 600; letter-spacing: 0.5px;"
         )
         tag_lbl.setFixedWidth(56)
         row3.addWidget(tag_lbl)
@@ -537,7 +537,7 @@ class WorkspaceView(QWidget):
                 height: 3px; background: transparent; margin: 0;
             }
             QScrollBar::handle:horizontal {
-                background: #475569; border-radius: 1px; min-width: 24px;
+                background: #4A6FA6; border-radius: 1px; min-width: 24px;
             }
             QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal { width: 0; }
         """)
@@ -593,7 +593,7 @@ class WorkspaceView(QWidget):
         grid_layout.setContentsMargins(10, 10, 10, 10)
 
         self.grid_title = QLabel("📂 全部文件列表")
-        self.grid_title.setStyleSheet("font-size: 13px; font-weight: bold; color: #6366F1; padding-bottom: 2px;")
+        self.grid_title.setStyleSheet("font-size: 13px; font-weight: bold; color: #4A6FA6; padding-bottom: 2px;")
         grid_layout.addWidget(self.grid_title)
 
         self.files_table = WorkspaceTableWidget()
@@ -651,12 +651,12 @@ class WorkspaceView(QWidget):
                     padding: 2px 10px;
                     font-size: 11px;
                     border-radius: 13px;
-                    border: 1px solid #334155;
+                    border: 1px solid #4A6FA6;
                 }
                 QPushButton:checked {
-                    background-color: #6366F1;
+                    background-color: #4A6FA6;
                     color: white;
-                    border: 1px solid #6366F1;
+                    border: 1px solid #4A6FA6;
                 }
             """)
             btn.toggled.connect(lambda checked, t=tag: self.toggle_filter_tag(t, checked))

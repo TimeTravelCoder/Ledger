@@ -3,33 +3,32 @@ def get_stylesheet(theme="dark"):
     Returns a highly polished, custom QSS stylesheet for either dark or light theme.
     """
     if theme == "dark":
-        bg_primary = "#0F172A"       # Slate 900
-        bg_secondary = "#1E293B"     # Slate 800
-        bg_tertiary = "#334155"      # Slate 700
-        text_primary = "#F8FAFC"     # Slate 50
-        text_secondary = "#94A3B8"   # Slate 400
-        text_disabled = "#64748B"    # Slate 500
-        border_color = "#334155"     # Slate 700
-        border_hover = "#4F46E5"     # Indigo 600
-        accent_color = "#6366F1"     # Indigo 500
-        success_color = "#10B981"    # Emerald 500
-        warning_color = "#F59E0B"    # Amber 500
-        error_color = "#EF4444"      # Red 500
+        bg_primary = "#183344"
+        bg_secondary = "#22495C"
+        bg_tertiary = "#2E5A6F"
+        text_primary = "#D1FFFF"
+        text_secondary = "#AAD9F2"
+        text_disabled = "#85B3CB"
+        border_color = "#4A6FA6"
+        border_hover = "#618EA5"
+        accent_color = "#4A6FA6"
+        success_color = "#85B3CB"
+        warning_color = "#AAD9F2"
+        error_color = "#618EA5"
         shadow_effect = "rgba(0, 0, 0, 0.3)"
     else:
-        # Light theme (Elegant Snow)
-        bg_primary = "#F8FAFC"       # Slate 50
-        bg_secondary = "#FFFFFF"     # White
-        bg_tertiary = "#E2E8F0"      # Slate 200
-        text_primary = "#0F172A"     # Slate 900
-        text_secondary = "#475569"   # Slate 600
-        text_disabled = "#94A3B8"    # Slate 400
-        border_color = "#CBD5E1"     # Slate 300
-        border_hover = "#4F46E5"     # Indigo 600
-        accent_color = "#4F46E5"     # Indigo 600
-        success_color = "#059669"    # Emerald 600
-        warning_color = "#D97706"    # Amber 600
-        error_color = "#DC2626"      # Red 600
+        bg_primary = "#F5FBFF"
+        bg_secondary = "#FFFFFF"
+        bg_tertiary = "#D1FFFF"
+        text_primary = "#2E5A6F"
+        text_secondary = "#618EA5"
+        text_disabled = "#85B3CB"
+        border_color = "#AAD9F2"
+        border_hover = "#4A6FA6"
+        accent_color = "#4A6FA6"
+        success_color = "#618EA5"
+        warning_color = "#85B3CB"
+        error_color = "#2E5A6F"
         shadow_effect = "rgba(15, 23, 42, 0.08)"
 
     qss = f"""
