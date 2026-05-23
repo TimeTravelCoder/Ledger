@@ -375,18 +375,18 @@ class WorkspaceView(QWidget):
     def init_ui(self):
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(0, 0, 0, 0)
-        main_layout.setSpacing(16)
+        main_layout.setSpacing(10)
 
         # ── Toolbar Panel ─────────────────────────────────────────────────────
         top_panel = QFrame()
         top_panel.setObjectName("CardPanel")
         top_vbox = QVBoxLayout(top_panel)
-        top_vbox.setContentsMargins(20, 16, 20, 14)
-        top_vbox.setSpacing(12)
+        top_vbox.setContentsMargins(16, 12, 16, 10)
+        top_vbox.setSpacing(8)
 
         # ── Row 1: Search + Status + Reset ────────────────────────────────────
         row1 = QHBoxLayout()
-        row1.setSpacing(12)
+        row1.setSpacing(8)
 
         # Search icon + input wrapper
         search_wrapper = QFrame()
@@ -394,18 +394,18 @@ class WorkspaceView(QWidget):
             QFrame {
                 background-color: #0F172A;
                 border: 1.5px solid #334155;
-                border-radius: 10px;
+                border-radius: 8px;
             }
         """)
         search_inner = QHBoxLayout(search_wrapper)
-        search_inner.setContentsMargins(14, 0, 10, 0)
-        search_inner.setSpacing(8)
+        search_inner.setContentsMargins(12, 0, 8, 0)
+        search_inner.setSpacing(6)
         lbl_search_icon = QLabel("🔍")
         lbl_search_icon.setStyleSheet("background: transparent; border: none; font-size: 15px;")
         search_inner.addWidget(lbl_search_icon)
         self.search_input = QLineEdit()
         self.search_input.setPlaceholderText("搜索文件名、备注关键词...")
-        self.search_input.setFixedHeight(38)
+        self.search_input.setFixedHeight(34)
         self.search_input.setStyleSheet("""
             QLineEdit { background: transparent; border: none; font-size: 14px; color: #F8FAFC; }
         """)
@@ -419,7 +419,7 @@ class WorkspaceView(QWidget):
         status_lbl.setStyleSheet("color: #94A3B8; font-size: 13px; font-weight: 500;")
         row1.addWidget(status_lbl)
         self.status_combo = QComboBox()
-        self.status_combo.setFixedHeight(42)
+        self.status_combo.setFixedHeight(34)
         self.status_combo.setMinimumWidth(110)
         self.refresh_status_combo()
         self.status_combo.currentIndexChanged.connect(self.run_search)
@@ -431,7 +431,7 @@ class WorkspaceView(QWidget):
 
         # Reset button
         self.reset_search_btn = QPushButton("↺  重置筛选")
-        self.reset_search_btn.setFixedHeight(42)
+        self.reset_search_btn.setFixedHeight(34)
         self.reset_search_btn.setStyleSheet("""
             QPushButton {
                 background: transparent;
@@ -458,13 +458,13 @@ class WorkspaceView(QWidget):
 
         # ── Row 2: Large action buttons (centered) ────────────────────────────
         row2 = QHBoxLayout()
-        row2.setSpacing(16)
-        row2.setContentsMargins(0, 4, 0, 4)
+        row2.setSpacing(12)
+        row2.setContentsMargins(0, 0, 0, 0)
         row2.addStretch()
 
         self.create_file_btn = QPushButton("📄   新建文件")
-        self.create_file_btn.setFixedHeight(48)
-        self.create_file_btn.setMinimumWidth(180)
+        self.create_file_btn.setFixedHeight(40)
+        self.create_file_btn.setMinimumWidth(160)
         self.create_file_btn.setStyleSheet("""
             QPushButton {
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
@@ -489,8 +489,8 @@ class WorkspaceView(QWidget):
         row2.addWidget(self.create_file_btn)
 
         self.create_folder_btn = QPushButton("📁   新建文件夹")
-        self.create_folder_btn.setFixedHeight(48)
-        self.create_folder_btn.setMinimumWidth(180)
+        self.create_folder_btn.setFixedHeight(40)
+        self.create_folder_btn.setMinimumWidth(160)
         self.create_folder_btn.setStyleSheet("""
             QPushButton {
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
@@ -523,8 +523,8 @@ class WorkspaceView(QWidget):
 
         # ── Row 3: Tag chips (scrollable) ─────────────────────────────────────
         row3 = QHBoxLayout()
-        row3.setSpacing(10)
-        row3.setContentsMargins(0, 2, 0, 2)
+        row3.setSpacing(8)
+        row3.setContentsMargins(0, 0, 0, 0)
 
         tag_lbl = QLabel("标签筛选")
         tag_lbl.setStyleSheet(
@@ -539,7 +539,7 @@ class WorkspaceView(QWidget):
         self._tag_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         self._tag_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self._tag_scroll.setWidgetResizable(True)
-        self._tag_scroll.setFixedHeight(36)
+        self._tag_scroll.setFixedHeight(30)
         self._tag_scroll.setStyleSheet("""
             QScrollArea { background: transparent; border: none; }
             QScrollBar:horizontal {
@@ -572,14 +572,14 @@ class WorkspaceView(QWidget):
 
         # 2. Main Content Split View (Left Tree, Center Table, Right Preview)
         split_layout = QHBoxLayout()
-        split_layout.setSpacing(15)
+        split_layout.setSpacing(10)
         self.main_splitter = QSplitter(Qt.Horizontal)
 
         # Left: Directory Tree
         tree_container = QFrame()
         tree_container.setObjectName("CardPanel")
         tree_layout = QVBoxLayout(tree_container)
-        tree_layout.setContentsMargins(10, 10, 10, 10)
+        tree_layout.setContentsMargins(10, 8, 10, 8)
         
         tree_title = QLabel("物理文件夹结构 (≤4层限制)")
         tree_title.setObjectName("CardTitle")
@@ -600,7 +600,7 @@ class WorkspaceView(QWidget):
         grid_container = QFrame()
         grid_container.setObjectName("CardPanel")
         grid_layout = QVBoxLayout(grid_container)
-        grid_layout.setContentsMargins(10, 10, 10, 10)
+        grid_layout.setContentsMargins(10, 8, 10, 8)
 
         self.grid_title = QLabel("📂 全部文件列表")
         self.grid_title.setStyleSheet("font-size: 13px; font-weight: bold; color: #6366F1; padding-bottom: 2px;")
@@ -614,6 +614,7 @@ class WorkspaceView(QWidget):
         self.files_table.setEditTriggers(QTableWidget.NoEditTriggers)
         self.files_table.setSelectionBehavior(QTableWidget.SelectRows)
         self.files_table.setSelectionMode(QAbstractItemView.ExtendedSelection)
+        self.files_table.setMinimumHeight(260)
         self.files_table.left_double_clicked.connect(self.on_table_left_double_clicked)
         self.files_table.right_double_clicked.connect(self.on_table_right_double_clicked)
         self.files_table.itemSelectionChanged.connect(self.on_table_selection_changed)
@@ -663,7 +664,7 @@ class WorkspaceView(QWidget):
         preview_container = QFrame()
         preview_container.setObjectName("CardPanel")
         preview_layout = QVBoxLayout(preview_container)
-        preview_layout.setContentsMargins(10, 10, 10, 10)
+        preview_layout.setContentsMargins(10, 8, 10, 8)
 
         self.preview_title = QLabel("预览面板")
         self.preview_title.setObjectName("CardTitle")
@@ -692,6 +693,7 @@ class WorkspaceView(QWidget):
         self.preview_pdf_doc = QPdfDocument(self)
         self.preview_pdf = QPdfView()
         self.preview_pdf.setDocument(self.preview_pdf_doc)
+        self.preview_pdf.setMinimumHeight(260)
         self.preview_pdf.hide()
         preview_stack_layout.addWidget(self.preview_pdf)
         self.preview_tabs.addTab(self.preview_stack, "文件预览")
@@ -714,10 +716,13 @@ class WorkspaceView(QWidget):
         self.preview_open_btn.clicked.connect(self.open_current_preview_file)
         preview_layout.addWidget(self.preview_open_btn)
 
+        self.main_splitter.setSizes([260, 780, 420])
+
         self.main_splitter.addWidget(preview_container)
         self.main_splitter.setStretchFactor(0, 2)
         self.main_splitter.setStretchFactor(1, 4)
         self.main_splitter.setStretchFactor(2, 3)
+        self.main_splitter.setChildrenCollapsible(False)
 
         split_layout.addWidget(self.main_splitter)
         main_layout.addLayout(split_layout)
