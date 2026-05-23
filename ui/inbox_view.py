@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QListWidget,
                              QPushButton, QFrame, QCheckBox, QTextEdit, 
                              QMessageBox, QStackedWidget, QScrollArea)
 from PySide6.QtCore import Qt, Signal
-from config import config, normalize_tag, display_tag
+from config import config, normalize_tag, display_tag, NAME_PRESET_BASES
 from db import db
 from file_manager import FileManager
 
@@ -133,14 +133,7 @@ class InboxView(QWidget):
         preset_layout = QHBoxLayout()
         preset_layout.addWidget(QLabel("命名规范模版:"))
         self.preset_combo = QComboBox()
-        self.preset_combo.addItems([
-            "常规模版 (日期_主题_版本_状态)",
-            "学术论文 (年份_论文名_作者)",
-            "实验报告 (Exp序号_学科_实验名_版本)",
-            "幻灯片 (日期_PPT名_版本)",
-            "实验图片 (日期_图片名_序号)",
-            "保持原名"
-        ])
+        self.refresh_preset_combo()
         self.preset_combo.currentIndexChanged.connect(self.on_preset_changed)
         preset_layout.addWidget(self.preset_combo, 1)
         form_layout.addLayout(preset_layout)
@@ -230,6 +223,39 @@ class InboxView(QWidget):
         main_layout.addWidget(self.right_stack, 2)
 
         self.scan_inbox()
+
+    def refresh_preset_combo(self):
+        self.preset_combo.blockSignals(True)
+        self.preset_combo.clear()
+        self.preset_defs = []
+        for base in NAME_PRESET_BASES:
+            if base["key"] == "keep":
+                continue
+            self.preset_defs.append({
+                "label": base["label"],
+                "format": base["default_format"],
+                "prefix": base["prefix"],
+                "key": base["key"],
+                "custom": False
+            })
+        for item in getattr(config, "custom_name_templates", []):
+            self.preset_defs.append({
+                "label": item.get("label", "自定义模板"),
+                "format": item.get("format", "{date}_{topic}"),
+                "prefix": item.get("prefix", "01"),
+                "key": "custom",
+                "custom": True
+            })
+        self.preset_defs.append({
+            "label": "保持原名",
+            "format": "{stem}",
+            "prefix": "00",
+            "key": "keep",
+            "custom": False
+        })
+        for preset in self.preset_defs:
+            self.preset_combo.addItem(preset["label"])
+        self.preset_combo.blockSignals(False)
 
     def scan_inbox(self):
         self.file_list_widget.clear()
@@ -336,8 +362,9 @@ class InboxView(QWidget):
 
         self.input_status.disconnect() if hasattr(self, 'input_status') else None
         
+        preset = self.preset_defs[idx]
         # Create fields based on selection
-        if idx == 0:  # Regular (Date_Topic_Version_Status)
+        if preset["key"] == "regular":
             h1 = QHBoxLayout()
             h1.addWidget(QLabel("日期:"))
             self.input_date = QLineEdit(datetime.datetime.now().strftime("%Y-%m-%d"))
@@ -370,10 +397,9 @@ class InboxView(QWidget):
             self.input_version.textChanged.connect(self.update_name_preview)
             self.input_status.currentIndexChanged.connect(self.update_name_preview)
             
-            # Select target folder starting with 01 (Study)
-            self.select_combo_by_prefix(self.dir_combo, "01")
+            self.select_combo_by_prefix(self.dir_combo, preset["prefix"])
 
-        elif idx == 1:  # Paper (Year_PaperTitle_Author)
+        elif preset["key"] == "paper":
             h1 = QHBoxLayout()
             h1.addWidget(QLabel("发表年份:"))
             self.input_date = QLineEdit(datetime.datetime.now().strftime("%Y"))
@@ -397,14 +423,14 @@ class InboxView(QWidget):
             self.input_topic.textChanged.connect(self.update_name_preview)
             self.input_version.textChanged.connect(self.update_name_preview)
             
-            self.select_combo_by_prefix(self.dir_combo, "05")
+            self.select_combo_by_prefix(self.dir_combo, preset["prefix"])
             
             # Set default tag
             for cb in self.secondary_checkboxes:
                 if cb.property("tag_value") == normalize_tag("学术论文"):
                     cb.setChecked(True)
 
-        elif idx == 2:  # Exp Report (Exp序号_学科_实验名_版本)
+        elif preset["key"] == "exp":
             h1 = QHBoxLayout()
             h1.addWidget(QLabel("实验编号 (如 Exp01):"))
             self.input_date = QLineEdit("Exp01")
@@ -428,14 +454,14 @@ class InboxView(QWidget):
             self.input_topic.textChanged.connect(self.update_name_preview)
             self.input_version.textChanged.connect(self.update_name_preview)
             
-            self.select_combo_by_prefix(self.dir_combo, "01")
+            self.select_combo_by_prefix(self.dir_combo, preset["prefix"])
             
             # Set default tag
             for cb in self.secondary_checkboxes:
                 if cb.property("tag_value") == normalize_tag("实验报告"):
                     cb.setChecked(True)
 
-        elif idx == 3:  # Slides (Date_PPT名_版本)
+        elif preset["key"] == "slides":
             h1 = QHBoxLayout()
             h1.addWidget(QLabel("汇报日期:"))
             self.input_date = QLineEdit(datetime.datetime.now().strftime("%Y-%m-%d"))
@@ -459,9 +485,9 @@ class InboxView(QWidget):
             self.input_topic.textChanged.connect(self.update_name_preview)
             self.input_version.textChanged.connect(self.update_name_preview)
             
-            self.select_combo_by_prefix(self.dir_combo, "08")
+            self.select_combo_by_prefix(self.dir_combo, preset["prefix"])
 
-        elif idx == 4:  # Image (Date_图片名_序号)
+        elif preset["key"] == "image":
             h1 = QHBoxLayout()
             h1.addWidget(QLabel("拍摄/生成日期:"))
             self.input_date = QLineEdit(datetime.datetime.now().strftime("%Y%m%d"))
@@ -485,9 +511,9 @@ class InboxView(QWidget):
             self.input_topic.textChanged.connect(self.update_name_preview)
             self.input_version.textChanged.connect(self.update_name_preview)
             
-            self.select_combo_by_prefix(self.dir_combo, "07")
+            self.select_combo_by_prefix(self.dir_combo, preset["prefix"])
 
-        elif idx == 5:  # Keep Original
+        elif preset["key"] == "keep":
             self.fields_layout.addWidget(QLabel("保持原有文件名称，只进行物理分类与标签元数据录入。"))
             if self.selected_file_path:
                 self.input_topic = QLineEdit(Path(self.selected_file_path).stem)
@@ -496,7 +522,7 @@ class InboxView(QWidget):
             # Re-sanitize topic inputs
             stem = Path(self.selected_file_path).stem
             clean_stem = stem.replace(" ", "_").replace("-", "_")
-            if idx in [0, 1, 2, 3, 4] and hasattr(self, 'input_topic'):
+            if preset["key"] != "keep" and hasattr(self, 'input_topic'):
                 self.input_topic.setText(clean_stem)
 
         self.update_name_preview()
@@ -507,52 +533,28 @@ class InboxView(QWidget):
             
         ext = Path(self.selected_file_path).suffix
         preset_idx = self.preset_combo.currentIndex()
+        preset = self.preset_defs[preset_idx]
         
         new_stem = ""
-        
-        if preset_idx == 0:  # Date_Topic_Version_Status
+        fmt = preset["format"]
+        if preset["key"] == "keep":
+            new_stem = Path(self.selected_file_path).stem
+        else:
             date = self.input_date.text().strip()
             topic = self.input_topic.text().strip()
             ver = self.input_version.text().strip()
             status = self.input_status.currentText().strip()
-            
-            parts = [p for p in [date, topic, ver, status] if p]
-            new_stem = "_".join(parts)
-            
-        elif preset_idx == 1:  # Year_PaperTitle_Author
-            year = self.input_date.text().strip()
-            title = self.input_topic.text().strip().replace(" ", "")  # Force camel case/no space
-            author = self.input_version.text().strip()
-            
-            parts = [p for p in [year, title, author] if p]
-            new_stem = "_".join(parts)
-            
-        elif preset_idx == 2:  # Exp01_MPI_VectorAdd_v2
-            exp_id = self.input_date.text().strip()
-            exp_name = self.input_topic.text().strip().replace(" ", "_")
-            ver = self.input_version.text().strip()
-            
-            parts = [p for p in [exp_id, exp_name, ver] if p]
-            new_stem = "_".join(parts)
-            
-        elif preset_idx == 3:  # Date_QuantumPresentation_v3
-            date = self.input_date.text().strip()
-            ppt_name = self.input_topic.text().strip().replace(" ", "")
-            ver = self.input_version.text().strip()
-            
-            parts = [p for p in [date, ppt_name, ver] if p]
-            new_stem = "_".join(parts)
-            
-        elif preset_idx == 4:  # Date_Experiment_Result01
-            date = self.input_date.text().strip()
-            img_name = self.input_topic.text().strip().replace(" ", "_")
-            seq = self.input_version.text().strip()
-            
-            parts = [p for p in [date, img_name, seq] if p]
-            new_stem = f"{date}_{img_name}{seq}" if date and img_name else "_".join(parts)
-            
-        elif preset_idx == 5:  # Keep original
-            new_stem = Path(self.selected_file_path).stem
+            mapping = {
+                "{date}": date,
+                "{topic}": topic,
+                "{version}": ver,
+                "{status}": status,
+                "{stem}": Path(self.selected_file_path).stem
+            }
+            new_stem = fmt
+            for key, value in mapping.items():
+                new_stem = new_stem.replace(key, value)
+            new_stem = "_".join([p for p in new_stem.split("_") if p])
 
         new_filename = new_stem + ext
         self.lbl_name_preview.blockSignals(True)

@@ -5,7 +5,7 @@ from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
                              QCheckBox, QMessageBox, QFileDialog, QTextEdit, 
                              QComboBox, QScrollArea, QListWidget, QListWidgetItem)
 from PySide6.QtCore import Qt, Signal
-from config import config, DEFAULT_TAGS, normalize_tags, display_tag
+from config import config, DEFAULT_TAGS, normalize_tags, display_tag, NAME_PRESET_BASES
 from file_manager import FileManager
 
 class SettingsView(QWidget):
@@ -267,6 +267,59 @@ class SettingsView(QWidget):
 
         inner_layout.addWidget(rule_card)
 
+        # 5. Naming Preset Templates Card
+        preset_card = QFrame()
+        preset_card.setObjectName("CardPanel")
+        preset_layout = QVBoxLayout(preset_card)
+        preset_layout.setContentsMargins(15, 15, 15, 15)
+        preset_layout.setSpacing(12)
+
+        preset_title = QLabel("命名规范模板")
+        preset_title.setStyleSheet("font-size: 14px; font-weight: bold; color: #6366F1;")
+        preset_layout.addWidget(preset_title)
+
+        preset_desc = QLabel("支持自定义添加模板；格式变量示例：{date} {topic} {version} {status} {stem}")
+        preset_desc.setStyleSheet("color: #94A3B8; font-size: 11px;")
+        preset_desc.setWordWrap(True)
+        preset_layout.addWidget(preset_desc)
+
+        self.preset_list = QListWidget()
+        self.preset_list.setMinimumHeight(220)
+        preset_layout.addWidget(self.preset_list)
+
+        self.populate_name_presets()
+
+        preset_edit = QGridLayout()
+        preset_edit.setSpacing(8)
+        self.input_preset_label = QLineEdit()
+        self.input_preset_label.setPlaceholderText("模板名称")
+        self.input_preset_prefix = QLineEdit()
+        self.input_preset_prefix.setPlaceholderText("目录前缀，例如 01 / 05 / 08")
+        self.input_preset_format = QLineEdit()
+        self.input_preset_format.setPlaceholderText("格式，例如 {date}_{topic}_{version}")
+        preset_edit.addWidget(QLabel("名称"), 0, 0)
+        preset_edit.addWidget(self.input_preset_label, 0, 1)
+        preset_edit.addWidget(QLabel("前缀"), 0, 2)
+        preset_edit.addWidget(self.input_preset_prefix, 0, 3)
+        preset_edit.addWidget(QLabel("格式"), 1, 0)
+        preset_edit.addWidget(self.input_preset_format, 1, 1, 1, 3)
+        preset_layout.addLayout(preset_edit)
+
+        preset_btn_layout = QHBoxLayout()
+        self.btn_preset_add = QPushButton("新增模板")
+        self.btn_preset_add.clicked.connect(self.add_name_preset)
+        preset_btn_layout.addWidget(self.btn_preset_add)
+        self.btn_preset_delete = QPushButton("删除模板")
+        self.btn_preset_delete.clicked.connect(self.delete_name_preset)
+        preset_btn_layout.addWidget(self.btn_preset_delete)
+        self.btn_preset_save = QPushButton("保存模板")
+        self.btn_preset_save.setObjectName("PrimaryBtn")
+        self.btn_preset_save.clicked.connect(self.save_name_presets)
+        preset_btn_layout.addWidget(self.btn_preset_save)
+        preset_layout.addLayout(preset_btn_layout)
+
+        inner_layout.addWidget(preset_card)
+
         inner_layout.addStretch()
 
     def browse_workspace(self):
@@ -480,6 +533,56 @@ class SettingsView(QWidget):
         config.auto_rules = rules
         config.save()
         QMessageBox.information(self, "成功", "规则归类配置已保存。")
+        self.refresh_other_views_signal.emit()
+
+    def populate_name_presets(self):
+        self.preset_list.clear()
+        self.name_presets = []
+        for base in NAME_PRESET_BASES:
+            self.name_presets.append({
+                "label": base["label"],
+                "prefix": base["prefix"],
+                "format": base["default_format"],
+                "base": True
+            })
+        for item in getattr(config, "custom_name_templates", []):
+            self.name_presets.append({
+                "label": item.get("label", "自定义"),
+                "prefix": item.get("prefix", "01"),
+                "format": item.get("format", "{date}_{topic}"),
+                "base": False
+            })
+        for preset in self.name_presets:
+            li = QListWidgetItem(f"{preset['label']} | 前缀: {preset['prefix']} | 格式: {preset['format']}")
+            li.setData(Qt.UserRole, preset)
+            self.preset_list.addItem(li)
+
+    def add_name_preset(self):
+        self.name_presets.append({"label": "新模板", "prefix": "01", "format": "{date}_{topic}", "base": False})
+        self.sync_name_preset_inputs()
+
+    def delete_name_preset(self):
+        row = self.preset_list.currentRow()
+        if row < 0:
+            QMessageBox.information(self, "提示", "请先选中一个模板。")
+            return
+        preset = self.preset_list.item(row).data(Qt.UserRole)
+        if preset and preset.get("base"):
+            QMessageBox.information(self, "提示", "基础模板不能删除。")
+            return
+        custom = [p for p in self.name_presets if p.get("label") != preset.get("label")]
+        self.name_presets = custom
+        self.sync_name_preset_inputs()
+
+    def sync_name_preset_inputs(self):
+        custom = [p for p in self.name_presets if not p.get("base")]
+        config.custom_name_templates = custom
+        self.populate_name_presets()
+
+    def save_name_presets(self):
+        config.custom_name_templates = [p for p in self.name_presets if not p.get("base")]
+        config.save()
+        QMessageBox.information(self, "成功", "命名模板已保存。")
         self.refresh_other_views_signal.emit()
 
     def save_custom_dirs(self):

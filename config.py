@@ -48,6 +48,45 @@ STANDARD_DIRS_CN = [
     "10归档区", "99临时缓冲"
 ]
 
+NAME_PRESET_BASES = [
+    {
+        "key": "regular",
+        "label": "常规模版",
+        "prefix": "01",
+        "default_format": "{date}_{topic}_{version}_{status}"
+    },
+    {
+        "key": "paper",
+        "label": "学术论文",
+        "prefix": "05",
+        "default_format": "{date}_{topic}_{version}"
+    },
+    {
+        "key": "exp",
+        "label": "实验报告",
+        "prefix": "01",
+        "default_format": "{date}_{topic}_{version}"
+    },
+    {
+        "key": "slides",
+        "label": "幻灯片",
+        "prefix": "08",
+        "default_format": "{date}_{topic}_{version}"
+    },
+    {
+        "key": "image",
+        "label": "实验图片",
+        "prefix": "07",
+        "default_format": "{date}_{topic}_{version}"
+    },
+    {
+        "key": "keep",
+        "label": "保持原名",
+        "prefix": "00",
+        "default_format": "{stem}"
+    },
+]
+
 class AppConfig:
     def __init__(self):
         self.workspace_dir = ""
@@ -67,6 +106,7 @@ class AppConfig:
             {"name": "代码文件", "keywords": ["code", "script"], "extensions": [".py", ".js", ".ts", ".cpp", ".java"], "target_prefix": "04"},
             {"name": "图片素材", "keywords": ["image", "photo", "截图"], "extensions": [".png", ".jpg", ".jpeg"], "target_prefix": "07"},
         ]
+        self.custom_name_templates = []
         
         # Default workspace setup in the same folder if not set
         default_ws = Path(__file__).parent / "Workspace"
@@ -109,6 +149,7 @@ class AppConfig:
                     self.custom_standard_dirs = data.get("custom_standard_dirs", self.custom_standard_dirs)
                     self.auto_rule_enabled = data.get("auto_rule_enabled", self.auto_rule_enabled)
                     self.auto_rules = data.get("auto_rules", self.auto_rules)
+                    self.custom_name_templates = data.get("custom_name_templates", self.custom_name_templates)
                     # Migration: if tags are the old English defaults, upgrade to Chinese
                     if self.tags.get("primary") == ["#AI", "#Quantum", "#Math", "#OS", "#Network", "#English"]:
                         self.tags = DEFAULT_TAGS.copy()
@@ -130,7 +171,8 @@ class AppConfig:
                 "use_custom_dirs": self.use_custom_dirs,
                 "custom_standard_dirs": self.custom_standard_dirs,
                 "auto_rule_enabled": self.auto_rule_enabled,
-                "auto_rules": self.auto_rules
+                "auto_rules": self.auto_rules,
+                "custom_name_templates": self.custom_name_templates
             }
             with open(CONFIG_FILE, "w", encoding="utf-8") as f:
                 json.dump(data, f, ensure_ascii=False, indent=4)
