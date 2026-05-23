@@ -980,13 +980,9 @@ class WorkspaceView(QWidget):
             return
 
         deleted = 0
-        ws_root = Path(config.workspace_dir)
         for rel_path in selected:
-            abs_path = ws_root / rel_path
             try:
-                if abs_path.exists():
-                    os.remove(abs_path)
-                db.delete_file_record(rel_path)
+                FileManager.delete_file(rel_path)
                 deleted += 1
             except Exception:
                 continue
@@ -1013,13 +1009,9 @@ class WorkspaceView(QWidget):
         if reply != QMessageBox.Yes:
             return
         deleted = 0
-        ws_root = Path(config.workspace_dir)
         for rel_path in delete_paths:
-            abs_path = ws_root / rel_path
             try:
-                if abs_path.exists():
-                    os.remove(abs_path)
-                db.delete_file_record(rel_path)
+                FileManager.delete_file(rel_path)
                 deleted += 1
             except Exception:
                 continue
@@ -1158,12 +1150,8 @@ class WorkspaceView(QWidget):
         
         if reply == QMessageBox.Yes:
             self.clear_preview_resources()
-            ws_root = Path(config.workspace_dir)
-            abs_path = ws_root / self.rel_path
             try:
-                if abs_path.exists():
-                    os.remove(abs_path)
-                db.delete_file_record(self.rel_path)
+                FileManager.delete_file(self.rel_path)
                 QMessageBox.information(self, "成功", "文件已成功从磁盘和数据库中删除！")
                 self.accept()
             except Exception as e:
@@ -1308,12 +1296,8 @@ class FileDetailsDialog(QDialog):
                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
         
         if reply == QMessageBox.Yes:
-            ws_root = Path(config.workspace_dir)
-            abs_path = ws_root / self.rel_path
             try:
-                if abs_path.exists():
-                    os.remove(abs_path)
-                db.delete_file_record(self.rel_path)
+                FileManager.delete_file(self.rel_path)
                 QMessageBox.information(self, "成功", "文件已成功从磁盘和数据库中删除！")
                 self.accept()
             except Exception as e:

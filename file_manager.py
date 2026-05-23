@@ -57,6 +57,21 @@ class FileManager:
         return dest
 
     @staticmethod
+    def delete_file(rel_path):
+        """Delete a workspace file and its database record safely."""
+        ws_root = Path(config.workspace_dir).resolve()
+        abs_path = (ws_root / rel_path).resolve()
+
+        try:
+            if abs_path.exists():
+                if abs_path.is_dir():
+                    shutil.rmtree(abs_path)
+                else:
+                    abs_path.unlink()
+        finally:
+            db.delete_file_record(rel_path)
+
+    @staticmethod
     def get_desktop_path():
         """Returns the user's desktop path on Windows."""
         return str(Path.home() / "Desktop")
