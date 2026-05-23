@@ -1,0 +1,391 @@
+def get_stylesheet(theme="dark"):
+    """
+    Returns a highly polished, custom QSS stylesheet for either dark or light theme.
+    """
+    if theme == "dark":
+        bg_primary = "#0F172A"       # Slate 900
+        bg_secondary = "#1E293B"     # Slate 800
+        bg_tertiary = "#334155"      # Slate 700
+        text_primary = "#F8FAFC"     # Slate 50
+        text_secondary = "#94A3B8"   # Slate 400
+        text_disabled = "#64748B"    # Slate 500
+        border_color = "#334155"     # Slate 700
+        border_hover = "#4F46E5"     # Indigo 600
+        accent_color = "#6366F1"     # Indigo 500
+        success_color = "#10B981"    # Emerald 500
+        warning_color = "#F59E0B"    # Amber 500
+        error_color = "#EF4444"      # Red 500
+        shadow_effect = "rgba(0, 0, 0, 0.3)"
+    else:
+        # Light theme (Elegant Snow)
+        bg_primary = "#F8FAFC"       # Slate 50
+        bg_secondary = "#FFFFFF"     # White
+        bg_tertiary = "#E2E8F0"      # Slate 200
+        text_primary = "#0F172A"     # Slate 900
+        text_secondary = "#475569"   # Slate 600
+        text_disabled = "#94A3B8"    # Slate 400
+        border_color = "#CBD5E1"     # Slate 300
+        border_hover = "#4F46E5"     # Indigo 600
+        accent_color = "#4F46E5"     # Indigo 600
+        success_color = "#059669"    # Emerald 600
+        warning_color = "#D97706"    # Amber 600
+        error_color = "#DC2626"      # Red 600
+        shadow_effect = "rgba(15, 23, 42, 0.08)"
+
+    qss = f"""
+    /* General Application Styling */
+    QWidget {{
+        font-family: "Segoe UI", "Microsoft YaHei", "Inter", sans-serif;
+        font-size: 13px;
+        color: {text_primary};
+        background-color: transparent;
+    }}
+    
+    QMainWindow {{
+        background-color: {bg_primary};
+    }}
+    
+    /* Sidebar Styling */
+    QFrame#Sidebar {{
+        background-color: {bg_secondary};
+        border-right: 1px solid {border_color};
+    }}
+    
+    QLabel#SidebarTitle {{
+        font-size: 16px;
+        font-weight: bold;
+        color: {text_primary};
+        padding: 10px;
+    }}
+    
+    /* Sidebar Navigation Buttons */
+    QPushButton#SidebarBtn {{
+        text-align: left;
+        padding: 12px 15px;
+        border: none;
+        border-radius: 8px;
+        color: {text_secondary};
+        font-weight: 500;
+        margin: 4px 10px;
+    }}
+    
+    QPushButton#SidebarBtn:hover {{
+        background-color: {bg_tertiary};
+        color: {text_primary};
+    }}
+    
+    QPushButton#SidebarBtn:checked {{
+        background-color: {accent_color};
+        color: #FFFFFF;
+        font-weight: bold;
+    }}
+    
+    /* Theme Toggle Button */
+    QPushButton#ThemeToggleBtn {{
+        background-color: {bg_tertiary};
+        border: 1px solid {border_color};
+        border-radius: 6px;
+        padding: 6px 12px;
+        color: {text_primary};
+        font-weight: 500;
+    }}
+    QPushButton#ThemeToggleBtn:hover {{
+        border-color: {accent_color};
+        background-color: {bg_secondary};
+    }}
+
+    /* Main Container Panel */
+    QFrame#MainContainer {{
+        background-color: {bg_primary};
+        padding: 20px;
+    }}
+    
+    /* Modern Dashboard Card Panel */
+    QFrame#CardPanel {{
+        background-color: {bg_secondary};
+        border: 1px solid {border_color};
+        border-radius: 12px;
+    }}
+    
+    QLabel#CardTitle {{
+        font-size: 12px;
+        font-weight: bold;
+        color: {text_secondary};
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }}
+    
+    QLabel#CardValue {{
+        font-size: 24px;
+        font-weight: bold;
+        color: {text_primary};
+    }}
+    
+    /* Input Fields (QLineEdit, QTextEdit) */
+    QLineEdit, QTextEdit {{
+        background-color: {bg_secondary};
+        border: 1px solid {border_color};
+        border-radius: 8px;
+        padding: 8px 12px;
+        color: {text_primary};
+        selection-background-color: {accent_color};
+    }}
+    
+    QLineEdit:focus, QTextEdit:focus {{
+        border: 1px solid {border_hover};
+    }}
+    
+    QLineEdit:disabled, QTextEdit:disabled {{
+        background-color: {bg_primary};
+        color: {text_disabled};
+        border-color: {border_color};
+    }}
+    
+    QLineEdit#ErrorInput {{
+        border: 1px solid {error_color};
+    }}
+
+    QLineEdit#SuccessInput {{
+        border: 1px solid {success_color};
+    }}
+
+    /* Normal Push Buttons */
+    QPushButton {{
+        background-color: {bg_secondary};
+        border: 1px solid {border_color};
+        border-radius: 8px;
+        padding: 8px 16px;
+        color: {text_primary};
+        font-weight: 600;
+    }}
+    
+    QPushButton:hover {{
+        background-color: {bg_tertiary};
+        border-color: {accent_color};
+    }}
+    
+    QPushButton:pressed {{
+        background-color: {accent_color};
+        color: #FFFFFF;
+    }}
+    
+    QPushButton#PrimaryBtn {{
+        background-color: {accent_color};
+        border: none;
+        color: #FFFFFF;
+    }}
+    
+    QPushButton#PrimaryBtn:hover {{
+        background-color: {border_hover};
+    }}
+
+    QPushButton#SuccessBtn {{
+        background-color: {success_color};
+        border: none;
+        color: #FFFFFF;
+    }}
+    
+    QPushButton#DangerBtn {{
+        background-color: {error_color};
+        border: none;
+        color: #FFFFFF;
+    }}
+    
+    /* Checkbox & Radio Buttons */
+    QCheckBox {{
+        spacing: 8px;
+        color: {text_primary};
+    }}
+    
+    QCheckBox::indicator {{
+        width: 18px;
+        height: 18px;
+        border: 1px solid {border_color};
+        border-radius: 4px;
+        background-color: {bg_secondary};
+    }}
+    
+    QCheckBox::indicator:hover {{
+        border-color: {accent_color};
+    }}
+    
+    QCheckBox::indicator:checked {{
+        background-color: {accent_color};
+        border-color: {accent_color};
+        image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white' width='18px' height='18px'%3E%3Cpath d='M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z'/%3E%3C/svg%3E");
+    }}
+    
+    /* ComboBox (Dropdown) */
+    QComboBox {{
+        background-color: {bg_secondary};
+        border: 1px solid {border_color};
+        border-radius: 8px;
+        padding: 6px 12px;
+        color: {text_primary};
+        combobox-popup: 0;
+    }}
+    
+    QComboBox:hover {{
+        border-color: {accent_color};
+    }}
+    
+    QComboBox::drop-down {{
+        subcontrol-origin: padding;
+        subcontrol-position: top right;
+        width: 25px;
+        border-left-width: 0px;
+        border-top-right-radius: 8px;
+        border-bottom-right-radius: 8px;
+    }}
+    
+    QComboBox::down-arrow {{
+        image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2394A3B8' width='12px' height='12px'%3E%3Cpath d='M7 10l5 5 5-5H7z'/%3E%3C/svg%3E");
+    }}
+    
+    QComboBox QAbstractItemView {{
+        background-color: {bg_secondary};
+        border: 1px solid {border_color};
+        border-radius: 8px;
+        selection-background-color: {accent_color};
+        selection-color: #FFFFFF;
+        outline: 0;
+    }}
+
+    /* Table Widget Styling */
+    QTableWidget, QTableView {{
+        background-color: {bg_secondary};
+        border: 1px solid {border_color};
+        border-radius: 12px;
+        gridline-color: {bg_primary};
+        selection-background-color: {bg_tertiary};
+        selection-color: {text_primary};
+        outline: 0;
+    }}
+    
+    QHeaderView::section {{
+        background-color: {bg_secondary};
+        color: {text_secondary};
+        padding: 10px;
+        border: none;
+        border-bottom: 1px solid {border_color};
+        font-weight: bold;
+        text-align: left;
+    }}
+    
+    QTableWidget::item {{
+        padding: 8px 12px;
+        border-bottom: 1px solid {bg_primary};
+    }}
+    
+    QTableWidget::item:hover {{
+        background-color: {bg_tertiary};
+    }}
+
+    /* Tree View Styling (Directory Explorer) */
+    QTreeView {{
+        background-color: {bg_secondary};
+        border: 1px solid {border_color};
+        border-radius: 12px;
+        outline: 0;
+        padding: 5px;
+    }}
+    
+    QTreeView::item {{
+        padding: 6px;
+        border-radius: 4px;
+    }}
+    
+    QTreeView::item:hover {{
+        background-color: {bg_tertiary};
+    }}
+    
+    QTreeView::item:selected {{
+        background-color: {accent_color};
+        color: #FFFFFF;
+    }}
+    
+    /* ScrollBar Styling */
+    QScrollBar:vertical {{
+        border: none;
+        background-color: {bg_primary};
+        width: 10px;
+        margin: 0px;
+    }}
+    
+    QScrollBar::handle:vertical {{
+        background-color: {border_color};
+        min-height: 20px;
+        border-radius: 5px;
+    }}
+    
+    QScrollBar::handle:vertical:hover {{
+        background-color: {accent_color};
+    }}
+    
+    QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
+        border: none;
+        background: none;
+    }}
+
+    QScrollBar:horizontal {{
+        border: none;
+        background-color: {bg_primary};
+        height: 10px;
+        margin: 0px;
+    }}
+    
+    QScrollBar::handle:horizontal {{
+        background-color: {border_color};
+        min-width: 20px;
+        border-radius: 5px;
+    }}
+    
+    QScrollBar::handle:horizontal:hover {{
+        background-color: {accent_color};
+    }}
+    
+    QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {{
+        border: none;
+        background: none;
+    }}
+    
+    /* Dialogs / Message Boxes */
+    QDialog {{
+        background-color: {bg_primary};
+    }}
+    
+    QMessageBox {{
+        background-color: {bg_secondary};
+    }}
+    
+    /* Tab Widget styling if needed */
+    QTabWidget::pane {{
+        border: 1px solid {border_color};
+        border-radius: 8px;
+        background-color: {bg_secondary};
+    }}
+    
+    QTabBar::tab {{
+        background-color: {bg_primary};
+        color: {text_secondary};
+        border: 1px solid {border_color};
+        border-bottom: none;
+        border-top-left-radius: 6px;
+        border-top-right-radius: 6px;
+        padding: 8px 16px;
+        margin-right: 4px;
+    }}
+    
+    QTabBar::tab:hover {{
+        background-color: {bg_tertiary};
+    }}
+    
+    QTabBar::tab:selected {{
+        background-color: {bg_secondary};
+        color: {text_primary};
+        border-color: {border_color};
+        border-bottom: 1px solid {bg_secondary};
+        font-weight: bold;
+    }}
+    """
+    return qss
