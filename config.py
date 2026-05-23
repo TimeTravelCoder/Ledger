@@ -80,6 +80,42 @@ NAME_PRESET_BASES = [
         "default_format": "{date}_{topic}_{version}"
     },
     {
+        "key": "meeting",
+        "label": "会议纪要",
+        "prefix": "06",
+        "default_format": "{date}_{topic}_{version}"
+    },
+    {
+        "key": "report",
+        "label": "项目报告",
+        "prefix": "03",
+        "default_format": "{date}_{topic}_{version}"
+    },
+    {
+        "key": "note",
+        "label": "学习笔记",
+        "prefix": "06",
+        "default_format": "{date}_{topic}"
+    },
+    {
+        "key": "data",
+        "label": "数据表格",
+        "prefix": "04",
+        "default_format": "{date}_{topic}_{version}"
+    },
+    {
+        "key": "contract",
+        "label": "合同文档",
+        "prefix": "03",
+        "default_format": "{date}_{topic}_{version}"
+    },
+    {
+        "key": "daily",
+        "label": "日常记录",
+        "prefix": "06",
+        "default_format": "{date}_{topic}"
+    },
+    {
         "key": "keep",
         "label": "保持原名",
         "prefix": "00",

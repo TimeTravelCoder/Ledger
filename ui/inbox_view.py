@@ -229,8 +229,6 @@ class InboxView(QWidget):
         self.preset_combo.clear()
         self.preset_defs = []
         for base in NAME_PRESET_BASES:
-            if base["key"] == "keep":
-                continue
             self.preset_defs.append({
                 "label": base["label"],
                 "format": base["default_format"],
@@ -246,13 +244,6 @@ class InboxView(QWidget):
                 "key": "custom",
                 "custom": True
             })
-        self.preset_defs.append({
-            "label": "保持原名",
-            "format": "{stem}",
-            "prefix": "00",
-            "key": "keep",
-            "custom": False
-        })
         for preset in self.preset_defs:
             self.preset_combo.addItem(preset["label"])
         self.preset_combo.blockSignals(False)
