@@ -1,6 +1,7 @@
 import os
 import datetime
 import shutil
+import tempfile
 from pathlib import Path
 from urllib.parse import quote
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QTreeView, 
@@ -368,6 +369,7 @@ class WorkspaceView(QWidget):
         super().__init__(parent)
         self.current_folder_rel = ""
         self.current_preview_rel_path = ""
+        self.preview_pdf_temp_path = None
         self.init_ui()
 
     def init_ui(self):
@@ -698,6 +700,18 @@ class WorkspaceView(QWidget):
         self.duplicates_list.itemDoubleClicked.connect(self.on_duplicate_item_double_clicked)
         self.preview_tabs.addTab(self.duplicates_list, "重复检测")
 
+        self.duplicate_tools = QFrame()
+        duplicate_tools_layout = QHBoxLayout(self.duplicate_tools)
+        duplicate_tools_layout.setContentsMargins(0, 0, 0, 0)
+        duplicate_tools_layout.setSpacing(8)
+        self.duplicate_delete_btn = QPushButton("删除重复文件")
+        self.duplicate_delete_btn.clicked.connect(self.delete_duplicate_selected)
+        duplicate_tools_layout.addWidget(self.duplicate_delete_btn)
+        self.keep_one_btn = QPushButton("保留首个")
+        self.keep_one_btn.clicked.connect(self.keep_first_duplicate)
+        duplicate_tools_layout.addWidget(self.keep_one_btn)
+        preview_layout.addWidget(self.duplicate_tools)
+
         self.preview_open_btn = QPushButton("在系统中打开")
         self.preview_open_btn.clicked.connect(self.open_current_preview_file)
         preview_layout.addWidget(self.preview_open_btn)
@@ -801,10 +815,8 @@ class WorkspaceView(QWidget):
     def on_table_selection_changed(self):
         selected = self.get_selected_rel_paths()
         if not selected:
+            self.clear_preview_resources()
             self.preview_file_label.setText("请选择文件")
-            self.preview_text.clear()
-            self.preview_image.hide()
-            self.preview_pdf.hide()
             self.selection_status_label.setText("当前未选择文件")
             self.current_preview_rel_path = ""
             return
@@ -818,6 +830,7 @@ class WorkspaceView(QWidget):
         ws_root = Path(config.workspace_dir)
         abs_path = ws_root / rel_path
         self.preview_file_label.setText(f"{abs_path.name}\n{rel_path}")
+        self.clear_preview_resources(keep_label=True)
         self.preview_text.show()
         self.preview_image.hide()
         self.preview_pdf.hide()
@@ -842,13 +855,46 @@ class WorkspaceView(QWidget):
             else:
                 self.preview_text.setPlainText("无法加载图片预览。")
         elif ext == ".pdf":
-            self.preview_text.hide()
-            self.preview_pdf_doc.load(str(abs_path))
-            self.preview_pdf.show()
+            try:
+                old_doc = self.preview_pdf.document()
+                if old_doc is not None:
+                    self.preview_pdf.setDocument(None)
+                    old_doc.deleteLater()
+                fd, temp_path = tempfile.mkstemp(suffix=".pdf")
+                os.close(fd)
+                shutil.copy2(str(abs_path), temp_path)
+                self.preview_pdf_temp_path = temp_path
+                self.preview_pdf_doc = QPdfDocument(self)
+                self.preview_pdf.setDocument(self.preview_pdf_doc)
+                self.preview_text.hide()
+                self.preview_pdf_doc.load(temp_path)
+                self.preview_pdf.show()
+            except Exception as e:
+                self.preview_text.setPlainText(f"PDF 预览失败: {e}")
         elif ext == ".docx":
             self.preview_text.setPlainText("DOCX 预览暂以系统打开方式支持。\n点击下方按钮可在默认程序中打开。")
         else:
             self.preview_text.setPlainText("暂不支持该格式的内嵌预览，可点击下方按钮在系统中打开。")
+
+    def clear_preview_resources(self, keep_label=False):
+        try:
+            old_doc = self.preview_pdf.document()
+            self.preview_pdf.setDocument(None)
+            if old_doc is not None:
+                old_doc.deleteLater()
+        except Exception:
+            pass
+        self.preview_pdf.hide()
+        self.preview_image.hide()
+        if not keep_label:
+            self.preview_text.show()
+            self.preview_text.clear()
+        if self.preview_pdf_temp_path and os.path.exists(self.preview_pdf_temp_path):
+            try:
+                os.remove(self.preview_pdf_temp_path)
+            except Exception:
+                pass
+        self.preview_pdf_temp_path = None
 
     def open_current_preview_file(self):
         if not self.current_preview_rel_path:
@@ -904,6 +950,7 @@ class WorkspaceView(QWidget):
                 self.duplicates_list.addItem(item)
         self.preview_tabs.setCurrentWidget(self.duplicates_list)
         self.selection_status_label.setText(f"发现 {len(duplicates)} 组重复文件。")
+        self.preview_tabs.setCurrentWidget(self.duplicates_list)
 
     def on_duplicate_item_double_clicked(self, item):
         rel_path = item.data(Qt.UserRole)
@@ -912,6 +959,75 @@ class WorkspaceView(QWidget):
         self.current_preview_rel_path = rel_path
         self.load_preview(rel_path)
         self.preview_tabs.setCurrentWidget(self.preview_stack)
+
+    def _get_duplicate_selected_paths(self):
+        selected = []
+        for item in self.duplicates_list.selectedItems():
+            rel_path = item.data(Qt.UserRole)
+            if rel_path:
+                selected.append(rel_path)
+        return selected
+
+    def delete_duplicate_selected(self):
+        selected = self._get_duplicate_selected_paths()
+        if not selected:
+            QMessageBox.information(self, "提示", "请先在重复检测列表中选择要删除的文件。")
+            return
+        reply = QMessageBox.question(self, "确认删除重复文件",
+                                     f"确认删除选中的 {len(selected)} 个重复文件吗？\n此操作会永久删除磁盘上的文件。",
+                                     QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        if reply != QMessageBox.Yes:
+            return
+
+        deleted = 0
+        ws_root = Path(config.workspace_dir)
+        for rel_path in selected:
+            abs_path = ws_root / rel_path
+            try:
+                if abs_path.exists():
+                    os.remove(abs_path)
+                db.delete_file_record(rel_path)
+                deleted += 1
+            except Exception:
+                continue
+
+        self.clear_preview_resources()
+        self.run_search()
+        self.show_duplicates()
+        self.refresh_other_views_signal.emit()
+        QMessageBox.information(self, "完成", f"已删除 {deleted} 个重复文件。")
+
+    def keep_first_duplicate(self):
+        selected = self._get_duplicate_selected_paths()
+        if not selected:
+            QMessageBox.information(self, "提示", "请先在重复检测列表中选择一组重复文件。")
+            return
+        keep = selected[0]
+        delete_paths = selected[1:]
+        if not delete_paths:
+            QMessageBox.information(self, "提示", "所选重复组只包含 1 个文件。")
+            return
+        reply = QMessageBox.question(self, "确认保留首个",
+                                     f"将保留：\n{keep}\n\n并删除另外 {len(delete_paths)} 个重复文件，是否继续？",
+                                     QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        if reply != QMessageBox.Yes:
+            return
+        deleted = 0
+        ws_root = Path(config.workspace_dir)
+        for rel_path in delete_paths:
+            abs_path = ws_root / rel_path
+            try:
+                if abs_path.exists():
+                    os.remove(abs_path)
+                db.delete_file_record(rel_path)
+                deleted += 1
+            except Exception:
+                continue
+        self.clear_preview_resources()
+        self.run_search()
+        self.show_duplicates()
+        self.refresh_other_views_signal.emit()
+        QMessageBox.information(self, "完成", f"已删除 {deleted} 个重复文件，保留首个文件。")
 
     def create_new_file(self):
         dialog = CreateFileDialog(self.current_folder_rel, self)
@@ -1034,6 +1150,24 @@ class WorkspaceView(QWidget):
             if dialog.exec() == QDialog.Accepted:
                 self.run_search()
                 self.refresh_other_views_signal.emit()
+
+    def delete_file(self):
+        reply = QMessageBox.question(self, "警告 - 物理删除",
+                                     "此操作将永久从磁盘删除该文件！\n确认要删除吗？",
+                                     QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        
+        if reply == QMessageBox.Yes:
+            self.clear_preview_resources()
+            ws_root = Path(config.workspace_dir)
+            abs_path = ws_root / self.rel_path
+            try:
+                if abs_path.exists():
+                    os.remove(abs_path)
+                db.delete_file_record(self.rel_path)
+                QMessageBox.information(self, "成功", "文件已成功从磁盘和数据库中删除！")
+                self.accept()
+            except Exception as e:
+                QMessageBox.critical(self, "错误", f"删除文件失败: {str(e)}")
 
     def refresh_status_combo(self):
         self.status_combo.blockSignals(True)
