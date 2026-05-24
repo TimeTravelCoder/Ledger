@@ -56,23 +56,88 @@ PREVIEW_IMAGE_EXTENSIONS = {
     ".png", ".jpg", ".jpeg", ".bmp", ".webp", ".gif", ".ico"
 }
 
-def _read_docx_text(abs_path):
+def _read_docx_to_html(abs_path):
     try:
         with zipfile.ZipFile(abs_path) as z:
             xml_content = z.read('word/document.xml')
             root = ET.fromstring(xml_content)
-            paragraphs = []
-            for p in root.iter():
-                if p.tag.endswith('}p'):
-                    texts = []
-                    for elem in p.iter():
-                        if elem.tag.endswith('}t') and elem.text:
-                            texts.append(elem.text)
-                    if texts:
-                        paragraphs.append("".join(texts))
-            return "\n".join(paragraphs)[:4000]
+            
+            ns = {'w': 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'}
+            
+            html_parts = []
+            html_parts.append("<div style='font-family: \"Segoe UI\", sans-serif; color: #E2E8F0; line-height: 1.6;'>")
+            
+            body = root.find('w:body', ns)
+            if body is None:
+                body = root
+                
+            for child in body:
+                tag_name = child.tag.split('}')[-1]
+                
+                if tag_name == 'p':
+                    # Parse Paragraph
+                    pPr = child.find('w:pPr', ns)
+                    pStyle = pPr.find('w:pStyle', ns) if pPr is not None else None
+                    style_val = pStyle.get('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}val', '') if pStyle is not None else ''
+                    
+                    is_heading = False
+                    heading_level = 0
+                    if 'heading' in style_val.lower():
+                        try:
+                            heading_level = int(''.join(filter(str.isdigit, style_val)) or 1)
+                            is_heading = True
+                        except Exception:
+                            is_heading = True
+                            heading_level = 1
+                    
+                    p_html = []
+                    for run in child.findall('w:r', ns):
+                        rPr = run.find('w:rPr', ns)
+                        is_bold = rPr.find('w:b', ns) is not None if rPr is not None else False
+                        is_italic = rPr.find('w:i', ns) is not None if rPr is not None else False
+                        is_underline = rPr.find('w:u', ns) is not None if rPr is not None else False
+                        
+                        t = run.find('w:t', ns)
+                        if t is not None and t.text:
+                            text_content = escape(t.text)
+                            if is_bold:
+                                text_content = f"<b>{text_content}</b>"
+                            if is_italic:
+                                text_content = f"<i>{text_content}</i>"
+                            if is_underline:
+                                text_content = f"<u>{text_content}</u>"
+                            p_html.append(text_content)
+                            
+                    full_p_text = "".join(p_html)
+                    if full_p_text.strip() or full_p_text == "":
+                        if is_heading:
+                            level = min(6, max(1, heading_level))
+                            html_parts.append(f"<h{level} style='color:#6366F1; margin-top: 15px; margin-bottom: 8px;'>{full_p_text}</h{level}>")
+                        else:
+                            html_parts.append(f"<p style='margin-bottom: 10px;'>{full_p_text}</p>")
+                            
+                elif tag_name == 'tbl':
+                    html_parts.append("<table border='1' style='border-collapse: collapse; width: 100%; border-color: #4A6FA6; margin: 15px 0; background-color: #1E293B;'>")
+                    for row in child.findall('w:tr', ns):
+                        html_parts.append("<tr>")
+                        for cell in row.findall('w:tc', ns):
+                            cell_p_html = []
+                            for cell_p in cell.findall('w:p', ns):
+                                cell_p_text_runs = []
+                                for run in cell_p.findall('w:r', ns):
+                                    t = run.find('w:t', ns)
+                                    if t is not None and t.text:
+                                        cell_p_text_runs.append(escape(t.text))
+                                cell_p_html.append("".join(cell_p_text_runs))
+                            cell_content = "<br/>".join(cell_p_html)
+                            html_parts.append(f"<td style='padding: 8px; border: 1px solid #4A6FA6; color: #F1F5F9;'>{cell_content}</td>")
+                        html_parts.append("</tr>")
+                    html_parts.append("</table>")
+                    
+            html_parts.append("</div>")
+            return "".join(html_parts)
     except Exception as e:
-        return f"无法读取 DOCX 内容: {e}"
+        return f"<div style='color: #EF4444;'>无法读取 DOCX 内容: {e}</div>"
 
 def _read_pptx_text(abs_path):
     try:
@@ -1060,7 +1125,7 @@ class WorkspaceView(QWidget):
         self.duplicate_hint_label.setObjectName("MutedText")
         duplicate_tools_layout.addWidget(self.duplicate_hint_label, 1)
 
-        self.keep_one_btn = QPushButton("删除选中的重复文件")
+        self.keep_one_btn = QPushButton("删除")
         self.keep_one_btn.setObjectName("DangerBtn")
         self.keep_one_btn.setIcon(line_icon("delete", "#FFFFFF", 16))
         self.keep_one_btn.setIconSize(QSize(16, 16))
@@ -1665,8 +1730,8 @@ class WorkspaceView(QWidget):
             except Exception as e:
                 self.preview_text.setPlainText(f"PDF 预览失败: {e}")
         elif ext == ".docx":
-            text = _read_docx_text(abs_path)
-            self.preview_text.setPlainText(text)
+            html_content = _read_docx_to_html(abs_path)
+            self.preview_text.setHtml(html_content)
         elif ext == ".pptx":
             text = _read_pptx_text(abs_path)
             self.preview_text.setPlainText(text)
