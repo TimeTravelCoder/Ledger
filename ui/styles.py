@@ -261,7 +261,7 @@ def get_stylesheet(theme="dark"):
     }}
     
     /* Input Fields (QLineEdit, QTextEdit) */
-    QLineEdit, QTextEdit {{
+    QLineEdit, QTextEdit, QLineEdit:read-only, QTextEdit:read-only {{
         background-color: {bg_secondary};
         border: 1px solid {border_color};
         border-radius: 8px;

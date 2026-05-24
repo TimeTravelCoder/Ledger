@@ -64,8 +64,28 @@ def _read_docx_to_html(abs_path):
             
             ns = {'w': 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'}
             
+            # Dynamic styles based on theme
+            if config.theme == "dark":
+                text_color = "#E2E8F0"
+                tbl_bg = "#1E293B"
+                tbl_border = "#4A6FA6"
+                td_text = "#F1F5F9"
+                header_color = "#6366F1"
+            elif config.theme == "zhongguose":
+                text_color = "#333333"
+                tbl_bg = "#EEF7F2"
+                tbl_border = "#C6D7DB"
+                td_text = "#1BA784"
+                header_color = "#1BA784"
+            else: # light theme
+                text_color = "#0F172A"
+                tbl_bg = "#F8FAFC"
+                tbl_border = "#CBD5E1"
+                td_text = "#0F172A"
+                header_color = "#4F46E5"
+            
             html_parts = []
-            html_parts.append("<div style='font-family: \"Segoe UI\", sans-serif; color: #E2E8F0; line-height: 1.6;'>")
+            html_parts.append(f"<div style='font-family: \"Segoe UI\", sans-serif; color: {text_color}; line-height: 1.6;'>")
             
             body = root.find('w:body', ns)
             if body is None:
@@ -112,12 +132,12 @@ def _read_docx_to_html(abs_path):
                     if full_p_text.strip() or full_p_text == "":
                         if is_heading:
                             level = min(6, max(1, heading_level))
-                            html_parts.append(f"<h{level} style='color:#6366F1; margin-top: 15px; margin-bottom: 8px;'>{full_p_text}</h{level}>")
+                            html_parts.append(f"<h{level} style='color:{header_color}; margin-top: 15px; margin-bottom: 8px;'>{full_p_text}</h{level}>")
                         else:
                             html_parts.append(f"<p style='margin-bottom: 10px;'>{full_p_text}</p>")
                             
                 elif tag_name == 'tbl':
-                    html_parts.append("<table border='1' style='border-collapse: collapse; width: 100%; border-color: #4A6FA6; margin: 15px 0; background-color: #1E293B;'>")
+                    html_parts.append(f"<table border='1' style='border-collapse: collapse; width: 100%; border-color: {tbl_border}; margin: 15px 0; background-color: {tbl_bg};'>")
                     for row in child.findall('w:tr', ns):
                         html_parts.append("<tr>")
                         for cell in row.findall('w:tc', ns):
@@ -130,7 +150,7 @@ def _read_docx_to_html(abs_path):
                                         cell_p_text_runs.append(escape(t.text))
                                 cell_p_html.append("".join(cell_p_text_runs))
                             cell_content = "<br/>".join(cell_p_html)
-                            html_parts.append(f"<td style='padding: 8px; border: 1px solid #4A6FA6; color: #F1F5F9;'>{cell_content}</td>")
+                            html_parts.append(f"<td style='padding: 8px; border: 1px solid {tbl_border}; color: {td_text};'>{cell_content}</td>")
                         html_parts.append("</tr>")
                     html_parts.append("</table>")
                     
