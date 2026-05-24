@@ -4,7 +4,8 @@ from pathlib import Path
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, 
                              QLabel, QPushButton, QTableWidget, QTableWidgetItem, 
                              QHeaderView, QFrame, QMessageBox, QScrollArea, QProgressBar)
-from PySide6.QtCore import Qt, Signal, QSize
+from PySide6.QtCore import Qt, Signal, QSize, QRectF, QPointF
+from PySide6.QtGui import QColor, QPainter, QPen
 from config import config
 from db import db
 from file_manager import FileManager
@@ -12,6 +13,91 @@ from ui.icon_utils import decorate_table, file_type_icon, line_icon
 
 def display_name(tag):
     return tag[1:] if str(tag).startswith("#") else str(tag)
+
+
+class TagDistributionChart(QFrame):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.items = []
+        self.setMinimumHeight(170)
+
+    def set_data(self, items):
+        self.items = [(display_name(tag), count) for tag, count in items[:6]]
+        self.update()
+
+    def paintEvent(self, event):
+        super().paintEvent(event)
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+        rect = self.rect().adjusted(12, 12, -12, -12)
+        if not self.items:
+            painter.setPen(QColor("#85B3CB"))
+            painter.drawText(rect, Qt.AlignCenter, "暂无标签数据")
+            return
+
+        max_count = max(count for _, count in self.items) or 1
+        row_h = max(20, rect.height() // max(1, len(self.items)))
+        for index, (name, count) in enumerate(self.items):
+            y = rect.top() + index * row_h + 3
+            label_rect = QRectF(rect.left(), y, 86, row_h - 6)
+            bar_rect = QRectF(rect.left() + 94, y + 4, rect.width() - 142, row_h - 14)
+            painter.setPen(QColor("#AAD9F2"))
+            painter.drawText(label_rect, Qt.AlignVCenter | Qt.AlignLeft, name[:10])
+            painter.setPen(Qt.NoPen)
+            painter.setBrush(QColor("#2E5A6F"))
+            painter.drawRoundedRect(bar_rect, 6, 6)
+            active = QRectF(bar_rect)
+            active.setWidth(max(6, bar_rect.width() * count / max_count))
+            painter.setBrush(QColor("#85B3CB"))
+            painter.drawRoundedRect(active, 6, 6)
+            painter.setPen(QColor("#D1FFFF"))
+            painter.drawText(QRectF(bar_rect.right() + 8, y, 42, row_h - 6), Qt.AlignVCenter | Qt.AlignRight, str(count))
+
+
+class WeeklyTrendChart(QFrame):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.items = []
+        self.setMinimumHeight(170)
+
+    def set_data(self, items):
+        self.items = items
+        self.update()
+
+    def paintEvent(self, event):
+        super().paintEvent(event)
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+        rect = self.rect().adjusted(12, 12, -12, -22)
+        if not self.items:
+            painter.setPen(QColor("#85B3CB"))
+            painter.drawText(self.rect(), Qt.AlignCenter, "暂无近 7 天数据")
+            return
+
+        max_count = max(count for _, count in self.items) or 1
+        painter.setPen(QPen(QColor("#4A6FA6"), 1))
+        painter.drawLine(rect.left(), rect.bottom(), rect.right(), rect.bottom())
+        gap = 8
+        bar_w = max(10, (rect.width() - gap * (len(self.items) - 1)) / max(1, len(self.items)))
+        points = []
+        for index, (label, count) in enumerate(self.items):
+            x = rect.left() + index * (bar_w + gap)
+            h = max(6, rect.height() * count / max_count)
+            bar_rect = QRectF(x, rect.bottom() - h, bar_w, h)
+            painter.setPen(Qt.NoPen)
+            painter.setBrush(QColor("#4A6FA6"))
+            painter.drawRoundedRect(bar_rect, 6, 6)
+            points.append(QPointF(bar_rect.center().x(), bar_rect.top()))
+            painter.setPen(QColor("#85B3CB"))
+            painter.drawText(QRectF(x - 6, rect.bottom() + 3, bar_w + 12, 18), Qt.AlignCenter, label)
+            painter.setPen(QColor("#D1FFFF"))
+            painter.drawText(QRectF(x - 6, bar_rect.top() - 18, bar_w + 12, 16), Qt.AlignCenter, str(count))
+
+        if len(points) > 1:
+            painter.setPen(QPen(QColor("#AAD9F2"), 2, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
+            for left, right in zip(points, points[1:]):
+                painter.drawLine(left, right)
+
 
 class DashboardView(QWidget):
     # Signal emitted when user wants to switch to the Inbox tab (for quick cleanup)
@@ -90,6 +176,14 @@ class DashboardView(QWidget):
             insight_layout.addWidget(chip)
         insight_layout.addStretch()
         main_layout.addWidget(insight_strip)
+
+        charts_layout = QHBoxLayout()
+        charts_layout.setSpacing(15)
+        self.tag_chart = TagDistributionChart()
+        self.weekly_chart = WeeklyTrendChart()
+        charts_layout.addWidget(self.create_chart_card("标签分布图", self.tag_chart), 1)
+        charts_layout.addWidget(self.create_chart_card("近 7 天整理趋势", self.weekly_chart), 1)
+        main_layout.addLayout(charts_layout)
 
         # 3. Middle Section: Desktop Cleanliness & Backup health
         middle_layout = QHBoxLayout()
@@ -252,6 +346,18 @@ class DashboardView(QWidget):
         card.value_label = val_lbl
         return card
 
+    def create_chart_card(self, title, chart_widget):
+        card = QFrame()
+        card.setObjectName("CardPanel")
+        layout = QVBoxLayout(card)
+        layout.setContentsMargins(15, 12, 15, 12)
+        layout.setSpacing(8)
+        title_lbl = QLabel(title)
+        title_lbl.setObjectName("CardTitle")
+        layout.addWidget(title_lbl)
+        layout.addWidget(chart_widget)
+        return card
+
     def refresh_data(self):
         # 1. Trigger File Manager disk sync first
         FileManager.scan_workspace_files()
@@ -306,6 +412,8 @@ class DashboardView(QWidget):
         self.pending_chip.setText(f"待处理: {inbox_count} 个")
         self.coverage_chip.setText(f"标签覆盖: {tag_coverage}%")
         self.recent_chip.setText(f"近7天整理: {recent_count} 个")
+        self.tag_chart.set_data(top_tags)
+        self.weekly_chart.set_data(self.build_weekly_activity(all_files))
         self.render_tag_bars(top_tags)
 
         # 3. Check Desktop Cleanliness
@@ -404,6 +512,19 @@ class DashboardView(QWidget):
             self.recent_table.setItem(i, 1, item_path)
             self.recent_table.setItem(i, 2, item_size)
             self.recent_table.setItem(i, 3, item_mtime)
+
+    def build_weekly_activity(self, all_files):
+        today = datetime.date.today()
+        days = [today - datetime.timedelta(days=offset) for offset in range(6, -1, -1)]
+        counts = {day: 0 for day in days}
+        for record in all_files:
+            try:
+                day = datetime.datetime.fromtimestamp(record["modified_time"]).date()
+            except Exception:
+                continue
+            if day in counts:
+                counts[day] += 1
+        return [(day.strftime("%m/%d"), counts[day]) for day in days]
 
     def clean_desktop(self):
         summary = FileManager.scan_desktop_summary()

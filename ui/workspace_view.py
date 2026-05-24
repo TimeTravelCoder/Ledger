@@ -380,6 +380,7 @@ class WorkspaceView(QWidget):
         self.current_preview_rel_path = ""
         self.preview_pdf_temp_path = None
         self.file_icon_cache = {}
+        self.duplicate_groups = {}
         self.init_ui()
 
     def get_file_type_icon(self, filename):
@@ -487,7 +488,8 @@ class WorkspaceView(QWidget):
 
         status_lbl = QLabel("状态筛选")
         status_lbl.setObjectName("ToolbarLabel")
-        toolbar_row.addWidget(status_lbl)
+        self.toolbar_status_label = status_lbl
+        toolbar_row.addWidget(self.toolbar_status_label)
         self.status_combo = QComboBox()
         self.status_combo.setFixedHeight(30)
         self.status_combo.setMinimumWidth(110)
@@ -527,7 +529,8 @@ class WorkspaceView(QWidget):
         tag_lbl = QLabel("标签筛选")
         tag_lbl.setObjectName("ToolbarLabel")
         tag_lbl.setFixedWidth(56)
-        tag_row.addWidget(tag_lbl)
+        self.toolbar_tag_label = tag_lbl
+        tag_row.addWidget(self.toolbar_tag_label)
 
         self._tag_scroll = QScrollArea()
         self._tag_scroll.setFrameShape(QFrame.NoFrame)
@@ -632,7 +635,8 @@ class WorkspaceView(QWidget):
         self.selection_status_label.setMinimumWidth(150)
         batch_layout.addWidget(self.selection_status_label, 1)
 
-        batch_layout.addWidget(QLabel("标签"))
+        self.batch_tag_label = QLabel("标签")
+        batch_layout.addWidget(self.batch_tag_label)
         self.batch_tags_input = QLineEdit()
         self.batch_tags_input.setFixedWidth(180)
         self.batch_tags_input.setPlaceholderText("如：论文, 课程学习")
@@ -644,7 +648,8 @@ class WorkspaceView(QWidget):
         self.batch_apply_tags_btn.clicked.connect(self.apply_batch_tags)
         batch_layout.addWidget(self.batch_apply_tags_btn)
 
-        batch_layout.addWidget(QLabel("移动到"))
+        self.batch_move_label = QLabel("移动到")
+        batch_layout.addWidget(self.batch_move_label)
         self.batch_target_dir = QComboBox()
         self.batch_target_dir.setFixedWidth(150)
         for d in config.get_standard_dirs():
@@ -658,7 +663,8 @@ class WorkspaceView(QWidget):
         self.batch_move_btn.clicked.connect(self.apply_batch_move)
         batch_layout.addWidget(self.batch_move_btn)
 
-        batch_layout.addWidget(QLabel("重复"))
+        self.batch_duplicate_label = QLabel("重复")
+        batch_layout.addWidget(self.batch_duplicate_label)
         self.duplicate_mode_combo = QComboBox()
         self.duplicate_mode_combo.setFixedWidth(90)
         self.duplicate_mode_combo.addItems(["文件名", "大小", "哈希"])
@@ -755,6 +761,7 @@ class WorkspaceView(QWidget):
         preview_stack_layout.setContentsMargins(0, 0, 0, 0)
         self.preview_text = QTextEdit()
         self.preview_text.setReadOnly(True)
+        self.preview_text.setPlainText("未选择文件。\n从中间文件列表选择一个文件后，这里会显示内容预览。")
         preview_stack_layout.addWidget(self.preview_text)
 
         self.preview_image = QLabel("图片预览")
@@ -813,10 +820,59 @@ class WorkspaceView(QWidget):
         main_layout.setStretch(1, 1)
 
         # Populate
+        self.configure_responsive_toolbar()
         self.setup_models()
         self.refresh_tags_cloud()
         self.update_batch_toolbar_state(0)
         self.run_search()
+
+    def configure_responsive_toolbar(self):
+        self.responsive_buttons = [
+            self.reset_search_btn,
+            self.create_file_btn,
+            self.create_folder_btn,
+            self.batch_apply_tags_btn,
+            self.batch_move_btn,
+            self.duplicate_check_btn,
+            self.rule_apply_btn,
+            self.keep_one_btn,
+            self.preview_open_btn,
+        ]
+        for btn in self.responsive_buttons:
+            btn.setProperty("expanded_text", btn.text())
+            btn.setToolTip(btn.text())
+        self.responsive_labels = [
+            self.toolbar_status_label,
+            self.toolbar_tag_label,
+            self.batch_tag_label,
+            self.batch_move_label,
+            self.batch_duplicate_label,
+        ]
+        self.toolbar_compact = None
+        self.apply_toolbar_responsive()
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self.apply_toolbar_responsive()
+
+    def apply_toolbar_responsive(self):
+        if not hasattr(self, "responsive_buttons"):
+            return
+        compact = self.width() < 980
+        self.toolbar_compact = compact
+        for btn in self.responsive_buttons:
+            text = btn.property("expanded_text") or btn.toolTip() or btn.text()
+            btn.setText("" if compact else text)
+            btn.setToolTip(text)
+            btn.setProperty("compact", compact)
+            btn.style().unpolish(btn)
+            btn.style().polish(btn)
+        for label in self.responsive_labels:
+            label.setVisible(not compact)
+        self.status_combo.setMinimumWidth(88 if compact else 110)
+        self.status_combo.setMaximumWidth(96 if compact else 16777215)
+        self.batch_tags_input.setFixedWidth(120 if compact else 180)
+        self.batch_target_dir.setFixedWidth(116 if compact else 150)
 
     def setup_models(self):
         ws_path = config.workspace_dir
@@ -925,6 +981,10 @@ class WorkspaceView(QWidget):
             self.preview_info_type.setText("类型: --")
             self.preview_info_size.setText("大小: --")
             self.preview_info_path.setText("路径: --")
+            self.preview_text.show()
+            self.preview_image.hide()
+            self.preview_pdf.hide()
+            self.preview_text.setPlainText("未选择文件。\n从中间文件列表选择一个文件后，这里会显示内容预览。")
             self.update_batch_toolbar_state(0)
             self.current_preview_rel_path = ""
             return
@@ -1090,6 +1150,7 @@ class WorkspaceView(QWidget):
         mode = modes[self.duplicate_mode_combo.currentText()]
         duplicates = FileManager.find_duplicates(mode=mode)
         self.duplicates_list.clear()
+        self.duplicate_groups = {}
         if not duplicates:
             self.duplicates_list.addItem(make_empty_item("未发现重复文件", "当前规则下没有需要处理的重复项。", "success"))
             self.set_operation_status("未发现重复文件。")
@@ -1098,20 +1159,35 @@ class WorkspaceView(QWidget):
             return
 
         for index, (group_key, records) in enumerate(duplicates.items(), start=1):
+            group_id = f"group-{index}"
             total_size = sum(record.get("file_size", 0) or 0 for record in records)
             largest_size = max((record.get("file_size", 0) or 0 for record in records), default=0)
             reclaim_size = max(0, total_size - largest_size)
             sample_paths = " | ".join(record["filepath"] for record in records[:2])
             if len(records) > 2:
                 sample_paths += f" | 另 {len(records) - 2} 个"
-            header_text = (
-                f"重复组 {index}    {len(records)} 个文件    总计 {format_bytes(total_size)}    可清理约 {format_bytes(reclaim_size)}\n"
-                f"匹配值: {group_key}\n路径: {sample_paths}"
-            )
-            header = QListWidgetItem(line_icon("duplicate", size=22), header_text)
+            header = QListWidgetItem()
             header.setFlags(Qt.ItemIsEnabled)
-            header.setSizeHint(QSize(0, 86))
+            header.setSizeHint(QSize(0, 112))
+            header.setData(Qt.UserRole, {"group_id": group_id})
             self.duplicates_list.addItem(header)
+            self.duplicates_list.setItemWidget(
+                header,
+                self.create_duplicate_group_card(
+                    group_id=group_id,
+                    index=index,
+                    group_key=group_key,
+                    records=records,
+                    total_size=total_size,
+                    reclaim_size=reclaim_size,
+                    sample_paths=sample_paths,
+                )
+            )
+            self.duplicate_groups[group_id] = {
+                "records": records,
+                "children": [],
+                "collapsed": False,
+            }
             for record in records:
                 rel_path = record["filepath"]
                 item = QListWidgetItem(f"{Path(rel_path).name}    {format_bytes(record.get('file_size', 0))}\n{rel_path}")
@@ -1119,14 +1195,96 @@ class WorkspaceView(QWidget):
                 item.setSizeHint(QSize(0, 54))
                 item.setToolTip(rel_path)
                 item.setData(Qt.UserRole, rel_path)
+                item.setData(Qt.UserRole + 1, group_id)
                 self.duplicates_list.addItem(item)
+                self.duplicate_groups[group_id]["children"].append(item)
         self.set_operation_status(f"发现 {len(duplicates)} 组重复文件，选择要删除的重复项。")
         if activate:
             self.preview_tabs.setCurrentWidget(self.duplicates_list)
 
+    def create_duplicate_group_card(self, group_id, index, group_key, records, total_size, reclaim_size, sample_paths):
+        card = QFrame()
+        card.setObjectName("DuplicateGroupCard")
+        layout = QVBoxLayout(card)
+        layout.setContentsMargins(10, 8, 10, 8)
+        layout.setSpacing(6)
+
+        top_row = QHBoxLayout()
+        top_row.setContentsMargins(0, 0, 0, 0)
+        icon_label = QLabel()
+        icon_label.setPixmap(line_icon("duplicate", size=22).pixmap(22, 22))
+        top_row.addWidget(icon_label)
+
+        title = QLabel(f"重复组 {index} · {len(records)} 个文件")
+        title.setObjectName("DuplicateGroupTitle")
+        top_row.addWidget(title, 1)
+
+        meta = QLabel(f"总计 {format_bytes(total_size)} · 可清理约 {format_bytes(reclaim_size)}")
+        meta.setObjectName("DuplicateGroupMeta")
+        top_row.addWidget(meta)
+        layout.addLayout(top_row)
+
+        detail = QLabel(f"匹配值: {group_key}\n路径: {sample_paths}")
+        detail.setObjectName("DuplicateGroupDetail")
+        detail.setWordWrap(True)
+        layout.addWidget(detail)
+
+        action_row = QHBoxLayout()
+        action_row.setContentsMargins(0, 0, 0, 0)
+        action_row.addStretch()
+        select_btn = QPushButton("选择重复项")
+        select_btn.setObjectName("ToolbarBtn")
+        select_btn.setIcon(line_icon("success", size=14))
+        select_btn.setIconSize(QSize(14, 14))
+        select_btn.clicked.connect(lambda: self.select_duplicate_group(group_id, include_first=False))
+        action_row.addWidget(select_btn)
+
+        keep_btn = QPushButton("保留首个")
+        keep_btn.setObjectName("ToolbarPrimaryBtn")
+        keep_btn.setIcon(line_icon("delete", "#FFFFFF", 14))
+        keep_btn.setIconSize(QSize(14, 14))
+        keep_btn.clicked.connect(lambda: self.delete_duplicate_group_except_first(group_id))
+        action_row.addWidget(keep_btn)
+
+        toggle_btn = QPushButton("折叠")
+        toggle_btn.setObjectName("ToolbarBtn")
+        toggle_btn.clicked.connect(lambda: self.toggle_duplicate_group(group_id, toggle_btn))
+        action_row.addWidget(toggle_btn)
+        layout.addLayout(action_row)
+        return card
+
+    def select_duplicate_group(self, group_id, include_first=False):
+        group = self.duplicate_groups.get(group_id)
+        if not group:
+            return
+        self.duplicates_list.clearSelection()
+        children = group["children"] if include_first else group["children"][1:]
+        for item in children:
+            item.setSelected(True)
+        self.set_operation_status(f"已选择本组 {len(children)} 个可处理重复项。")
+
+    def toggle_duplicate_group(self, group_id, button):
+        group = self.duplicate_groups.get(group_id)
+        if not group:
+            return
+        group["collapsed"] = not group["collapsed"]
+        for item in group["children"]:
+            item.setHidden(group["collapsed"])
+        button.setText("展开" if group["collapsed"] else "折叠")
+
+    def delete_duplicate_group_except_first(self, group_id):
+        group = self.duplicate_groups.get(group_id)
+        if not group:
+            return
+        paths = [record["filepath"] for record in group["records"][1:]]
+        if not paths:
+            self.set_operation_status("该重复组没有可删除的其余文件。")
+            return
+        self.delete_duplicate_paths(paths, label="该重复组中除首个外的文件")
+
     def on_duplicate_item_double_clicked(self, item):
         rel_path = item.data(Qt.UserRole)
-        if not rel_path:
+        if not isinstance(rel_path, str) or not rel_path:
             return
         self.current_preview_rel_path = rel_path
         self.load_preview(rel_path)
@@ -1136,7 +1294,7 @@ class WorkspaceView(QWidget):
         selected = []
         for item in self.duplicates_list.selectedItems():
             rel_path = item.data(Qt.UserRole)
-            if rel_path:
+            if isinstance(rel_path, str) and rel_path:
                 selected.append(rel_path)
         return selected
 
@@ -1151,11 +1309,15 @@ class WorkspaceView(QWidget):
         if not target_paths:
             self.set_operation_status("请先选择一个文件。")
             return
+        self.delete_duplicate_paths(target_paths, label="选中的文件")
+
+    def delete_duplicate_paths(self, target_paths, label="选中的文件"):
+        target_paths = list(dict.fromkeys(target_paths))
         preview = "\n".join(target_paths[:5])
         if len(target_paths) > 5:
             preview += f"\n... 以及 {len(target_paths) - 5} 个文件"
         reply = QMessageBox.question(self, "确认删除文件",
-                                     f"确认删除选中的 {len(target_paths)} 个文件吗？\n{preview}\n此操作会永久删除磁盘上的文件。",
+                                     f"确认删除{label}（共 {len(target_paths)} 个）吗？\n{preview}\n此操作会永久删除磁盘上的文件。",
                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
         if reply != QMessageBox.Yes:
             return

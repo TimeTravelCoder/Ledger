@@ -9,7 +9,7 @@ from PySide6.QtCore import Qt, Signal, QSize
 from config import config, normalize_tag, display_tag, NAME_PRESET_BASES
 from db import db
 from file_manager import FileManager
-from ui.icon_utils import file_type_icon, line_icon
+from ui.icon_utils import file_type_icon, line_icon, make_empty_item
 
 STYLE_PREVIEW_NORMAL = """
     QLineEdit {
@@ -363,6 +363,11 @@ class InboxView(QWidget):
             if has_files and self.file_list_widget.count() > 0:
                 self.file_list_widget.setCurrentRow(0)
             else:
+                self.file_list_widget.addItem(make_empty_item(
+                    "收集箱暂无文件",
+                    "可以从桌面一键导入，或把下载文件放进收集箱后点击扫描。",
+                    "inbox",
+                ))
                 self.right_stack.setCurrentIndex(0)
         except Exception as e:
             print(f"Error scanning inbox: {e}")

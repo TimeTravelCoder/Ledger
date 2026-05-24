@@ -167,6 +167,12 @@ def get_stylesheet(theme="dark"):
         border-radius: 12px;
     }}
 
+    QFrame#DuplicateGroupCard {{
+        background-color: {bg_primary};
+        border: 1px solid {border_color};
+        border-radius: 10px;
+    }}
+
     QFrame#RenamePreviewCard {{
         background-color: {bg_primary};
         border: 1px dashed {border_hover};
@@ -285,6 +291,23 @@ def get_stylesheet(theme="dark"):
         font-weight: 600;
     }}
 
+    QLabel#DuplicateGroupTitle {{
+        color: {text_primary};
+        font-size: 13px;
+        font-weight: 800;
+    }}
+
+    QLabel#DuplicateGroupMeta {{
+        color: {text_secondary};
+        font-size: 12px;
+        font-weight: 700;
+    }}
+
+    QLabel#DuplicateGroupDetail {{
+        color: {text_disabled};
+        font-size: 11px;
+    }}
+
     /* Normal Push Buttons */
     QPushButton {{
         background-color: {bg_secondary};
@@ -327,6 +350,11 @@ def get_stylesheet(theme="dark"):
     QPushButton#ToolbarBtn:hover {{
         background-color: {bg_tertiary};
         border-color: {accent_color};
+    }}
+
+    QPushButton#ToolbarBtn[compact="true"], QPushButton#ToolbarPrimaryBtn[compact="true"] {{
+        padding: 6px 8px;
+        min-width: 30px;
     }}
 
     QPushButton#ToolbarPrimaryBtn {{

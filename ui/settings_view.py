@@ -513,6 +513,12 @@ class SettingsView(QWidget):
                 item.widget().deleteLater()
 
         self.rule_widgets = []
+        if not config.auto_rules:
+            empty = QLabel("暂无规则归类配置。\n可以先保存默认规则，或在这里添加关键词/后缀到目标目录的映射。")
+            empty.setObjectName("EmptyState")
+            empty.setAlignment(Qt.AlignCenter)
+            empty.setWordWrap(True)
+            self.rule_scroll_layout.addWidget(empty)
         for rule in config.auto_rules:
             row = QFrame()
             row.setObjectName("CardPanel")
