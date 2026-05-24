@@ -451,31 +451,69 @@ class DashboardView(QWidget):
         decorate_table(self.recent_table, row_height=34, icon_size=22)
         recent_layout.addWidget(self.recent_table)
 
-        self.tags_summary = QLabel("标签分布: --")
-        self.tags_summary.setWordWrap(True)
-        self.tags_summary.setStyleSheet("color: #94A3B8; font-size: 11px;")
-        recent_layout.addWidget(self.tags_summary)
+        # Keep dummy/hidden member variables for 100% backend compatibility
+        self.tags_summary = QLabel()
+        self.bar_title = QLabel()
+        self.bar_container = QFrame()
+        self.bar_container_layout = QVBoxLayout(self.bar_container)
+
+        # Create a container frame for premium indicators
+        theme = config.theme
+        is_light = theme in ["light", "zhongguose"]
+        indicators_frame = QFrame()
+        indicators_layout = QHBoxLayout(indicators_frame)
+        indicators_layout.setContentsMargins(0, 5, 0, 5)
+        indicators_layout.setSpacing(30) # Generous horizontal spacing
+
+        # --- Indicator 1: 标签覆盖度 ---
+        tag_indicator_widget = QWidget()
+        tag_indicator_layout = QVBoxLayout(tag_indicator_widget)
+        tag_indicator_layout.setContentsMargins(0, 0, 0, 0)
+        tag_indicator_layout.setSpacing(6)
+
+        tag_header_layout = QHBoxLayout()
+        self.tag_lbl = QLabel("标签覆盖度")
+        self.tag_value_lbl = QLabel("0%")
+        tag_header_layout.addWidget(self.tag_lbl)
+        tag_header_layout.addStretch()
+        tag_header_layout.addWidget(self.tag_value_lbl)
 
         self.tag_progress = QProgressBar()
         self.tag_progress.setRange(0, 100)
         self.tag_progress.setValue(0)
-        self.tag_progress.setFormat("标签覆盖度")
-        recent_layout.addWidget(self.tag_progress)
+        self.tag_progress.setTextVisible(False) # Hide overlapping text
+        self.tag_progress.setFixedHeight(6)
+        
+        tag_indicator_layout.addLayout(tag_header_layout)
+        tag_indicator_layout.addWidget(self.tag_progress)
+
+        # --- Indicator 2: 近7天整理进度 ---
+        recent_indicator_widget = QWidget()
+        recent_indicator_layout = QVBoxLayout(recent_indicator_widget)
+        recent_indicator_layout.setContentsMargins(0, 0, 0, 0)
+        recent_indicator_layout.setSpacing(6)
+
+        recent_header_layout = QHBoxLayout()
+        self.recent_lbl = QLabel("近7天整理进度")
+        self.recent_value_lbl = QLabel("0%")
+        recent_header_layout.addWidget(self.recent_lbl)
+        recent_header_layout.addStretch()
+        recent_header_layout.addWidget(self.recent_value_lbl)
 
         self.recent_progress = QProgressBar()
         self.recent_progress.setRange(0, 100)
         self.recent_progress.setValue(0)
-        self.recent_progress.setFormat("近7天整理进度")
-        recent_layout.addWidget(self.recent_progress)
+        self.recent_progress.setTextVisible(False) # Hide overlapping text
+        self.recent_progress.setFixedHeight(6)
+        
+        recent_indicator_layout.addLayout(recent_header_layout)
+        recent_indicator_layout.addWidget(self.recent_progress)
 
-        self.bar_title = QLabel("标签概览")
-        self.bar_title.setObjectName("CardTitle")
-        recent_layout.addWidget(self.bar_title)
-        self.bar_container = QFrame()
-        self.bar_container_layout = QVBoxLayout(self.bar_container)
-        self.bar_container_layout.setContentsMargins(0, 0, 0, 0)
-        self.bar_container_layout.setSpacing(6)
-        recent_layout.addWidget(self.bar_container)
+        # Add to horizontal indicators layout
+        indicators_layout.addWidget(tag_indicator_widget, 1)
+        indicators_layout.addWidget(recent_indicator_widget, 1)
+
+        recent_layout.addWidget(indicators_frame)
 
         main_layout.addWidget(recent_card)
 
@@ -579,14 +617,59 @@ class DashboardView(QWidget):
         self.card_tags_count.value_label.setText(str(tags_count))
         self.card_recent_count.value_label.setText(str(recent_count))
         self.tags_summary.setText(f"标签分布: {tag_summary_text}")
-        self.tag_progress.setValue(tag_coverage)
-        self.recent_progress.setValue(recent_progress)
         self.pending_chip.setText(f"待处理: {inbox_count} 个")
         self.coverage_chip.setText(f"标签覆盖: {tag_coverage}%")
         self.recent_chip.setText(f"近7天整理: {recent_count} 个")
         self.tag_chart.set_data(top_tags)
         self.weekly_chart.set_data(self.build_weekly_activity(all_files))
         self.render_tag_bars(top_tags)
+
+        # Dynamic Theme-Adaptive CSS & Label values update for Premium Progress Indicators
+        theme = config.theme
+        is_light = theme in ["light", "zhongguose"]
+        bg_track = "rgba(0, 0, 0, 0.06)" if is_light else "rgba(255, 255, 255, 0.06)"
+        lbl_style = "color: #475569; font-size: 12px; font-weight: 500;" if is_light else "color: #85B3CB; font-size: 12px; font-weight: 500;"
+        tag_color_hex = "#6366F1" if theme == "light" else ("#1BA784" if theme == "zhongguose" else "#AAD9F2")
+        recent_color_hex = "#4F46E5" if theme == "light" else ("#127A60" if theme == "zhongguose" else "#4A6FA6")
+
+        self.tag_lbl.setStyleSheet(lbl_style)
+        self.recent_lbl.setStyleSheet(lbl_style)
+        self.tag_value_lbl.setStyleSheet(f"color: {tag_color_hex}; font-size: 12px; font-weight: bold;")
+        self.recent_value_lbl.setStyleSheet(f"color: {recent_color_hex}; font-size: 12px; font-weight: bold;")
+
+        self.tag_progress.setStyleSheet(
+            f"""
+            QProgressBar {{
+                border: none;
+                border-radius: 3px;
+                background-color: {bg_track};
+                height: 6px;
+            }}
+            QProgressBar::chunk {{
+                background-color: {tag_color_hex};
+                border-radius: 3px;
+            }}
+            """
+        )
+        self.recent_progress.setStyleSheet(
+            f"""
+            QProgressBar {{
+                border: none;
+                border-radius: 3px;
+                background-color: {bg_track};
+                height: 6px;
+            }}
+            QProgressBar::chunk {{
+                background-color: {recent_color_hex};
+                border-radius: 3px;
+            }}
+            """
+        )
+
+        self.tag_progress.setValue(tag_coverage)
+        self.recent_progress.setValue(recent_progress)
+        self.tag_value_lbl.setText(f"{tag_coverage}%")
+        self.recent_value_lbl.setText(f"{recent_progress}%")
 
         # 3. Check Desktop Cleanliness
         desktop_files = FileManager.scan_desktop_files()
