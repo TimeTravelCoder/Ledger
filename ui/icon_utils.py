@@ -95,8 +95,20 @@ def format_bytes(num_bytes):
     return "0 B"
 
 
-def line_icon(name, color="#AAD9F2", size=24):
+def line_icon(name, color=None, size=24):
     """Return a small linear icon drawn with one visual language."""
+    if color is None:
+        try:
+            from config import config
+            if config.theme == "dark":
+                color = "#AAD9F2"
+            elif config.theme == "zhongguose":
+                color = "#4A6E56"
+            else:
+                color = "#475569"
+        except Exception:
+            color = "#AAD9F2"
+
     cache_key = (name, color, size)
     if cache_key in _LINE_ICON_CACHE:
         return _LINE_ICON_CACHE[cache_key]

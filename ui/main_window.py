@@ -148,6 +148,7 @@ class MainWindow(QMainWindow):
 
         # Set default active nav button
         self.btn_dash.setChecked(True)
+        self.refresh_nav_icons()
 
         sidebar_layout.addStretch()
 
@@ -216,17 +217,39 @@ class MainWindow(QMainWindow):
         btn.setCheckable(True)
         btn.setAutoExclusive(True)
         btn.setProperty("nav_label", text)
+        btn.setProperty("icon_name", icon_name)  # Store icon name for dynamic theme coloring
         btn.setToolTip(text)
-        btn.setIcon(line_icon(icon_name, size=18))
         btn.setIconSize(QSize(18, 18))
         btn.clicked.connect(lambda: self.switch_tab(index))
         return btn
+
+    def refresh_nav_icons(self):
+        # Determine unselected icon color based on current theme to ensure high contrast and readability
+        if config.theme == "dark":
+            unselected_color = "#AAD9F2"
+        elif config.theme == "zhongguose":
+            unselected_color = "#4A6E56"
+        else:
+            unselected_color = "#475569"
+            
+        selected_color = "#FFFFFF"  # Pure white on selected solid backgrounds
+        
+        for btn in self.nav_buttons:
+            icon_name = btn.property("icon_name")
+            if not icon_name:
+                continue
+            is_active = btn.isChecked()
+            color = selected_color if is_active else unselected_color
+            btn.setIcon(line_icon(icon_name, color=color, size=18))
 
     def switch_tab(self, index):
         self.content_stack.setCurrentIndex(index)
         # Sync checked states of sidebar buttons (needed if switched programmatically)
         for i, btn in enumerate(self.nav_buttons):
             btn.setChecked(i == index)
+            
+        # Dynamically refresh nav icons to swap selected/unselected styles instantly
+        self.refresh_nav_icons()
             
         # Special refreshes on tab activation
         if index == 0:
@@ -254,6 +277,7 @@ class MainWindow(QMainWindow):
         
         # Update sub-components if necessary (e.g. refresh UI states)
         self.update_theme_btn_text()
+        self.refresh_nav_icons()
         self.refresh_all_views()
 
     def show_toast(self, message, title="", level="info", duration=3200):
@@ -263,11 +287,15 @@ class MainWindow(QMainWindow):
     def update_theme_btn_text(self):
         if config.theme == "dark":
             self.btn_theme_toggle.setText("切换浅色模式")
+            theme_icon_color = "#AAD9F2"
         elif config.theme == "light":
             self.btn_theme_toggle.setText("切换幽竹清溪")
+            theme_icon_color = "#475569"
         else:
             self.btn_theme_toggle.setText("切换深色模式")
-        self.btn_theme_toggle.setIcon(line_icon("theme", size=16))
+            theme_icon_color = "#4A6E56"
+            
+        self.btn_theme_toggle.setIcon(line_icon("theme", color=theme_icon_color, size=16))
         self.btn_theme_toggle.setIconSize(QSize(16, 16))
         theme_text = self.btn_theme_toggle.text()
         self.btn_theme_toggle.setProperty("expanded_text", theme_text)
@@ -289,6 +317,7 @@ class MainWindow(QMainWindow):
         self.view_workspace.refresh_rule_hint_for_current_selection()
         self.view_workspace.run_search()
         self.view_backup.refresh_history()
+        self.refresh_nav_icons()
 
     def setup_downloads_watcher(self):
         """Sets up watchdog file watcher thread on the downloads folder."""
