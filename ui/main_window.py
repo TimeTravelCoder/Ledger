@@ -31,17 +31,43 @@ class DownloadWatcher(FileSystemEventHandler):
     def on_created(self, event):
         if event.is_directory:
             return
-            
-        file_path = Path(event.src_path)
-        # Avoid temporary browser download files like .tmp, .crdownload, .part
-        if file_path.suffix.lower() in [".tmp", ".crdownload", ".part", ".download"]:
+        self.handle_file(event.src_path)
+
+    def on_moved(self, event):
+        if event.is_directory:
+            return
+        self.handle_file(event.dest_path)
+
+    def handle_file(self, file_path_str):
+        file_path = Path(file_path_str)
+        # Avoid temporary browser download files like .tmp, .crdownload, .part, .download, etc.
+        if file_path.suffix.lower() in [".tmp", ".crdownload", ".part", ".download"] or file_path.name.startswith("."):
             return
             
-        # Anti-debounce check (sometimes OS triggers multiple created events)
+        # Wait until file size stabilizes (i.e. browser is done writing)
         import time
+        try:
+            last_size = -1
+            stable_count = 0
+            for _ in range(15): # check up to 15 times
+                if not file_path.exists():
+                    return
+                current_size = file_path.stat().st_size
+                if current_size == last_size and current_size > 0:
+                    stable_count += 1
+                    if stable_count >= 2: # Stable for 2 consecutive checks
+                        break
+                else:
+                    last_size = current_size
+                    stable_count = 0
+                time.sleep(0.3)
+        except Exception:
+            return
+
+        # Anti-debounce check (sometimes OS triggers multiple watchdog events)
         now = time.time()
         if str(file_path) in self.last_triggered:
-            if now - self.last_triggered[str(file_path)] < 1.0:
+            if now - self.last_triggered[str(file_path)] < 1.2:
                 return
         self.last_triggered[str(file_path)] = now
         
@@ -326,6 +352,7 @@ class MainWindow(QMainWindow):
         self.view_workspace.run_search()
         self.view_backup.refresh_history()
         self.refresh_nav_icons()
+        self.setup_downloads_watcher()
 
     def setup_downloads_watcher(self):
         """Sets up watchdog file watcher thread on the downloads folder."""
@@ -454,4 +481,9 @@ class MainWindow(QMainWindow):
         # Clean up background watcher threads on exit
         if self.watcher_thread:
             self.watcher_thread.stop()
+            
+        # Close SQLite database connection gracefully to prevent locks
+        from db import db
+        db.close()
+        
         event.accept()

@@ -5,18 +5,33 @@ from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
                              QLabel, QLineEdit, QPushButton, QFrame, 
                              QProgressBar, QTextEdit, QTableWidget, QTableWidgetItem, 
                              QHeaderView, QFileDialog, QMessageBox, QScrollArea)
-from PySide6.QtCore import Qt, Signal, QSize
+from PySide6.QtCore import Qt, Signal, QSize, QThread
 from config import config
 from db import db
 from file_manager import FileManager
 from ui.icon_utils import decorate_table, line_icon
 from ui.toast import show_toast
 
+class BackupWorker(QThread):
+    finished_signal = Signal(bool, str)
+
+    def __init__(self, backup_type):
+        super().__init__()
+        self.backup_type = backup_type
+
+    def run(self):
+        try:
+            success, msg = FileManager.perform_backup(self.backup_type)
+            self.finished_signal.emit(success, msg)
+        except Exception as e:
+            self.finished_signal.emit(False, str(e))
+
 class BackupView(QWidget):
     refresh_other_views_signal = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.backup_worker = None
         self.init_ui()
 
     def init_ui(self):
@@ -235,13 +250,21 @@ class BackupView(QWidget):
         
         config.save()
 
-        # 2. Start backup
-        label = "移动硬盘" if backup_type == "disk" else "云端同步盘"
-        self.progress_bar.setValue(20)
-        self.console_output.append(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] 启动增量镜像备份至 '{label}'...")
+        # Disable buttons to prevent double click race conditions
+        self.btn_run_disk.setEnabled(False)
+        self.btn_run_cloud.setEnabled(False)
 
-        self.progress_bar.setValue(50)
-        success, msg = FileManager.perform_backup(backup_type)
+        # 2. Start backup Worker thread
+        label = "移动硬盘" if backup_type == "disk" else "云端同步盘"
+        self.progress_bar.setValue(10) # 10% on startup
+        self.console_output.append(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] 启动增量镜像备份至 '{label}' (后台异步处理中)...")
+
+        self.backup_worker = BackupWorker(backup_type)
+        self.backup_worker.finished_signal.connect(lambda success, msg: self.on_backup_finished(backup_type, success, msg))
+        self.backup_worker.start()
+
+    def on_backup_finished(self, backup_type, success, msg):
+        label = "移动硬盘" if backup_type == "disk" else "云端同步盘"
         self.progress_bar.setValue(100)
 
         if success:
@@ -250,6 +273,11 @@ class BackupView(QWidget):
         else:
             self.console_output.append(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] 备份失败！原因: {msg}")
             QMessageBox.critical(self, "备份失败", f"备份未成功运行！\n原因: {msg}")
+
+        # Re-enable buttons and reset worker reference
+        self.btn_run_disk.setEnabled(True)
+        self.btn_run_cloud.setEnabled(True)
+        self.backup_worker = None
 
         # Refresh
         self.refresh_history()

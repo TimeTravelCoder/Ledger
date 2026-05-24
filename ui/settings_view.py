@@ -752,14 +752,15 @@ class SettingsView(QWidget):
             
         idx = self.wiz_lang_combo.currentIndex()
         chosen_lang = "cn"
+        use_custom_dirs_flag = False
         if idx == 0:
             chosen_lang = "cn"
-            config.use_custom_dirs = False
+            use_custom_dirs_flag = False
         elif idx == 1:
             chosen_lang = "en"
-            config.use_custom_dirs = False
+            use_custom_dirs_flag = False
         else:
-            config.use_custom_dirs = True
+            use_custom_dirs_flag = True
             if not config.custom_standard_dirs:
                 QMessageBox.warning(self, "警告", "请先在下方配置并保存您的“自建分类目录模板”！")
                 return
@@ -771,9 +772,15 @@ class SettingsView(QWidget):
         )
         
         if reply == QMessageBox.Yes:
+            # First, set global config parameter temporarily to init the workspace correctly
+            old_use_custom = config.use_custom_dirs
+            config.use_custom_dirs = use_custom_dirs_flag
+            
             # 1. Physically create workspace and directories
             success, msg = FileManager.init_workspace(custom_ws_dir=str(target_path), custom_lang=chosen_lang)
             if not success:
+                # Revert if failed
+                config.use_custom_dirs = old_use_custom
                 QMessageBox.critical(self, "生成失败", msg)
                 return
                 
@@ -1052,10 +1059,30 @@ class SettingsView(QWidget):
             QMessageBox.warning(self, "警告", "自建目录结构不能为空！")
             return
             
-        parts = [p.strip() for p in raw_dirs.replace("；", ",").replace(";", ",").split(",") if p.strip()]
-        if not parts:
+        raw_parts = [p.strip() for p in raw_dirs.replace("；", ",").replace(";", ",").split(",") if p.strip()]
+        if not raw_parts:
             QMessageBox.warning(self, "警告", "自建目录结构格式不正确！")
             return
+            
+        parts = []
+        for p_str in raw_parts:
+            # Check for absolute paths
+            if Path(p_str).is_absolute() or p_str.startswith("/") or p_str.startswith("\\"):
+                QMessageBox.warning(self, "警告", f"自建目录中不能包含绝对路径: '{p_str}'！")
+                return
+            
+            # Check for path traversals
+            if ".." in p_str or p_str.startswith("."):
+                QMessageBox.warning(self, "警告", f"自建目录中不能包含特殊字符或路径穿越: '{p_str}'！")
+                return
+                
+            # Check for Windows illegal characters in directory names
+            illegal_chars = ['*', '?', '"', '<', '>', '|', ':']
+            if any(char in p_str for char in illegal_chars):
+                QMessageBox.warning(self, "警告", f"目录名称包含非法字符: '{p_str}'！")
+                return
+                
+            parts.append(p_str)
             
         config.custom_standard_dirs = parts
         config.save()

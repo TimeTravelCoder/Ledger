@@ -1,8 +1,10 @@
 import sqlite3
 import datetime
 from pathlib import Path
+from functools import lru_cache
 from config import config
 
+@lru_cache(maxsize=4096)
 def get_pinyin_char(char):
     if not '\u4e00' <= char <= '\u9fa5':
         return char.lower()
@@ -38,10 +40,12 @@ def get_pinyin_char(char):
         pass
     return char.lower()
 
+@lru_cache(maxsize=1024)
 def get_pinyin_initials(text):
     if not text:
         return ""
     return "".join(get_pinyin_char(c) for c in text)
+
 
 
 class DatabaseManager:
@@ -153,6 +157,28 @@ class DatabaseManager:
         conn = self.get_conn()
         cursor = conn.cursor()
         cursor.execute("DELETE FROM files WHERE filepath = ?", (rel_path,))
+        conn.commit()
+
+    def delete_file_records(self, rel_paths):
+        """Delete multiple file records in a single transaction."""
+        if not rel_paths:
+            return
+        conn = self.get_conn()
+        cursor = conn.cursor()
+        chunk_size = 500
+        for i in range(0, len(rel_paths), chunk_size):
+            chunk = rel_paths[i:i + chunk_size]
+            placeholders = ",".join(["?"] * len(chunk))
+            cursor.execute(f"DELETE FROM files WHERE filepath IN ({placeholders})", chunk)
+        conn.commit()
+
+    def delete_folder_records(self, folder_rel_path):
+        """Delete all file records under a specific folder path."""
+        conn = self.get_conn()
+        cursor = conn.cursor()
+        folder_prefix = folder_rel_path + "/"
+        cursor.execute("DELETE FROM files WHERE filepath = ? OR filepath LIKE ?", 
+                       (folder_rel_path, folder_prefix + "%"))
         conn.commit()
 
     def rename_file_record(self, old_rel_path, new_rel_path, new_filename):

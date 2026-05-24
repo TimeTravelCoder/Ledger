@@ -407,7 +407,10 @@ class InboxView(QWidget):
 
         selected_item = items[0]
         self.selected_file_path = selected_item.data(Qt.UserRole)
-        filename = selected_item.text()
+        if not self.selected_file_path:
+            self.right_stack.setCurrentIndex(0)
+            return
+        filename = Path(self.selected_file_path).name
         
         self.lbl_curr_name.setText(f"原文件名: {filename}")
         self.right_stack.setCurrentIndex(1)

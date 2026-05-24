@@ -420,9 +420,6 @@ class CreateFileDialog(QDialog):
         self.ext_combo.addItems([
             ".md（Markdown 文档）",
             ".txt（纯文本文件）",
-            ".docx（Word 文档）",
-            ".xlsx（Excel 表格）",
-            ".pptx（PPT 演示文稿）",
             "自定义后缀"
         ])
         self.ext_combo.currentIndexChanged.connect(self.on_ext_changed)
@@ -462,7 +459,7 @@ class CreateFileDialog(QDialog):
         layout.addLayout(btn_layout)
 
     def on_ext_changed(self, index):
-        self.input_custom_ext.setVisible(index == 5)
+        self.input_custom_ext.setVisible(index == 2)
 
     def create_file(self):
         filename = self.input_filename.text().strip()
@@ -476,12 +473,6 @@ class CreateFileDialog(QDialog):
             ext = ".md"
         elif ext_idx == 1:
             ext = ".txt"
-        elif ext_idx == 2:
-            ext = ".docx"
-        elif ext_idx == 3:
-            ext = ".xlsx"
-        elif ext_idx == 4:
-            ext = ".pptx"
         else:
             ext = self.input_custom_ext.text().strip()
             if not ext.startswith("."):
@@ -1461,6 +1452,9 @@ class WorkspaceView(QWidget):
     def open_file_details(self, rel_path):
         dialog = FileDetailsDialog(rel_path, self)
         if dialog.exec() == QDialog.Accepted:
+            if self.current_preview_rel_path == rel_path:
+                self.clear_preview_resources()
+                self.current_preview_rel_path = ""
             self.refresh_tree_view()
             self.run_search()
             self.refresh_other_views_signal.emit()
@@ -1512,6 +1506,7 @@ class WorkspaceView(QWidget):
             return
         try:
             shutil.rmtree(abs_path)
+            db.delete_folder_records(rel_path)
             FileManager.scan_workspace_files()
         except Exception as e:
             QMessageBox.critical(self, "错误", f"删除目录失败：\n{str(e)}")
@@ -1696,8 +1691,7 @@ class WorkspaceView(QWidget):
         self.refresh_rule_hint(first_rel)
 
     def load_preview(self, rel_path):
-        ws_root = Path(config.workspace_dir)
-        abs_path = ws_root / rel_path
+        abs_path = self.get_abs_path(rel_path)
         self.preview_file_icon.setPixmap(self.get_file_type_icon(abs_path.name).pixmap(32, 32))
         self.preview_name_label.setText(abs_path.name)
         self.preview_file_label.setText(rel_path)
@@ -1900,21 +1894,28 @@ class WorkspaceView(QWidget):
             self.set_operation_status("请先选择一个文件。")
             return
         moved = 0
+        failed = []
         for rel_path in rel_paths:
             name, target_dir = FileManager.suggest_rule_target(Path(rel_path).name)
             if target_dir:
                 try:
                     FileManager.bulk_move_files([rel_path], target_dir)
                     moved += 1
-                except Exception:
-                    pass
+                except Exception as e:
+                    failed.append((rel_path, str(e)))
         self.refresh_tree_view()
         self.run_search()
         self.show_duplicates(activate=False)
         self.refresh_other_views_signal.emit()
         self.set_operation_status(f"已按规则归类 {moved} 个文件。")
-        if moved:
-            show_toast(self, f"已按规则归类 {moved} 个文件。", title="规则归类", level="success")
+        if failed:
+            fail_preview = "\n".join([f"- {path}: {err}" for path, err in failed[:5]])
+            if len(failed) > 5:
+                fail_preview += f"\n... 以及 {len(failed) - 5} 个文件归类失败"
+            QMessageBox.critical(self, "部分文件归类失败", 
+                                 f"已成功归类 {moved} 个文件，但有 {len(failed)} 个文件归类失败：\n{fail_preview}")
+        elif moved:
+            show_toast(self, f"已成功按规则自动归类 {moved} 个文件。", title="归类完成", level="success")
 
     def refresh_rule_hint_for_current_selection(self):
         if self.current_preview_rel_path:
@@ -2324,22 +2325,33 @@ class WorkspaceView(QWidget):
             return
 
         deleted = 0
-        try:
-            for target_rel_path in target_paths:
+        failed = []
+        for target_rel_path in target_paths:
+            try:
                 FileManager.delete_file(target_rel_path)
                 deleted += 1
-        except Exception as e:
-            QMessageBox.critical(self, "错误", f"删除文件失败：{str(e)}")
-            return
+            except Exception as e:
+                failed.append((target_rel_path, str(e)))
 
+        # Always release preview resources and update lists to keep UI synced
         self.clear_preview_resources()
-        self.current_preview_rel_path = ""
+        if self.current_preview_rel_path in target_paths:
+            self.current_preview_rel_path = ""
+            
         self.refresh_tree_view()
         self.run_search()
         self.show_duplicates(activate=False)
         self.refresh_other_views_signal.emit()
-        self.set_operation_status(f"已删除 {deleted} 个文件。")
-        show_toast(self, f"已删除 {deleted} 个文件。", title="删除完成", level="success")
+
+        if failed:
+            fail_preview = "\n".join([f"- {path}: {err}" for path, err in failed[:5]])
+            if len(failed) > 5:
+                fail_preview += f"\n... 以及 {len(failed) - 5} 个文件删除失败"
+            QMessageBox.critical(self, "部分文件删除失败", 
+                                 f"已成功删除 {deleted} 个文件，但有 {len(failed)} 个文件删除失败：\n{fail_preview}")
+        else:
+            self.set_operation_status(f"已删除 {deleted} 个文件。")
+            show_toast(self, f"已删除 {deleted} 个文件。", title="删除完成", level="success")
 
     def create_new_file(self):
         dialog = CreateFileDialog(self.current_folder_rel, self)
@@ -2456,20 +2468,6 @@ class WorkspaceView(QWidget):
         if rel_path:
             self.open_file_details(rel_path)
 
-    def delete_file(self):
-        reply = QMessageBox.question(self, "警告 - 物理删除",
-                                     "此操作将永久从磁盘删除该文件。\n确认要删除吗？",
-                                     QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
-        
-        if reply == QMessageBox.Yes:
-            self.clear_preview_resources()
-            try:
-                FileManager.delete_file(self.rel_path)
-                show_toast(self, "文件已成功从磁盘和数据库中删除。", title="删除成功", level="success")
-                self.accept()
-            except Exception as e:
-                QMessageBox.critical(self, "错误", f"删除文件失败：{str(e)}")
-
     def refresh_status_combo(self):
         self.status_combo.blockSignals(True)
         self.status_combo.clear()
@@ -2581,9 +2579,17 @@ class FileDetailsDialog(QDialog):
 
         # If name changed, rename physically
         if new_name != self.info["filename"]:
+            if "/" in new_name or "\\" in new_name or ".." in new_name:
+                QMessageBox.warning(self, "警告", "文件名中不能包含路径分隔符、文件夹层级或穿越字符（如 /, \\, ..）。")
+                return
+                
             ws_root = Path(config.workspace_dir)
             src_abs = ws_root / self.info["filepath"]
             dest_abs = src_abs.parent / new_name
+            
+            if dest_abs.exists() and dest_abs.resolve() != src_abs.resolve():
+                QMessageBox.warning(self, "警告", "已存在同名文件，请使用其他名称！")
+                return
             
             try:
                 # Physically rename

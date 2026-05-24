@@ -323,7 +323,7 @@ class DashboardView(QWidget):
 
         self.card_total_files = self.create_stat_card("文件总数", "0", "统计当前工作空间内的所有文件", "file")
         self.card_total_size = self.create_stat_card("存储容量", "0.00 MB", "工作空间占用的磁盘空间大小", "workspace")
-        self.card_unorganized = self.create_stat_card("收集箱未整理", "0", "00_Inbox 目录中等待整理的文件", "inbox")
+        self.card_unorganized = self.create_stat_card("收集箱未整理", "0", f"{config.get_inbox_name()} 目录中等待整理的文件", "inbox")
         self.card_tags_count = self.create_stat_card("使用标签数", "0", "当前已在文件上打上的标签总数", "tag")
         self.card_recent_count = self.create_stat_card("近7天整理量", "0", "最近 7 天内更新或整理过的文件数", "dashboard")
 
@@ -615,6 +615,7 @@ class DashboardView(QWidget):
         self.card_total_files.value_label.setText(str(total_count))
         self.card_total_size.value_label.setText(size_str)
         self.card_unorganized.value_label.setText(str(inbox_count))
+        self.card_unorganized.desc_label.setText(f"{config.get_inbox_name()} 目录中等待整理的文件")
         self.card_tags_count.value_label.setText(str(tags_count))
         self.card_recent_count.value_label.setText(str(recent_count))
         self.tags_summary.setText(f"标签分布: {tag_summary_text}")
@@ -797,7 +798,7 @@ class DashboardView(QWidget):
             return
 
         reply = QMessageBox.question(self, "确认清理", 
-                                     "是否确认将桌面上所有的普通文件移动到 00_Inbox 收集箱进行统一整理？\n(桌面快捷方式 .lnk 文件将被忽略)",
+                                     f"是否确认将桌面上所有的普通文件移动到 {config.get_inbox_name()} 收集箱进行统一整理？\n(桌面快捷方式 .lnk 文件将被忽略)",
                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
         
         if reply == QMessageBox.Yes:

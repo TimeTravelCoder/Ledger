@@ -130,8 +130,14 @@ class FileManager:
         ws_root = Path(ws_path)
         try:
             ws_root.mkdir(parents=True, exist_ok=True)
+            ws_root_abs = ws_root.resolve()
             for d in dirs:
-                (ws_root / d).mkdir(exist_ok=True)
+                # Resolve paths to enforce secure boundaries
+                target_path = (ws_root / d).resolve()
+                if not target_path.is_relative_to(ws_root_abs):
+                    print(f"Skipping dangerous workspace path traversal: {d}")
+                    continue
+                target_path.mkdir(parents=True, exist_ok=True)
             return True, "工作空间目录及标准分类文件夹初始化成功！"
         except Exception as e:
             return False, f"初始化工作空间失败: {str(e)}"
@@ -347,9 +353,9 @@ class FileManager:
                         
             # Clean up db records for files that are no longer on disk
             db_files = [row["filepath"] for row in db.search_files()]
-            for db_f in db_files:
-                if db_f not in disk_files:
-                    db.delete_file_record(db_f)
+            to_delete = [db_f for db_f in db_files if db_f not in disk_files]
+            if to_delete:
+                db.delete_file_records(to_delete)
                     
         except Exception as e:
             print(f"Error scanning workspace: {e}")
@@ -409,6 +415,12 @@ class FileManager:
             pass
             
         if src_is_inside:
+            if not db.get_file_info(src_rel_path):
+                try:
+                    src_stat = src.stat()
+                    db.sync_file_metadata(src_rel_path, src.name, src_stat.st_size, src_stat.st_mtime)
+                except Exception:
+                    pass
             db.rename_file_record(src_rel_path, new_rel_path, new_filename)
         else:
             # Sync fresh file metadata
