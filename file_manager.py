@@ -33,18 +33,31 @@ class FileManager:
             pass
 
     @staticmethod
-    def move_replace(src_path, dest_path):
-        """Move a file and replace any existing destination file."""
+    def move_replace(src_path, dest_path, replace=True):
+        """Move a file and replace any existing destination file (or auto-rename if replace is False)."""
         src = Path(src_path)
         dest = Path(dest_path)
         dest.parent.mkdir(parents=True, exist_ok=True)
 
         if dest.exists():
-            FileManager._delete_workspace_record(dest)
-            if dest.is_dir():
-                shutil.rmtree(dest)
+            if replace:
+                FileManager._delete_workspace_record(dest)
+                if dest.is_dir():
+                    shutil.rmtree(dest)
+                else:
+                    dest.unlink()
             else:
-                dest.unlink()
+                # Resolve duplicate names by appending incremental suffixes
+                stem = dest.stem
+                ext = dest.suffix
+                counter = 1
+                while True:
+                    candidate_name = f"{stem}_{counter}{ext}"
+                    candidate_dest = dest.parent / candidate_name
+                    if not candidate_dest.exists():
+                        dest = candidate_dest
+                        break
+                    counter += 1
 
         shutil.move(str(src), str(dest))
         return dest
@@ -270,7 +283,7 @@ class FileManager:
             src = Path(file_info["path"])
             dest = inbox_dir / src.name
             try:
-                FileManager.move_replace(src, dest)
+                FileManager.move_replace(src, dest, replace=False)
                 moved_count += 1
             except Exception as e:
                 errors.append(f"无法移动 {src.name}: {str(e)}")
@@ -392,6 +405,17 @@ class FileManager:
             return False, f"未配置{'外部硬盘' if backup_type == 'disk' else '云盘'}备份路径！"
             
         dest_path = Path(dest_dir)
+        
+        # Verify drive root connectivity (especially useful for unplugged USB drives/SSDs on Windows/macOS)
+        try:
+            dest_abs = dest_path.resolve()
+            drive_root = dest_abs.anchor
+            # Check if anchor is resolved and physically online/exists
+            if drive_root and not os.path.exists(drive_root):
+                return False, f"备份存储介质不可用，请确认对应的驱动器或盘符 '{drive_root}' 已正确连接并挂载！"
+        except Exception as e:
+            return False, f"路径有效性检查失败: {str(e)}"
+            
         try:
             dest_path.mkdir(parents=True, exist_ok=True)
         except Exception as e:

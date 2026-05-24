@@ -373,7 +373,7 @@ class MainWindow(QMainWindow):
             try:
                 import shutil
                 from file_manager import FileManager
-                FileManager.move_replace(file_path, dest)
+                FileManager.move_replace(file_path, dest, replace=False)
                 
                 self.show_toast(
                     message=f"'{filename}' 已导入收集箱。",

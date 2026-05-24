@@ -14,8 +14,10 @@ def get_stylesheet(theme="dark"):
         border_hover = "#00D8F6"
         accent_color = "#0A84B1"
         success_color = "#00F5D4"
+        success_hover = "#14FCDA"
         warning_color = "#FFD166"
         error_color = "#FF5C8A"
+        error_hover = "#FF709B"
         shadow_effect = "rgba(0, 0, 0, 0.4)"
         text_on_accent = "#FFFFFF"
     elif theme == "zhongguose":
@@ -30,8 +32,10 @@ def get_stylesheet(theme="dark"):
         border_hover = "#1BA784"
         accent_color = "#127A60"
         success_color = "#15803D"
+        success_hover = "#16A34A"
         warning_color = "#B45309"
         error_color = "#B91C1C"
+        error_hover = "#DC2626"
         shadow_effect = "rgba(27, 167, 132, 0.08)"
         text_on_accent = "#FFFFFF"
     else:
@@ -46,8 +50,10 @@ def get_stylesheet(theme="dark"):
         border_hover = "#4F46E5"
         accent_color = "#4F46E5"
         success_color = "#059669"
+        success_hover = "#10B981"
         warning_color = "#D97706"
         error_color = "#DC2626"
+        error_hover = "#EF4444"
         shadow_effect = "rgba(15, 23, 42, 0.08)"
         text_on_accent = "#FFFFFF"
 
@@ -512,11 +518,23 @@ def get_stylesheet(theme="dark"):
         border: none;
         color: #FFFFFF;
     }}
+    QPushButton#SuccessBtn:hover {{
+        background: {success_hover};
+    }}
+    QPushButton#SuccessBtn:pressed {{
+        background: {success_color};
+    }}
     
     QPushButton#DangerBtn {{
         background: {error_color};
         border: none;
         color: #FFFFFF;
+    }}
+    QPushButton#DangerBtn:hover {{
+        background: {error_hover};
+    }}
+    QPushButton#DangerBtn:pressed {{
+        background: {error_color};
     }}
     
     /* Checkbox & Radio Buttons */

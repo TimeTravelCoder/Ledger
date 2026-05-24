@@ -175,16 +175,36 @@ class DatabaseManager:
         return dict(row) if row else None
 
     def search_files(self, query=None, selected_tags=None, file_status=None):
-        """Advanced composite search by name/tags/status with relevance ranking."""
+        """Advanced composite search by name/tags/status with relevance ranking and SQLite pre-filtering."""
         conn = self.get_conn()
         cursor = conn.cursor()
         
-        # Fetch all records to do advanced multi-keyword and pinyin matching in Python
-        cursor.execute("SELECT * FROM files")
+        # Build dynamic SQL pre-filtering query to avoid loading all rows in large workspaces
+        sql = "SELECT * FROM files"
+        params = []
+        conditions = []
+        
+        if selected_tags:
+            for tag in selected_tags:
+                tag_cleaned = tag.strip()
+                if tag_cleaned:
+                    conditions.append("tags LIKE ?")
+                    params.append(f"%{tag_cleaned}%")
+                    
+        if file_status:
+            status_cleaned = file_status.strip()
+            if status_cleaned:
+                conditions.append("tags LIKE ?")
+                params.append(f"%{status_cleaned}%")
+                
+        if conditions:
+            sql += " WHERE " + " AND ".join(conditions)
+            
+        cursor.execute(sql, tuple(params))
         rows = cursor.fetchall()
         records = [dict(row) for row in rows]
         
-        # 1. Precise Tag Filtering (exact match, no substring clashes)
+        # 1. Precise Tag Filtering (exact match, no substring clashes) on the reduced record set
         if selected_tags:
             normalized_selected = {t.strip().lower().lstrip("#") for t in selected_tags if t.strip()}
             filtered = []
@@ -195,7 +215,7 @@ class DatabaseManager:
                     filtered.append(r)
             records = filtered
             
-        # 2. Precise Status Filtering (exact match, no substring clashes)
+        # 2. Precise Status Filtering (exact match, no substring clashes) on the reduced record set
         if file_status:
             normalized_status = file_status.strip().lower().lstrip("#")
             filtered = []
