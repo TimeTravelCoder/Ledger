@@ -3,34 +3,39 @@ def get_stylesheet(theme="dark"):
     Returns a highly polished, custom QSS stylesheet for either dark or light theme.
     """
     if theme == "dark":
-        bg_primary = "#183344"
-        bg_secondary = "#22495C"
-        bg_tertiary = "#2E5A6F"
-        text_primary = "#D1FFFF"
-        text_secondary = "#AAD9F2"
-        text_disabled = "#85B3CB"
-        border_color = "#4A6FA6"
-        border_hover = "#618EA5"
-        accent_color = "#4A6FA6"
-        success_color = "#85B3CB"
-        warning_color = "#AAD9F2"
-        error_color = "#618EA5"
-        shadow_effect = "rgba(0, 0, 0, 0.3)"
+        # Premium cyber deep-sea navy theme
+        bg_primary = "#0B1E2B"
+        bg_secondary = "#132D3E"
+        bg_tertiary = "#1E4258"
+        text_primary = "#E2F9FF"
+        text_secondary = "#9BD8EB"
+        text_disabled = "#568296"
+        border_color = "#204F6E"
+        border_hover = "#00D8F6"
+        accent_color = "#0A84B1"
+        success_color = "#00F5D4"
+        warning_color = "#FFD166"
+        error_color = "#FF5C8A"
+        shadow_effect = "rgba(0, 0, 0, 0.4)"
+        text_on_accent = "#FFFFFF"
     elif theme == "zhongguose":
-        bg_primary = "#F5FBF8"
-        bg_secondary = "#FFFDF8"
-        bg_tertiary = "#EEF7F2"
-        text_primary = "#1BA784"
-        text_secondary = "#6E8B74"
-        text_disabled = "#7CB9A8"
-        border_color = "#C6D7DB"
+        # Elegant traditional Chinese colors (Warm Rice-Paper White and Imperial Jade Green)
+        bg_primary = "#F3FAF5"
+        bg_secondary = "#FFFDF9"
+        bg_tertiary = "#E4F3EC"
+        text_primary = "#1F3A2B"
+        text_secondary = "#4A6E56"
+        text_disabled = "#90B29C"
+        border_color = "#D0DFD7"
         border_hover = "#1BA784"
-        accent_color = "#1BA784"
-        success_color = "#207F4C"
-        warning_color = "#B9DEC9"
-        error_color = "#15231B"
-        shadow_effect = "rgba(27, 167, 132, 0.12)"
+        accent_color = "#127A60"
+        success_color = "#15803D"
+        warning_color = "#B45309"
+        error_color = "#B91C1C"
+        shadow_effect = "rgba(27, 167, 132, 0.08)"
+        text_on_accent = "#FFFFFF"
     else:
+        # Modern professional Slate & Indigo theme
         bg_primary = "#F8FAFC"
         bg_secondary = "#FFFFFF"
         bg_tertiary = "#E2E8F0"
@@ -44,6 +49,7 @@ def get_stylesheet(theme="dark"):
         warning_color = "#D97706"
         error_color = "#DC2626"
         shadow_effect = "rgba(15, 23, 42, 0.08)"
+        text_on_accent = "#FFFFFF"
 
     qss = f"""
     /* General Application Styling */
@@ -89,8 +95,8 @@ def get_stylesheet(theme="dark"):
     }}
     
     QPushButton#SidebarBtn:checked {{
-        background-color: {accent_color};
-        color: #FFFFFF;
+        background: {accent_color};
+        color: {text_on_accent};
         font-weight: bold;
     }}
 
@@ -324,16 +330,16 @@ def get_stylesheet(theme="dark"):
     }}
 
     QPushButton#FilterChip:checked {{
-        background-color: {accent_color};
-        border-color: {accent_color};
-        color: #FFFFFF;
+        background: {accent_color};
+        border: 1px solid {accent_color};
+        color: {text_on_accent};
         font-weight: bold;
     }}
 
     QPushButton#FilterChip:checked:hover {{
-        background-color: {border_hover};
-        border-color: {border_hover};
-        color: #FFFFFF;
+        background: {border_hover};
+        border: 1px solid {border_hover};
+        color: {text_on_accent};
     }}
 
     QLabel#BatchStatus {{
@@ -385,18 +391,18 @@ def get_stylesheet(theme="dark"):
     }}
     
     QPushButton:pressed {{
-        background-color: {accent_color};
-        color: #FFFFFF;
+        background: {accent_color};
+        color: {text_on_accent};
     }}
     
     QPushButton#PrimaryBtn {{
-        background-color: {accent_color};
+        background: {accent_color};
         border: none;
-        color: #FFFFFF;
+        color: {text_on_accent};
     }}
     
     QPushButton#PrimaryBtn:hover {{
-        background-color: {border_hover};
+        background: {border_hover};
     }}
 
     QPushButton#ToolbarBtn {{
@@ -419,26 +425,26 @@ def get_stylesheet(theme="dark"):
     }}
 
     QPushButton#ToolbarPrimaryBtn {{
-        background-color: {accent_color};
+        background: {accent_color};
         border: none;
         border-radius: 10px;
         padding: 6px 12px;
-        color: #FFFFFF;
+        color: {text_on_accent};
         font-weight: 700;
     }}
 
     QPushButton#ToolbarPrimaryBtn:hover {{
-        background-color: {border_hover};
+        background: {border_hover};
     }}
 
     QPushButton#SuccessBtn {{
-        background-color: {success_color};
+        background: {success_color};
         border: none;
         color: #FFFFFF;
     }}
     
     QPushButton#DangerBtn {{
-        background-color: {error_color};
+        background: {error_color};
         border: none;
         color: #FFFFFF;
     }}
