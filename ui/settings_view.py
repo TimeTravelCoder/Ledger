@@ -3,7 +3,8 @@ from pathlib import Path
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, 
                              QLabel, QLineEdit, QPushButton, QFrame, 
                              QCheckBox, QMessageBox, QFileDialog, QTextEdit, 
-                             QComboBox, QScrollArea, QListWidget, QListWidgetItem)
+                             QComboBox, QScrollArea, QListWidget, QListWidgetItem,
+                             QTabWidget)
 from PySide6.QtCore import Qt, Signal, QSize
 from config import config, DEFAULT_TAGS, normalize_tags, display_tag, NAME_PRESET_BASES
 from file_manager import FileManager
@@ -24,42 +25,48 @@ class SettingsView(QWidget):
         
         # Modern scroll area to handle different window heights beautifully
         scroll = QScrollArea(self)
-        scroll.setWidgetResizable(True)
-        scroll.setFrameShape(QFrame.NoFrame)
-        scroll.setStyleSheet("QScrollArea { background: transparent; }")
+        # 1. Page Header (Modern Title Panel)
+        header_panel = QFrame()
+        header_panel.setObjectName("ToolbarPanel")
+        header_panel.setFixedHeight(50)
+        header_layout = QHBoxLayout(header_panel)
+        header_layout.setContentsMargins(18, 0, 18, 0)
+        header_layout.setSpacing(8)
         
-        scroll_content = QWidget()
-        scroll_content.setObjectName("ScrollContent")
-        scroll_content.setStyleSheet("#ScrollContent { background: transparent; }")
+        header_icon = QLabel()
+        header_icon.setPixmap(line_icon("settings", size=18).pixmap(18, 18))
+        header_layout.addWidget(header_icon)
         
-        inner_layout = QVBoxLayout(scroll_content)
-        inner_layout.setContentsMargins(24, 24, 24, 24)
-        inner_layout.setSpacing(20)
-        
-        scroll.setWidget(scroll_content)
-        outer_layout.addWidget(scroll)
-        
-
-        # Header
         header = QLabel("系统参数设置")
-        header.setStyleSheet("font-size: 20px; font-weight: bold;")
-        inner_layout.addWidget(header)
-
-        # 1. Directory Settings Card
+        header.setStyleSheet("font-size: 14px; font-weight: bold;")
+        header_layout.addWidget(header)
+        header_layout.addStretch()
+        
+        outer_layout.addWidget(header_panel)
+        
+        # 2. Central Tab Widget
+        self.tabs = QTabWidget()
+        self.tabs.setObjectName("SettingsTabs")
+        self.tabs.setContentsMargins(12, 12, 12, 12)
+        
+        # ── Tab 1: 常规路径 (Path Settings) ──────────────────────────────────
+        tab_paths = QWidget()
+        layout_paths = QVBoxLayout(tab_paths)
+        layout_paths.setContentsMargins(15, 15, 15, 15)
+        layout_paths.setSpacing(15)
+        
         dir_card = QFrame()
         dir_card.setObjectName("CardPanel")
         dir_layout = QVBoxLayout(dir_card)
-        dir_layout.setContentsMargins(15, 15, 15, 15)
+        dir_layout.setContentsMargins(18, 18, 18, 18)
         dir_layout.setSpacing(15)
-
+        
         dir_title = QLabel("路径参数配置")
-        dir_title.setStyleSheet("font-size: 14px; font-weight: bold;")
+        dir_title.setObjectName("SettingsCardTitle")
         dir_layout.addWidget(dir_title)
-
+        
         grid = QGridLayout()
         grid.setSpacing(10)
-
-        # Workspace Root
         grid.addWidget(QLabel("主工作空间目录 (Workspace):"), 0, 0)
         self.input_ws_path = QLineEdit(config.workspace_dir)
         grid.addWidget(self.input_ws_path, 0, 1)
@@ -68,8 +75,7 @@ class SettingsView(QWidget):
         self.btn_browse_ws.setIconSize(QSize(16, 16))
         self.btn_browse_ws.clicked.connect(self.browse_workspace)
         grid.addWidget(self.btn_browse_ws, 0, 2)
-
-        # Downloads Folder
+        
         grid.addWidget(QLabel("浏览器下载目录 (Downloads):"), 1, 0)
         self.input_dl_path = QLineEdit(config.downloads_dir)
         grid.addWidget(self.input_dl_path, 1, 1)
@@ -78,20 +84,17 @@ class SettingsView(QWidget):
         self.btn_browse_dl.setIconSize(QSize(16, 16))
         self.btn_browse_dl.clicked.connect(self.browse_downloads)
         grid.addWidget(self.btn_browse_dl, 1, 2)
-
         dir_layout.addLayout(grid)
-
-        # Monitored toggle
-        self.cb_monitor_dl = QCheckBox("在后台自动监控 Downloads 文件夹的变化 (自动弹出提醒)")
+        
+        self.cb_monitor_dl = QCheckBox("自动监控 Downloads 文件夹的变化 (弹出智能整理提醒)")
         self.cb_monitor_dl.setChecked(config.monitored_downloads)
         self.cb_monitor_dl.stateChanged.connect(self.save_monitored)
         dir_layout.addWidget(self.cb_monitor_dl)
-
+        
         self.theme_hint = QLabel(f"当前主题: {config.theme}")
-        self.theme_hint.setStyleSheet("color: #85B3CB; font-size: 11px;")
+        self.theme_hint.setObjectName("MutedText")
         dir_layout.addWidget(self.theme_hint)
-
-        # Initializer Button
+        
         init_layout = QHBoxLayout()
         self.btn_init_ws = QPushButton("一键初始化/修复标准目录结构")
         self.btn_init_ws.setObjectName("PrimaryBtn")
@@ -106,236 +109,259 @@ class SettingsView(QWidget):
         self.btn_save_paths.clicked.connect(self.save_paths)
         init_layout.addWidget(self.btn_save_paths)
         dir_layout.addLayout(init_layout)
-
-        inner_layout.addWidget(dir_card)
-
-        # 1.5 New Workspace Wizard Card
+        
+        layout_paths.addWidget(dir_card)
+        layout_paths.addStretch()
+        
+        # ── Tab 2: 空间向导 (Workspace Wizard) ──────────────────────────────
+        tab_wiz = QWidget()
+        layout_wiz = QVBoxLayout(tab_wiz)
+        layout_wiz.setContentsMargins(15, 15, 15, 15)
+        layout_wiz.setSpacing(15)
+        
+        wiz_scroll = QScrollArea()
+        wiz_scroll.setWidgetResizable(True)
+        wiz_scroll.setFrameShape(QFrame.NoFrame)
+        wiz_scroll.setStyleSheet("QScrollArea { background: transparent; }")
+        wiz_scroll_content = QWidget()
+        wiz_scroll_content.setObjectName("WizScrollContent")
+        wiz_scroll_content.setStyleSheet("#WizScrollContent { background: transparent; }")
+        wiz_inner = QVBoxLayout(wiz_scroll_content)
+        wiz_inner.setContentsMargins(0, 0, 0, 0)
+        wiz_inner.setSpacing(15)
+        
         wizard_card = QFrame()
         wizard_card.setObjectName("CardPanel")
         wizard_layout = QVBoxLayout(wizard_card)
-        wizard_layout.setContentsMargins(15, 15, 15, 15)
+        wizard_layout.setContentsMargins(18, 18, 18, 18)
         wizard_layout.setSpacing(15)
-
-        wizard_title = QLabel("新建工作空间向导 (一键生成中/英文规范)")
-        wizard_title.setStyleSheet("font-size: 14px; font-weight: bold; color: #6366F1;")
+        
+        wizard_title = QLabel("新建工作空间向导")
+        wizard_title.setObjectName("SettingsCardTitle")
         wizard_layout.addWidget(wizard_title)
-
-        wizard_desc = QLabel("选择任意盘符或目录，系统将在此目录下创建 'Workspace' 文件夹，并自动初始化 12 个分类模板目录。")
-        wizard_desc.setStyleSheet("color: #94A3B8; font-size: 11px;")
+        
+        wizard_desc = QLabel("选择任意盘符或目录，系统将在此目录下创建 'Workspace' 文件夹，并自动初始化 12 个标准的分类目录。")
+        wizard_desc.setObjectName("MutedText")
         wizard_layout.addWidget(wizard_desc)
-
+        
         wiz_grid = QGridLayout()
         wiz_grid.setSpacing(10)
-
         wiz_grid.addWidget(QLabel("选择目标路径:"), 0, 0)
         self.input_wiz_path = QLineEdit()
-        self.input_wiz_path.setPlaceholderText("选择任一磁盘目录，例如 D:/ 或 E:/KnowledgeHub")
+        self.input_wiz_path.setPlaceholderText("选择磁盘目录，例如 D:/ 或 E:/LedgerHub")
         wiz_grid.addWidget(self.input_wiz_path, 0, 1)
-        self.btn_wiz_browse = QPushButton("选择盘符/目录...")
+        self.btn_wiz_browse = QPushButton("选择目录...")
         self.btn_wiz_browse.setIcon(line_icon("folder", size=16))
         self.btn_wiz_browse.setIconSize(QSize(16, 16))
         self.btn_wiz_browse.clicked.connect(self.browse_wizard_path)
         wiz_grid.addWidget(self.btn_wiz_browse, 0, 2)
-
-        wiz_grid.addWidget(QLabel("标准分类模版规范:"), 1, 0)
+        
+        wiz_grid.addWidget(QLabel("标准分类模板:"), 1, 0)
         self.wiz_lang_combo = QComboBox()
         self.wiz_lang_combo.addItems([
-            "中文标准模版 (00_收集箱, 01_课程学习, 02_课题研究...)",
-            "英文标准模版 (00_Inbox, 01_Study, 02_Research...)",
+            "中文标准模版 (00收集箱, 01课程学习, 02课题研究...)",
+            "英文标准模版 (00Inbox, 01Study, 02Research...)",
             "自建自定义分类模版 (使用下方设置的自建分类模板)"
         ])
         wiz_grid.addWidget(self.wiz_lang_combo, 1, 1, 1, 2)
-
         wizard_layout.addLayout(wiz_grid)
-
+        
         self.btn_run_wiz = QPushButton("一键生成工作空间文件夹")
         self.btn_run_wiz.setObjectName("SuccessBtn")
         self.btn_run_wiz.setIcon(line_icon("workspace", "#FFFFFF", 16))
         self.btn_run_wiz.setIconSize(QSize(16, 16))
         self.btn_run_wiz.clicked.connect(self.run_workspace_wizard)
         wizard_layout.addWidget(self.btn_run_wiz)
-
-        inner_layout.addWidget(wizard_card)
-
-        # 2. Tag System Customization Card
-        tag_card = QFrame()
-        tag_card.setObjectName("CardPanel")
-        tag_layout = QVBoxLayout(tag_card)
-        tag_layout.setContentsMargins(15, 15, 15, 15)
-        tag_layout.setSpacing(15)
-
-        tag_title = QLabel("自定义标签字典体系")
-        tag_title.setStyleSheet("font-size: 14px; font-weight: bold;")
-        tag_layout.addWidget(tag_title)
-
-        tag_desc = QLabel("以逗号分隔输入标签；写不写 # 都可以，系统会自动兼容。")
-        tag_desc.setStyleSheet("color: #94A3B8; font-size: 11px;")
-        tag_layout.addWidget(tag_desc)
-
-        tag_grid = QGridLayout()
-        tag_grid.setSpacing(10)
-
-        # Primary Tags
-        tag_grid.addWidget(QLabel("一级分类标签:"), 0, 0)
-        self.input_p_tags = QLineEdit(",".join(display_tag(tag) for tag in config.tags["primary"]))
-        tag_grid.addWidget(self.input_p_tags, 0, 1)
-
-        # Secondary Tags
-        tag_grid.addWidget(QLabel("二级属性标签:"), 1, 0)
-        self.input_s_tags = QLineEdit(",".join(display_tag(tag) for tag in config.tags["secondary"]))
-        tag_grid.addWidget(self.input_s_tags, 1, 1)
-
-        # Status Tags
-        tag_grid.addWidget(QLabel("状态标记标签:"), 2, 0)
-        self.input_st_tags = QLineEdit(",".join(display_tag(tag) for tag in config.tags["status"]))
-        tag_grid.addWidget(self.input_st_tags, 2, 1)
-
-        tag_layout.addLayout(tag_grid)
-
-        # Save tags button
-        tag_btn_layout = QHBoxLayout()
-        self.btn_save_tags = QPushButton("保存标签修改")
-        self.btn_save_tags.setIcon(line_icon("tag", size=16))
-        self.btn_save_tags.setIconSize(QSize(16, 16))
-        self.btn_save_tags.clicked.connect(self.save_tags)
-        tag_btn_layout.addWidget(self.btn_save_tags)
+        wiz_inner.addWidget(wizard_card)
         
-        self.btn_reset_tags = QPushButton("恢复默认标签规范")
-        self.btn_reset_tags.setIcon(line_icon("refresh", size=16))
-        self.btn_reset_tags.setIconSize(QSize(16, 16))
-        self.btn_reset_tags.clicked.connect(self.reset_tags_to_default)
-        tag_btn_layout.addWidget(self.btn_reset_tags)
-        
-        tag_layout.addLayout(tag_btn_layout)
-        inner_layout.addWidget(tag_card)
-
-        # 3. Custom Category Template Card
         custom_card = QFrame()
         custom_card.setObjectName("CardPanel")
         custom_layout = QVBoxLayout(custom_card)
-        custom_layout.setContentsMargins(15, 15, 15, 15)
+        custom_layout.setContentsMargins(18, 18, 18, 18)
         custom_layout.setSpacing(15)
-
+        
         custom_title = QLabel("自建分类目录模板与规范")
-        custom_title.setStyleSheet("font-size: 14px; font-weight: bold; color: #10B981;")
+        custom_title.setObjectName("SettingsCardTitle")
         custom_layout.addWidget(custom_title)
-
-        custom_desc = QLabel("启用自建模板后，系统将使用您自定义的分类文件夹结构。各个文件夹以英文逗号分隔。")
-        custom_desc.setStyleSheet("color: #94A3B8; font-size: 11px;")
+        
+        custom_desc = QLabel("启用自建模板后，系统在生成空间或整理目录时，会使用您自定义的分类文件夹结构。")
+        custom_desc.setObjectName("MutedText")
         custom_layout.addWidget(custom_desc)
-
-        self.cb_use_custom_dirs = QCheckBox("启用自建分类模板 (不勾选则默认使用标准中/英文模板)")
+        
+        self.cb_use_custom_dirs = QCheckBox("启用自建分类目录结构")
         self.cb_use_custom_dirs.setChecked(config.use_custom_dirs)
         self.cb_use_custom_dirs.stateChanged.connect(self.save_use_custom_dirs)
         custom_layout.addWidget(self.cb_use_custom_dirs)
-
+        
         grid_custom = QHBoxLayout()
-        grid_custom.addWidget(QLabel("自建目录结构 (英文逗号分隔):"))
+        grid_custom.addWidget(QLabel("自建目录结构 (用英文逗号分隔):"))
         self.input_custom_dirs = QLineEdit(", ".join(config.custom_standard_dirs))
         if not config.custom_standard_dirs:
-            # Fallback placeholder showing an example
             self.input_custom_dirs.setPlaceholderText("例如: 00收集箱, 01学习, 02工作, 03生活, 04娱乐, 99临时缓冲")
         grid_custom.addWidget(self.input_custom_dirs, 1)
         custom_layout.addLayout(grid_custom)
-
-        custom_btn_layout = QHBoxLayout()
+        
         self.btn_save_custom_dirs = QPushButton("保存并应用自建分类模板")
         self.btn_save_custom_dirs.setObjectName("PrimaryBtn")
         self.btn_save_custom_dirs.setIcon(line_icon("success", "#FFFFFF", 16))
         self.btn_save_custom_dirs.setIconSize(QSize(16, 16))
         self.btn_save_custom_dirs.clicked.connect(self.save_custom_dirs)
-        custom_btn_layout.addWidget(self.btn_save_custom_dirs)
-        custom_layout.addLayout(custom_btn_layout)
-
-        inner_layout.addWidget(custom_card)
-
-        # 4. Auto Rule Routing Card
+        custom_layout.addWidget(self.btn_save_custom_dirs)
+        wiz_inner.addWidget(custom_card)
+        
+        wiz_scroll.setWidget(wiz_scroll_content)
+        layout_wiz.addWidget(wiz_scroll)
+        
+        # ── Tab 3: 标签管理 (Tags Dictionary) ──────────────────────────────
+        tab_tags = QWidget()
+        layout_tags = QVBoxLayout(tab_tags)
+        layout_tags.setContentsMargins(15, 15, 15, 15)
+        layout_tags.setSpacing(15)
+        
+        tag_card = QFrame()
+        tag_card.setObjectName("CardPanel")
+        tag_layout = QVBoxLayout(tag_card)
+        tag_layout.setContentsMargins(18, 18, 18, 18)
+        tag_layout.setSpacing(15)
+        
+        tag_title = QLabel("自定义标签字典体系")
+        tag_title.setObjectName("SettingsCardTitle")
+        tag_layout.addWidget(tag_title)
+        
+        tag_desc = QLabel("配置系统的标签下拉池与筛选器。各标签以英文逗号分隔，系统会自动处理 # 前缀。")
+        tag_desc.setObjectName("MutedText")
+        tag_layout.addWidget(tag_desc)
+        
+        tag_grid = QGridLayout()
+        tag_grid.setSpacing(10)
+        tag_grid.addWidget(QLabel("一级分类标签:"), 0, 0)
+        self.input_p_tags = QLineEdit(",".join(display_tag(tag) for tag in config.tags["primary"]))
+        tag_grid.addWidget(self.input_p_tags, 0, 1)
+        
+        tag_grid.addWidget(QLabel("二级细分标签:"), 1, 0)
+        self.input_s_tags = QLineEdit(",".join(display_tag(tag) for tag in config.tags["secondary"]))
+        tag_grid.addWidget(self.input_s_tags, 1, 1)
+        
+        tag_grid.addWidget(QLabel("状态属性标签:"), 2, 0)
+        self.input_st_tags = QLineEdit(",".join(display_tag(tag) for tag in config.tags["status"]))
+        tag_grid.addWidget(self.input_st_tags, 2, 1)
+        tag_layout.addLayout(tag_grid)
+        
+        tag_btn_layout = QHBoxLayout()
+        self.btn_save_tags = QPushButton("保存标签字典")
+        self.btn_save_tags.setObjectName("PrimaryBtn")
+        self.btn_save_tags.setIcon(line_icon("success", "#FFFFFF", 16))
+        self.btn_save_tags.setIconSize(QSize(16, 16))
+        self.btn_save_tags.clicked.connect(self.save_tags)
+        tag_btn_layout.addWidget(self.btn_save_tags)
+        
+        self.btn_reset_tags = QPushButton("恢复系统出厂标签默认值")
+        self.btn_reset_tags.setIcon(line_icon("refresh", size=16))
+        self.btn_reset_tags.setIconSize(QSize(16, 16))
+        self.btn_reset_tags.clicked.connect(self.reset_tags_to_default)
+        tag_btn_layout.addWidget(self.btn_reset_tags)
+        tag_layout.addLayout(tag_btn_layout)
+        
+        layout_tags.addWidget(tag_card)
+        layout_tags.addStretch()
+        
+        # ── Tab 4: 自动规则 (Automation Rules) ──────────────────────────────
+        tab_rules = QWidget()
+        layout_rules = QVBoxLayout(tab_rules)
+        layout_rules.setContentsMargins(15, 15, 15, 15)
+        layout_rules.setSpacing(15)
+        
+        rules_scroll = QScrollArea()
+        rules_scroll.setWidgetResizable(True)
+        rules_scroll.setFrameShape(QFrame.NoFrame)
+        rules_scroll.setStyleSheet("QScrollArea { background: transparent; }")
+        
+        rules_scroll_content = QWidget()
+        rules_scroll_content.setObjectName("RulesScrollContent")
+        rules_scroll_content.setStyleSheet("#RulesScrollContent { background: transparent; }")
+        rules_scroll_inner = QVBoxLayout(rules_scroll_content)
+        rules_scroll_inner.setContentsMargins(0, 0, 0, 0)
+        rules_scroll_inner.setSpacing(15)
+        
         rule_card = QFrame()
         rule_card.setObjectName("CardPanel")
         rule_layout = QVBoxLayout(rule_card)
-        rule_layout.setContentsMargins(15, 15, 15, 15)
+        rule_layout.setContentsMargins(18, 18, 18, 18)
         rule_layout.setSpacing(12)
-
+        
         rule_title = QLabel("规则归类自动化")
-        rule_title.setStyleSheet("font-size: 14px; font-weight: bold; color: #6366F1;")
+        rule_title.setObjectName("SettingsCardTitle")
         rule_layout.addWidget(rule_title)
-
-        self.cb_auto_rule = QCheckBox("启用关键词 / 后缀自动归类")
+        
+        self.cb_auto_rule = QCheckBox("启用关键词 / 后缀名称自动归类 (导入收集箱时智能识别分流)")
         self.cb_auto_rule.setChecked(config.auto_rule_enabled)
         self.cb_auto_rule.stateChanged.connect(self.save_auto_rule_enabled)
         rule_layout.addWidget(self.cb_auto_rule)
-
+        
         self.rule_scroll = QScrollArea()
         self.rule_scroll.setWidgetResizable(True)
         self.rule_scroll.setFrameShape(QFrame.NoFrame)
-        self.rule_scroll.setMinimumHeight(220)
+        self.rule_scroll.setMinimumHeight(200)
         self.rule_scroll_content = QWidget()
         self.rule_scroll_layout = QVBoxLayout(self.rule_scroll_content)
         self.rule_scroll_layout.setContentsMargins(0, 0, 0, 0)
         self.rule_scroll_layout.setSpacing(8)
         self.rule_scroll.setWidget(self.rule_scroll_content)
         rule_layout.addWidget(self.rule_scroll)
-
-        self.populate_rule_list()
-
-        rule_btn_layout = QHBoxLayout()
-        self.btn_save_rules = QPushButton("保存规则")
+        
+        self.btn_save_rules = QPushButton("保存归类规则")
         self.btn_save_rules.setObjectName("PrimaryBtn")
         self.btn_save_rules.setIcon(line_icon("success", "#FFFFFF", 16))
         self.btn_save_rules.setIconSize(QSize(16, 16))
         self.btn_save_rules.clicked.connect(self.save_auto_rules)
-        rule_btn_layout.addWidget(self.btn_save_rules)
-        rule_layout.addLayout(rule_btn_layout)
-
-        inner_layout.addWidget(rule_card)
-
-        # 5. Naming Preset Templates Card
+        rule_layout.addWidget(self.btn_save_rules)
+        rules_scroll_inner.addWidget(rule_card)
+        
         preset_card = QFrame()
         preset_card.setObjectName("CardPanel")
         preset_layout = QVBoxLayout(preset_card)
-        preset_layout.setContentsMargins(15, 15, 15, 15)
+        preset_layout.setContentsMargins(18, 18, 18, 18)
         preset_layout.setSpacing(12)
-
-        preset_title = QLabel("命名规范模板")
-        preset_title.setStyleSheet("font-size: 14px; font-weight: bold; color: #6366F1;")
+        
+        preset_title = QLabel("规范命名模板")
+        preset_title.setObjectName("SettingsCardTitle")
         preset_layout.addWidget(preset_title)
-
-        preset_desc = QLabel("支持自定义添加模板；格式变量示例：{date} {topic} {version} {status} {stem}")
-        preset_desc.setStyleSheet("color: #94A3B8; font-size: 11px;")
-        preset_desc.setWordWrap(True)
+        
+        preset_desc = QLabel("自定义导入时自动推荐改名的结构。支持的格式变量：{date}，{topic}，{version}，{status}，{stem}。")
+        preset_desc.setObjectName("MutedText")
         preset_layout.addWidget(preset_desc)
-
+        
         self.preset_list = QListWidget()
         self.preset_list.setObjectName("SettingsList")
-        self.preset_list.setIconSize(QSize(22, 22))
-        self.preset_list.setMinimumHeight(220)
+        self.preset_list.setIconSize(QSize(18, 18))
+        self.preset_list.setMinimumHeight(180)
         preset_layout.addWidget(self.preset_list)
-
-        self.populate_name_presets()
-
+        
         preset_edit = QGridLayout()
         preset_edit.setSpacing(8)
         self.input_preset_label = QLineEdit()
-        self.input_preset_label.setPlaceholderText("模板名称")
+        self.input_preset_label.setPlaceholderText("例如: 学术论文")
         self.input_preset_prefix = QLineEdit()
-        self.input_preset_prefix.setPlaceholderText("目录前缀，例如 01 / 05 / 08")
+        self.input_preset_prefix.setPlaceholderText("例如: 05")
         self.input_preset_format = QLineEdit()
-        self.input_preset_format.setPlaceholderText("格式，例如 {date}_{topic}_{version}")
-        preset_edit.addWidget(QLabel("名称"), 0, 0)
+        self.input_preset_format.setPlaceholderText("例如: {date}_{topic}_{version}")
+        
+        preset_edit.addWidget(QLabel("分类模板名称:"), 0, 0)
         preset_edit.addWidget(self.input_preset_label, 0, 1)
-        preset_edit.addWidget(QLabel("前缀"), 0, 2)
+        preset_edit.addWidget(QLabel("默认分流目录前缀:"), 0, 2)
         preset_edit.addWidget(self.input_preset_prefix, 0, 3)
-        preset_edit.addWidget(QLabel("格式"), 1, 0)
+        preset_edit.addWidget(QLabel("命名格式规范:"), 1, 0)
         preset_edit.addWidget(self.input_preset_format, 1, 1, 1, 3)
         preset_layout.addLayout(preset_edit)
-
+        
         preset_btn_layout = QHBoxLayout()
-        self.btn_preset_add = QPushButton("新增模板")
+        self.btn_preset_add = QPushButton("新增命名模板")
         self.btn_preset_add.setIcon(line_icon("file", size=16))
         self.btn_preset_add.setIconSize(QSize(16, 16))
         self.btn_preset_add.clicked.connect(self.add_name_preset)
         preset_btn_layout.addWidget(self.btn_preset_add)
-        self.btn_preset_delete = QPushButton("删除模板")
+        
+        self.btn_preset_delete = QPushButton("删除选中模板")
         self.btn_preset_delete.setIcon(line_icon("delete", size=16))
         self.btn_preset_delete.setIconSize(QSize(16, 16))
         self.btn_preset_delete.clicked.connect(self.delete_name_preset)

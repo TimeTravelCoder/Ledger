@@ -307,6 +307,14 @@ def get_stylesheet(theme="dark"):
         font-size: 12px;
     }}
 
+    QLabel#SettingsCardTitle {{
+        font-size: 14px;
+        font-weight: 700;
+        color: {accent_color};
+        border-bottom: 2px solid {bg_tertiary};
+        padding-bottom: 6px;
+    }}
+
     QLabel#ToolbarLabel, QLabel#BatchHint {{
         color: {text_disabled};
         font-size: 12px;
