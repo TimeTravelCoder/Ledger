@@ -10,9 +10,9 @@ from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QTreeView,
                              QFileSystemModel, QDialog, QCheckBox, QTextEdit, 
                              QMessageBox, QComboBox, QGridLayout, QInputDialog,
                              QListWidget, QListWidgetItem, QSplitter, QAbstractItemView,
-                             QTabWidget, QSizePolicy)
-from PySide6.QtCore import Qt, QModelIndex, Signal, QDir, QUrl
-from PySide6.QtGui import QDesktopServices, QPixmap
+                             QTabWidget, QSizePolicy, QStyle)
+from PySide6.QtCore import Qt, QModelIndex, Signal, QDir, QUrl, QSize
+from PySide6.QtGui import QDesktopServices, QPixmap, QIcon, QColor, QPainter, QFont
 from PySide6.QtPdf import QPdfDocument
 from PySide6.QtPdfWidgets import QPdfView
 from config import config, display_tag, normalize_tag
@@ -370,7 +370,76 @@ class WorkspaceView(QWidget):
         self.current_folder_rel = ""
         self.current_preview_rel_path = ""
         self.preview_pdf_temp_path = None
+        self.file_icon_cache = {}
         self.init_ui()
+
+    def get_file_type_icon(self, filename):
+        suffix = Path(str(filename)).suffix.lower()
+        label, color = {
+            ".pdf": ("PDF", "#DC2626"),
+            ".doc": ("DOC", "#2563EB"),
+            ".docx": ("DOC", "#2563EB"),
+            ".txt": ("TXT", "#64748B"),
+            ".md": ("MD", "#7C3AED"),
+            ".png": ("IMG", "#059669"),
+            ".jpg": ("IMG", "#059669"),
+            ".jpeg": ("IMG", "#059669"),
+            ".gif": ("IMG", "#059669"),
+            ".py": ("PY", "#D97706"),
+            ".js": ("JS", "#CA8A04"),
+            ".ts": ("TS", "#0284C7"),
+            ".xlsx": ("XLS", "#16A34A"),
+            ".xls": ("XLS", "#16A34A"),
+            ".ppt": ("PPT", "#EA580C"),
+            ".pptx": ("PPT", "#EA580C"),
+            ".csv": ("CSV", "#0F766E"),
+            ".json": ("JSON", "#4A6FA6"),
+        }.get(suffix, ("FILE", "#4A6FA6"))
+
+        cache_key = (label, color)
+        if cache_key in self.file_icon_cache:
+            return self.file_icon_cache[cache_key]
+
+        pixmap = QPixmap(32, 32)
+        pixmap.fill(Qt.transparent)
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.Antialiasing)
+        painter.setPen(Qt.NoPen)
+        painter.setBrush(QColor(color))
+        painter.drawRoundedRect(3, 3, 26, 26, 6, 6)
+        painter.setPen(QColor("#FFFFFF"))
+        font = QFont("Segoe UI", 6 if len(label) > 3 else 7)
+        font.setBold(True)
+        painter.setFont(font)
+        painter.drawText(pixmap.rect(), Qt.AlignCenter, label)
+        painter.end()
+
+        icon = QIcon(pixmap)
+        self.file_icon_cache[cache_key] = icon
+        return icon
+
+    def describe_file_type(self, filename):
+        suffix = Path(str(filename)).suffix.lower()
+        return {
+            ".pdf": "PDF 文档",
+            ".doc": "Word 文档",
+            ".docx": "Word 文档",
+            ".txt": "文本文件",
+            ".md": "Markdown",
+            ".png": "图片",
+            ".jpg": "图片",
+            ".jpeg": "图片",
+            ".gif": "图片",
+            ".py": "Python 代码",
+            ".js": "JavaScript",
+            ".ts": "TypeScript",
+            ".xlsx": "Excel 表格",
+            ".xls": "Excel 表格",
+            ".ppt": "演示文稿",
+            ".pptx": "演示文稿",
+            ".csv": "CSV 数据",
+            ".json": "JSON 数据",
+        }.get(suffix, suffix.upper().lstrip(".") or "普通文件")
 
     def init_ui(self):
         main_layout = QVBoxLayout(self)
@@ -402,8 +471,9 @@ class WorkspaceView(QWidget):
         search_inner = QHBoxLayout(search_wrapper)
         search_inner.setContentsMargins(12, 0, 8, 0)
         search_inner.setSpacing(6)
-        lbl_search_icon = QLabel("🔍")
-        lbl_search_icon.setStyleSheet("background: transparent; border: none; font-size: 15px;")
+        lbl_search_icon = QLabel()
+        lbl_search_icon.setPixmap(self.style().standardIcon(QStyle.StandardPixmap.SP_FileDialogContentsView).pixmap(16, 16))
+        lbl_search_icon.setStyleSheet("background: transparent; border: none;")
         search_inner.addWidget(lbl_search_icon)
         self.search_input = QLineEdit()
         self.search_input.setPlaceholderText("搜索文件名、备注关键词...")
@@ -432,7 +502,9 @@ class WorkspaceView(QWidget):
         sep1.setStyleSheet("color: #2D3748;"); row1.addWidget(sep1)
 
         # Reset button
-        self.reset_search_btn = QPushButton("↺  重置筛选")
+        self.reset_search_btn = QPushButton("重置筛选")
+        self.reset_search_btn.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_BrowserReload))
+        self.reset_search_btn.setIconSize(QSize(16, 16))
         self.reset_search_btn.setFixedHeight(32)
         self.reset_search_btn.setStyleSheet("""
             QPushButton {
@@ -465,7 +537,9 @@ class WorkspaceView(QWidget):
         row2.setContentsMargins(0, 0, 0, 0)
         row2.addStretch()
 
-        self.create_file_btn = QPushButton("📄   新建文件")
+        self.create_file_btn = QPushButton("新建文件")
+        self.create_file_btn.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_FileIcon))
+        self.create_file_btn.setIconSize(QSize(18, 18))
         self.create_file_btn.setFixedHeight(38)
         self.create_file_btn.setMinimumWidth(150)
         self.create_file_btn.setStyleSheet("""
@@ -491,7 +565,9 @@ class WorkspaceView(QWidget):
         self.create_file_btn.clicked.connect(self.create_new_file)
         row2.addWidget(self.create_file_btn)
 
-        self.create_folder_btn = QPushButton("📁   新建文件夹")
+        self.create_folder_btn = QPushButton("新建文件夹")
+        self.create_folder_btn.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_FileDialogNewFolder))
+        self.create_folder_btn.setIconSize(QSize(18, 18))
         self.create_folder_btn.setFixedHeight(38)
         self.create_folder_btn.setMinimumWidth(150)
         self.create_folder_btn.setStyleSheet("""
@@ -607,7 +683,7 @@ class WorkspaceView(QWidget):
         grid_layout = QVBoxLayout(grid_container)
         grid_layout.setContentsMargins(10, 8, 10, 8)
 
-        self.grid_title = QLabel("📂 全部文件列表")
+        self.grid_title = QLabel("全部文件列表")
         self.grid_title.setStyleSheet("font-size: 13px; font-weight: bold; color: #6366F1; padding-bottom: 2px;")
         grid_layout.addWidget(self.grid_title)
 
@@ -621,6 +697,11 @@ class WorkspaceView(QWidget):
         self.files_table.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.files_table.setMinimumHeight(260)
         self.files_table.setAlternatingRowColors(True)
+        self.files_table.setShowGrid(False)
+        self.files_table.setIconSize(QSize(24, 24))
+        self.files_table.verticalHeader().setVisible(False)
+        self.files_table.verticalHeader().setDefaultSectionSize(36)
+        self.files_table.horizontalHeader().setHighlightSections(False)
         self.files_table.left_double_clicked.connect(self.on_table_left_double_clicked)
         self.files_table.right_double_clicked.connect(self.on_table_right_double_clicked)
         self.files_table.itemSelectionChanged.connect(self.on_table_selection_changed)
@@ -642,6 +723,8 @@ class WorkspaceView(QWidget):
         self.batch_tags_input.setPlaceholderText("如：论文, 课程学习")
         batch_layout.addWidget(self.batch_tags_input, 1, 1)
         self.batch_apply_tags_btn = QPushButton("追加标签")
+        self.batch_apply_tags_btn.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_DialogApplyButton))
+        self.batch_apply_tags_btn.setIconSize(QSize(16, 16))
         self.batch_apply_tags_btn.clicked.connect(self.apply_batch_tags)
         batch_layout.addWidget(self.batch_apply_tags_btn, 1, 2)
 
@@ -652,6 +735,8 @@ class WorkspaceView(QWidget):
                 self.batch_target_dir.addItem(d)
         batch_layout.addWidget(self.batch_target_dir, 2, 1)
         self.batch_move_btn = QPushButton("批量移动")
+        self.batch_move_btn.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_ArrowForward))
+        self.batch_move_btn.setIconSize(QSize(16, 16))
         self.batch_move_btn.clicked.connect(self.apply_batch_move)
         batch_layout.addWidget(self.batch_move_btn, 2, 2)
 
@@ -660,6 +745,8 @@ class WorkspaceView(QWidget):
         self.duplicate_mode_combo.addItems(["文件名", "大小", "哈希"])
         batch_layout.addWidget(self.duplicate_mode_combo, 3, 1)
         self.duplicate_check_btn = QPushButton("扫描重复")
+        self.duplicate_check_btn.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_FileDialogInfoView))
+        self.duplicate_check_btn.setIconSize(QSize(16, 16))
         self.duplicate_check_btn.clicked.connect(self.show_duplicates)
         batch_layout.addWidget(self.duplicate_check_btn, 3, 2)
 
@@ -668,6 +755,8 @@ class WorkspaceView(QWidget):
         self.rule_hint_label.setWordWrap(True)
         batch_layout.addWidget(self.rule_hint_label, 4, 1)
         self.rule_apply_btn = QPushButton("按建议归类")
+        self.rule_apply_btn.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_DialogYesButton))
+        self.rule_apply_btn.setIconSize(QSize(16, 16))
         self.rule_apply_btn.clicked.connect(self.apply_rule_suggestion)
         batch_layout.addWidget(self.rule_apply_btn, 4, 2)
 
@@ -684,19 +773,48 @@ class WorkspaceView(QWidget):
         self.preview_title.setObjectName("CardTitle")
         preview_layout.addWidget(self.preview_title)
 
-        self.preview_file_label = QLabel("请选择文件")
-        self.preview_file_label.setWordWrap(True)
-        preview_layout.addWidget(self.preview_file_label)
-
         self.preview_info_card = QFrame()
-        self.preview_info_card.setObjectName("CardPanel")
+        self.preview_info_card.setObjectName("PreviewInfoCard")
         preview_info_layout = QVBoxLayout(self.preview_info_card)
-        preview_info_layout.setContentsMargins(8, 6, 8, 6)
-        preview_info_layout.setSpacing(4)
+        preview_info_layout.setContentsMargins(10, 8, 10, 8)
+        preview_info_layout.setSpacing(6)
+
+        preview_header = QHBoxLayout()
+        preview_header.setContentsMargins(0, 0, 0, 0)
+        preview_header.setSpacing(8)
+        self.preview_file_icon = QLabel()
+        self.preview_file_icon.setFixedSize(36, 36)
+        self.preview_file_icon.setPixmap(self.get_file_type_icon("").pixmap(32, 32))
+        preview_header.addWidget(self.preview_file_icon)
+
+        preview_name_box = QVBoxLayout()
+        preview_name_box.setContentsMargins(0, 0, 0, 0)
+        preview_name_box.setSpacing(2)
+        self.preview_name_label = QLabel("未选择文件")
+        self.preview_name_label.setObjectName("PreviewFileName")
+        self.preview_name_label.setWordWrap(True)
+        self.preview_file_label = QLabel("请选择文件")
+        self.preview_file_label.setObjectName("PreviewFilePath")
+        self.preview_file_label.setWordWrap(True)
+        preview_name_box.addWidget(self.preview_name_label)
+        preview_name_box.addWidget(self.preview_file_label)
+        preview_header.addLayout(preview_name_box, 1)
+        preview_info_layout.addLayout(preview_header)
+
+        preview_meta_layout = QHBoxLayout()
+        preview_meta_layout.setContentsMargins(0, 0, 0, 0)
+        preview_meta_layout.setSpacing(6)
         self.preview_info_type = QLabel("类型: --")
         self.preview_info_size = QLabel("大小: --")
+        for lbl in [self.preview_info_type, self.preview_info_size]:
+            lbl.setObjectName("PreviewMetaChip")
+            preview_meta_layout.addWidget(lbl)
+        preview_meta_layout.addStretch()
+        preview_info_layout.addLayout(preview_meta_layout)
+
         self.preview_info_path = QLabel("路径: --")
-        for lbl in [self.preview_info_type, self.preview_info_size, self.preview_info_path]:
+        self.preview_info_path.setObjectName("PreviewInfoPath")
+        for lbl in [self.preview_info_path]:
             lbl.setWordWrap(True)
             preview_info_layout.addWidget(lbl)
         preview_layout.addWidget(self.preview_info_card)
@@ -726,7 +844,10 @@ class WorkspaceView(QWidget):
         self.preview_tabs.addTab(self.preview_stack, "文件预览")
 
         self.duplicates_list = QListWidget()
+        self.duplicates_list.setObjectName("DuplicateList")
         self.duplicates_list.setSelectionMode(QAbstractItemView.ExtendedSelection)
+        self.duplicates_list.setSpacing(6)
+        self.duplicates_list.setUniformItemSizes(False)
         self.duplicates_list.itemDoubleClicked.connect(self.on_duplicate_item_double_clicked)
         self.preview_tabs.addTab(self.duplicates_list, "重复检测")
 
@@ -735,11 +856,15 @@ class WorkspaceView(QWidget):
         duplicate_tools_layout.setContentsMargins(0, 0, 0, 0)
         duplicate_tools_layout.setSpacing(8)
         self.keep_one_btn = QPushButton("删除文件")
+        self.keep_one_btn.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_TrashIcon))
+        self.keep_one_btn.setIconSize(QSize(16, 16))
         self.keep_one_btn.clicked.connect(self.delete_selected_duplicate_files)
         duplicate_tools_layout.addWidget(self.keep_one_btn)
         preview_layout.addWidget(self.duplicate_tools)
 
         self.preview_open_btn = QPushButton("在系统中打开")
+        self.preview_open_btn.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_DialogOpenButton))
+        self.preview_open_btn.setIconSize(QSize(16, 16))
         self.preview_open_btn.clicked.connect(self.open_current_preview_file)
         preview_layout.addWidget(self.preview_open_btn)
 
@@ -826,7 +951,7 @@ class WorkspaceView(QWidget):
         
         # Reset folder selection
         self.current_folder_rel = ""
-        self.grid_title.setText("📂 全部文件列表")
+        self.grid_title.setText("全部文件列表")
         self.dir_tree.clearSelection()
         
         self.run_search()
@@ -846,6 +971,8 @@ class WorkspaceView(QWidget):
         selected = self.get_selected_rel_paths()
         if not selected:
             self.clear_preview_resources()
+            self.preview_file_icon.setPixmap(self.get_file_type_icon("").pixmap(32, 32))
+            self.preview_name_label.setText("未选择文件")
             self.preview_file_label.setText("请选择文件")
             self.preview_info_type.setText("类型: --")
             self.preview_info_size.setText("大小: --")
@@ -863,8 +990,10 @@ class WorkspaceView(QWidget):
     def load_preview(self, rel_path):
         ws_root = Path(config.workspace_dir)
         abs_path = ws_root / rel_path
-        self.preview_file_label.setText(f"{abs_path.name}\n{rel_path}")
-        self.preview_info_type.setText(f"类型: {abs_path.suffix.lower() or '--'}")
+        self.preview_file_icon.setPixmap(self.get_file_type_icon(abs_path.name).pixmap(32, 32))
+        self.preview_name_label.setText(abs_path.name)
+        self.preview_file_label.setText(rel_path)
+        self.preview_info_type.setText(f"类型: {self.describe_file_type(abs_path.name)}")
         try:
             size = abs_path.stat().st_size
             size_str = f"{size / 1024:.1f} KB" if size < 1024 * 1024 else f"{size / (1024 * 1024):.1f} MB"
@@ -1012,22 +1141,29 @@ class WorkspaceView(QWidget):
         modes = {"文件名": "filename", "大小": "size", "哈希": "hash"}
         mode = modes[self.duplicate_mode_combo.currentText()]
         duplicates = FileManager.find_duplicates(mode=mode)
+        self.duplicates_list.clear()
         if not duplicates:
-            self.duplicates_list.clear()
-            empty_item = QListWidgetItem("未发现重复文件。")
+            empty_item = QListWidgetItem("未发现重复文件。\n当前规则下没有需要处理的重复项。")
             empty_item.setFlags(Qt.NoItemFlags)
+            empty_item.setSizeHint(QSize(0, 66))
             self.duplicates_list.addItem(empty_item)
+            self.selection_status_label.setText("未发现重复文件。")
             if activate:
                 self.preview_tabs.setCurrentWidget(self.duplicates_list)
             return
-        self.duplicates_list.clear()
-        for group_key, records in duplicates.items():
-            header = QListWidgetItem(f"重复组: {group_key} ({len(records)} 个)")
+
+        for index, (group_key, records) in enumerate(duplicates.items(), start=1):
+            header = QListWidgetItem(f"重复组 {index}    {len(records)} 个文件\n{group_key}")
             header.setFlags(Qt.NoItemFlags)
+            header.setSizeHint(QSize(0, 58))
             self.duplicates_list.addItem(header)
             for record in records:
-                item = QListWidgetItem(f"  {record['filepath']}")
-                item.setData(Qt.UserRole, record["filepath"])
+                rel_path = record["filepath"]
+                item = QListWidgetItem(f"{Path(rel_path).name}\n{rel_path}")
+                item.setIcon(self.get_file_type_icon(rel_path))
+                item.setSizeHint(QSize(0, 50))
+                item.setToolTip(rel_path)
+                item.setData(Qt.UserRole, rel_path)
                 self.duplicates_list.addItem(item)
         self.selection_status_label.setText(f"发现 {len(duplicates)} 组重复文件。")
         if activate:
@@ -1050,25 +1186,29 @@ class WorkspaceView(QWidget):
         return selected
 
     def delete_selected_duplicate_files(self):
-        target_rel_path = self.current_preview_rel_path or self.get_selected_rel_paths()[:1]
-        if isinstance(target_rel_path, list):
-            target_rel_path = target_rel_path[0] if target_rel_path else None
-        if not target_rel_path:
-            for item in self.duplicates_list.selectedItems():
-                rel_path = item.data(Qt.UserRole)
-                if rel_path:
-                    target_rel_path = rel_path
-                    break
-        if not target_rel_path:
+        target_paths = self._get_duplicate_selected_paths()
+        if not target_paths:
+            target_paths = self.get_selected_rel_paths()
+        if not target_paths and self.current_preview_rel_path:
+            target_paths = [self.current_preview_rel_path]
+        target_paths = list(dict.fromkeys(target_paths))
+
+        if not target_paths:
             QMessageBox.information(self, "提示", "请先选择一个文件。")
             return
+        preview = "\n".join(target_paths[:5])
+        if len(target_paths) > 5:
+            preview += f"\n... 以及 {len(target_paths) - 5} 个文件"
         reply = QMessageBox.question(self, "确认删除文件",
-                                     f"确认删除当前文件吗？\n{target_rel_path}\n此操作会永久删除磁盘上的文件。",
+                                     f"确认删除选中的 {len(target_paths)} 个文件吗？\n{preview}\n此操作会永久删除磁盘上的文件。",
                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
         if reply != QMessageBox.Yes:
             return
+        deleted = 0
         try:
-            FileManager.delete_file(target_rel_path)
+            for target_rel_path in target_paths:
+                FileManager.delete_file(target_rel_path)
+                deleted += 1
         except Exception as e:
             QMessageBox.critical(self, "错误", f"删除文件失败: {str(e)}")
             return
@@ -1077,7 +1217,7 @@ class WorkspaceView(QWidget):
         self.run_search()
         self.show_duplicates(activate=False)
         self.refresh_other_views_signal.emit()
-        QMessageBox.information(self, "完成", "已删除 1 个文件。")
+        QMessageBox.information(self, "完成", f"已删除 {deleted} 个文件。")
 
     def create_new_file(self):
         dialog = CreateFileDialog(self.current_folder_rel, self)
@@ -1100,14 +1240,14 @@ class WorkspaceView(QWidget):
             try:
                 rel = Path(dir_path).relative_to(ws_root)
                 self.current_folder_rel = str(rel).replace("\\", "/")
-                self.grid_title.setText(f"📂 目录 {self.current_folder_rel} 中的文件列表")
+                self.grid_title.setText(f"目录 {self.current_folder_rel} 中的文件列表")
             except ValueError:
                 self.current_folder_rel = ""
-                self.grid_title.setText("📂 全部文件列表")
+                self.grid_title.setText("全部文件列表")
         else:
             # Clicked a file
             self.current_folder_rel = ""
-            self.grid_title.setText("📂 全部文件列表")
+            self.grid_title.setText("全部文件列表")
             
         self.run_search()
 
@@ -1163,6 +1303,7 @@ class WorkspaceView(QWidget):
             
             # Store full record path inside name item for double click
             item_name.setData(Qt.UserRole, r["filepath"])
+            item_name.setIcon(self.get_file_type_icon(r["filename"]))
             
             item_name.setFlags(item_name.flags() & ~Qt.ItemIsEditable)
             item_path.setFlags(item_path.flags() & ~Qt.ItemIsEditable)

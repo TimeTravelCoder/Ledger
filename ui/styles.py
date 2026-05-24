@@ -74,12 +74,13 @@ def get_stylesheet(theme="dark"):
     /* Sidebar Navigation Buttons */
     QPushButton#SidebarBtn {{
         text-align: left;
-        padding: 12px 15px;
+        padding: 11px 14px;
         border: none;
         border-radius: 8px;
         color: {text_secondary};
         font-weight: 500;
         margin: 4px 10px;
+        icon-size: 18px;
     }}
     
     QPushButton#SidebarBtn:hover {{
@@ -119,6 +120,12 @@ def get_stylesheet(theme="dark"):
         border: 1px solid {border_color};
         border-radius: 12px;
     }}
+
+    QFrame#PreviewInfoCard {{
+        background-color: {bg_primary};
+        border: 1px solid {border_color};
+        border-radius: 10px;
+    }}
     
     QLabel#CardTitle {{
         font-size: 12px;
@@ -132,6 +139,26 @@ def get_stylesheet(theme="dark"):
         font-size: 24px;
         font-weight: bold;
         color: {text_primary};
+    }}
+
+    QLabel#PreviewFileName {{
+        font-size: 13px;
+        font-weight: 700;
+        color: {text_primary};
+    }}
+
+    QLabel#PreviewFilePath, QLabel#PreviewInfoPath {{
+        font-size: 11px;
+        color: {text_disabled};
+    }}
+
+    QLabel#PreviewMetaChip {{
+        background-color: {bg_tertiary};
+        border: 1px solid {border_color};
+        border-radius: 9px;
+        padding: 3px 8px;
+        color: {text_secondary};
+        font-size: 11px;
     }}
     
     /* Input Fields (QLineEdit, QTextEdit) */
@@ -269,9 +296,10 @@ def get_stylesheet(theme="dark"):
         background-color: {bg_secondary};
         border: 1px solid {border_color};
         border-radius: 12px;
-        gridline-color: {bg_primary};
-        selection-background-color: {bg_tertiary};
-        selection-color: {text_primary};
+        gridline-color: transparent;
+        alternate-background-color: {bg_primary};
+        selection-background-color: {accent_color};
+        selection-color: #FFFFFF;
         outline: 0;
     }}
     
@@ -286,7 +314,7 @@ def get_stylesheet(theme="dark"):
     }}
     
     QTableWidget::item {{
-        padding: 8px 12px;
+        padding: 9px 12px;
         border-bottom: 1px solid {bg_primary};
     }}
     
@@ -296,6 +324,11 @@ def get_stylesheet(theme="dark"):
 
     QTableWidget::item:alternate {{
         background-color: {bg_primary};
+    }}
+
+    QTableWidget::item:selected {{
+        background-color: {accent_color};
+        color: #FFFFFF;
     }}
 
     /* Tree View Styling (Directory Explorer) */
@@ -318,6 +351,32 @@ def get_stylesheet(theme="dark"):
     
     QTreeView::item:selected {{
         background-color: {accent_color};
+        color: #FFFFFF;
+    }}
+
+    QListWidget#DuplicateList {{
+        background-color: {bg_secondary};
+        border: none;
+        outline: 0;
+    }}
+
+    QListWidget#DuplicateList::item {{
+        background-color: {bg_primary};
+        border: 1px solid {border_color};
+        border-radius: 8px;
+        padding: 8px 10px;
+        margin: 3px 2px;
+        color: {text_primary};
+    }}
+
+    QListWidget#DuplicateList::item:hover {{
+        background-color: {bg_tertiary};
+        border-color: {border_hover};
+    }}
+
+    QListWidget#DuplicateList::item:selected {{
+        background-color: {accent_color};
+        border-color: {accent_color};
         color: #FFFFFF;
     }}
     

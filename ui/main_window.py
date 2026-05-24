@@ -4,7 +4,7 @@ from pathlib import Path
 from PySide6.QtWidgets import (QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, 
                              QPushButton, QStackedWidget, QLabel, QFrame, 
                              QMessageBox, QSystemTrayIcon, QStyle)
-from PySide6.QtCore import Qt, QThread, Signal, Slot, QTimer
+from PySide6.QtCore import Qt, QThread, Signal, Slot, QTimer, QSize
 from PySide6.QtGui import QIcon
 from config import config
 from ui.styles import get_stylesheet
@@ -94,10 +94,9 @@ class MainWindow(QMainWindow):
         self.resize(1150, 750)
         self.setMinimumSize(600, 400)  # Allow resizing with reasonable minimum
         
-        # Set beautiful app icon
-        icon_path = Path(__file__).parent.parent / "app_icon.png"
-        if icon_path.exists():
-            self.setWindowIcon(QIcon(str(icon_path)))
+        self.app_icon = self.load_app_icon()
+        if not self.app_icon.isNull():
+            self.setWindowIcon(self.app_icon)
         
         # Enforce dark or light style sheet based on config
         self.setStyleSheet(get_stylesheet(config.theme))
@@ -122,8 +121,9 @@ class MainWindow(QMainWindow):
         title_container = QHBoxLayout()
         title_container.setContentsMargins(15, 10, 15, 20)
         
-        logo_lbl = QLabel("📂")
-        logo_lbl.setStyleSheet("font-size: 24px;")
+        logo_lbl = QLabel()
+        logo_lbl.setFixedSize(30, 30)
+        logo_lbl.setPixmap(self.app_icon.pixmap(30, 30))
         title_container.addWidget(logo_lbl)
         
         title_lbl = QLabel("文档分类与管理")
@@ -133,11 +133,11 @@ class MainWindow(QMainWindow):
 
         # Navigation Buttons
         self.nav_buttons = []
-        self.btn_dash = self.create_nav_button("📊 控制面板", 0)
-        self.btn_inbox = self.create_nav_button("📥 智能收集箱", 1)
-        self.btn_ws = self.create_nav_button("📂 工作空间浏览器", 2)
-        self.btn_backup = self.create_nav_button("🛡️ 3-2-1 备份卫士", 3)
-        self.btn_settings = self.create_nav_button("⚙️ 软件参数设置", 4)
+        self.btn_dash = self.create_nav_button("控制面板", 0, QStyle.StandardPixmap.SP_ComputerIcon)
+        self.btn_inbox = self.create_nav_button("智能收集箱", 1, QStyle.StandardPixmap.SP_DirOpenIcon)
+        self.btn_ws = self.create_nav_button("工作空间浏览器", 2, QStyle.StandardPixmap.SP_DirIcon)
+        self.btn_backup = self.create_nav_button("3-2-1 备份卫士", 3, QStyle.StandardPixmap.SP_DriveHDIcon)
+        self.btn_settings = self.create_nav_button("软件参数设置", 4, QStyle.StandardPixmap.SP_FileDialogDetailedView)
 
         for btn in [self.btn_dash, self.btn_inbox, self.btn_ws, self.btn_backup, self.btn_settings]:
             sidebar_layout.addWidget(btn)
@@ -199,11 +199,21 @@ class MainWindow(QMainWindow):
         # Setup System Tray Icon for desktop convenience
         self.setup_tray_icon()
 
-    def create_nav_button(self, text, index):
+    def load_app_icon(self):
+        root = Path(__file__).parent.parent
+        for filename in ("app_icon.ico", "app_icon.png"):
+            icon_path = root / filename
+            if icon_path.exists():
+                return QIcon(str(icon_path))
+        return self.style().standardIcon(QStyle.StandardPixmap.SP_DirIcon)
+
+    def create_nav_button(self, text, index, standard_icon):
         btn = QPushButton(text)
         btn.setObjectName("SidebarBtn")
         btn.setCheckable(True)
         btn.setAutoExclusive(True)
+        btn.setIcon(self.style().standardIcon(standard_icon))
+        btn.setIconSize(QSize(18, 18))
         btn.clicked.connect(lambda: self.switch_tab(index))
         return btn
 
@@ -242,11 +252,15 @@ class MainWindow(QMainWindow):
 
     def update_theme_btn_text(self):
         if config.theme == "dark":
-            self.btn_theme_toggle.setText("☀️ 切换浅色模式")
+            self.btn_theme_toggle.setText("切换浅色模式")
+            self.btn_theme_toggle.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_DesktopIcon))
         elif config.theme == "light":
-            self.btn_theme_toggle.setText("🌿 切换幽竹清溪")
+            self.btn_theme_toggle.setText("切换幽竹清溪")
+            self.btn_theme_toggle.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_DirHomeIcon))
         else:
-            self.btn_theme_toggle.setText("🌙 切换深色模式")
+            self.btn_theme_toggle.setText("切换深色模式")
+            self.btn_theme_toggle.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_ComputerIcon))
+        self.btn_theme_toggle.setIconSize(QSize(16, 16))
 
     @Slot()
     def refresh_all_views(self):
@@ -328,14 +342,7 @@ class MainWindow(QMainWindow):
     def setup_tray_icon(self):
         self.tray_icon = QSystemTrayIcon(self)
         
-        # Use custom or fallback standard folder icon for tray
-        icon_path = Path(__file__).parent.parent / "app_icon.png"
-        if icon_path.exists():
-            icon = QIcon(str(icon_path))
-        else:
-            icon = self.style().standardIcon(QStyle.StandardPixmap.SP_DirIcon)
-            
-        self.tray_icon.setIcon(icon)
+        self.tray_icon.setIcon(self.app_icon)
         self.tray_icon.setToolTip("电脑文档规范分类与管理系统")
         self.tray_icon.show()
 
