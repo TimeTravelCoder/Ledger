@@ -3,12 +3,11 @@ from pathlib import Path
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, 
                              QLabel, QLineEdit, QPushButton, QFrame, 
                              QCheckBox, QMessageBox, QFileDialog, QTextEdit, 
-                             QComboBox, QScrollArea, QListWidget, QListWidgetItem,
-                             QStyle)
+                             QComboBox, QScrollArea, QListWidget, QListWidgetItem)
 from PySide6.QtCore import Qt, Signal, QSize
 from config import config, DEFAULT_TAGS, normalize_tags, display_tag, NAME_PRESET_BASES
 from file_manager import FileManager
-from ui.icon_utils import set_button_icon
+from ui.icon_utils import line_icon
 
 class SettingsView(QWidget):
     refresh_other_views_signal = Signal()
@@ -64,7 +63,8 @@ class SettingsView(QWidget):
         self.input_ws_path = QLineEdit(config.workspace_dir)
         grid.addWidget(self.input_ws_path, 0, 1)
         self.btn_browse_ws = QPushButton("浏览...")
-        set_button_icon(self.btn_browse_ws, QStyle.StandardPixmap.SP_DirOpenIcon)
+        self.btn_browse_ws.setIcon(line_icon("folder", size=16))
+        self.btn_browse_ws.setIconSize(QSize(16, 16))
         self.btn_browse_ws.clicked.connect(self.browse_workspace)
         grid.addWidget(self.btn_browse_ws, 0, 2)
 
@@ -73,7 +73,8 @@ class SettingsView(QWidget):
         self.input_dl_path = QLineEdit(config.downloads_dir)
         grid.addWidget(self.input_dl_path, 1, 1)
         self.btn_browse_dl = QPushButton("浏览...")
-        set_button_icon(self.btn_browse_dl, QStyle.StandardPixmap.SP_DirOpenIcon)
+        self.btn_browse_dl.setIcon(line_icon("folder", size=16))
+        self.btn_browse_dl.setIconSize(QSize(16, 16))
         self.btn_browse_dl.clicked.connect(self.browse_downloads)
         grid.addWidget(self.btn_browse_dl, 1, 2)
 
@@ -93,12 +94,14 @@ class SettingsView(QWidget):
         init_layout = QHBoxLayout()
         self.btn_init_ws = QPushButton("一键初始化/修复标准目录结构")
         self.btn_init_ws.setObjectName("PrimaryBtn")
-        set_button_icon(self.btn_init_ws, QStyle.StandardPixmap.SP_DialogApplyButton)
+        self.btn_init_ws.setIcon(line_icon("success", "#FFFFFF", 16))
+        self.btn_init_ws.setIconSize(QSize(16, 16))
         self.btn_init_ws.clicked.connect(self.run_init_workspace)
         init_layout.addWidget(self.btn_init_ws)
         
         self.btn_save_paths = QPushButton("应用路径并重新加载")
-        set_button_icon(self.btn_save_paths, QStyle.StandardPixmap.SP_DialogSaveButton)
+        self.btn_save_paths.setIcon(line_icon("refresh", size=16))
+        self.btn_save_paths.setIconSize(QSize(16, 16))
         self.btn_save_paths.clicked.connect(self.save_paths)
         init_layout.addWidget(self.btn_save_paths)
         dir_layout.addLayout(init_layout)
@@ -128,7 +131,8 @@ class SettingsView(QWidget):
         self.input_wiz_path.setPlaceholderText("选择任一磁盘目录，例如 D:/ 或 E:/KnowledgeHub")
         wiz_grid.addWidget(self.input_wiz_path, 0, 1)
         self.btn_wiz_browse = QPushButton("选择盘符/目录...")
-        set_button_icon(self.btn_wiz_browse, QStyle.StandardPixmap.SP_DirOpenIcon)
+        self.btn_wiz_browse.setIcon(line_icon("folder", size=16))
+        self.btn_wiz_browse.setIconSize(QSize(16, 16))
         self.btn_wiz_browse.clicked.connect(self.browse_wizard_path)
         wiz_grid.addWidget(self.btn_wiz_browse, 0, 2)
 
@@ -145,7 +149,8 @@ class SettingsView(QWidget):
 
         self.btn_run_wiz = QPushButton("一键生成工作空间文件夹")
         self.btn_run_wiz.setObjectName("SuccessBtn")
-        set_button_icon(self.btn_run_wiz, QStyle.StandardPixmap.SP_FileDialogNewFolder)
+        self.btn_run_wiz.setIcon(line_icon("workspace", "#FFFFFF", 16))
+        self.btn_run_wiz.setIconSize(QSize(16, 16))
         self.btn_run_wiz.clicked.connect(self.run_workspace_wizard)
         wizard_layout.addWidget(self.btn_run_wiz)
 
@@ -189,12 +194,14 @@ class SettingsView(QWidget):
         # Save tags button
         tag_btn_layout = QHBoxLayout()
         self.btn_save_tags = QPushButton("保存标签修改")
-        set_button_icon(self.btn_save_tags, QStyle.StandardPixmap.SP_DialogSaveButton)
+        self.btn_save_tags.setIcon(line_icon("tag", size=16))
+        self.btn_save_tags.setIconSize(QSize(16, 16))
         self.btn_save_tags.clicked.connect(self.save_tags)
         tag_btn_layout.addWidget(self.btn_save_tags)
         
         self.btn_reset_tags = QPushButton("恢复默认标签规范")
-        set_button_icon(self.btn_reset_tags, QStyle.StandardPixmap.SP_BrowserReload)
+        self.btn_reset_tags.setIcon(line_icon("refresh", size=16))
+        self.btn_reset_tags.setIconSize(QSize(16, 16))
         self.btn_reset_tags.clicked.connect(self.reset_tags_to_default)
         tag_btn_layout.addWidget(self.btn_reset_tags)
         
@@ -233,7 +240,8 @@ class SettingsView(QWidget):
         custom_btn_layout = QHBoxLayout()
         self.btn_save_custom_dirs = QPushButton("保存并应用自建分类模板")
         self.btn_save_custom_dirs.setObjectName("PrimaryBtn")
-        set_button_icon(self.btn_save_custom_dirs, QStyle.StandardPixmap.SP_DialogApplyButton)
+        self.btn_save_custom_dirs.setIcon(line_icon("success", "#FFFFFF", 16))
+        self.btn_save_custom_dirs.setIconSize(QSize(16, 16))
         self.btn_save_custom_dirs.clicked.connect(self.save_custom_dirs)
         custom_btn_layout.addWidget(self.btn_save_custom_dirs)
         custom_layout.addLayout(custom_btn_layout)
@@ -272,7 +280,8 @@ class SettingsView(QWidget):
         rule_btn_layout = QHBoxLayout()
         self.btn_save_rules = QPushButton("保存规则")
         self.btn_save_rules.setObjectName("PrimaryBtn")
-        set_button_icon(self.btn_save_rules, QStyle.StandardPixmap.SP_DialogSaveButton)
+        self.btn_save_rules.setIcon(line_icon("success", "#FFFFFF", 16))
+        self.btn_save_rules.setIconSize(QSize(16, 16))
         self.btn_save_rules.clicked.connect(self.save_auto_rules)
         rule_btn_layout.addWidget(self.btn_save_rules)
         rule_layout.addLayout(rule_btn_layout)
@@ -321,16 +330,19 @@ class SettingsView(QWidget):
 
         preset_btn_layout = QHBoxLayout()
         self.btn_preset_add = QPushButton("新增模板")
-        set_button_icon(self.btn_preset_add, QStyle.StandardPixmap.SP_FileDialogNewFolder)
+        self.btn_preset_add.setIcon(line_icon("file", size=16))
+        self.btn_preset_add.setIconSize(QSize(16, 16))
         self.btn_preset_add.clicked.connect(self.add_name_preset)
         preset_btn_layout.addWidget(self.btn_preset_add)
         self.btn_preset_delete = QPushButton("删除模板")
-        set_button_icon(self.btn_preset_delete, QStyle.StandardPixmap.SP_TrashIcon)
+        self.btn_preset_delete.setIcon(line_icon("delete", size=16))
+        self.btn_preset_delete.setIconSize(QSize(16, 16))
         self.btn_preset_delete.clicked.connect(self.delete_name_preset)
         preset_btn_layout.addWidget(self.btn_preset_delete)
         self.btn_preset_save = QPushButton("保存模板")
         self.btn_preset_save.setObjectName("PrimaryBtn")
-        set_button_icon(self.btn_preset_save, QStyle.StandardPixmap.SP_DialogSaveButton)
+        self.btn_preset_save.setIcon(line_icon("success", "#FFFFFF", 16))
+        self.btn_preset_save.setIconSize(QSize(16, 16))
         self.btn_preset_save.clicked.connect(self.save_name_presets)
         preset_btn_layout.addWidget(self.btn_preset_save)
         preset_layout.addLayout(preset_btn_layout)
@@ -571,9 +583,7 @@ class SettingsView(QWidget):
             })
         for preset in self.name_presets:
             li = QListWidgetItem(f"{preset['label']} | 前缀: {preset['prefix']} | 格式: {preset['format']}")
-            li.setIcon(self.style().standardIcon(
-                QStyle.StandardPixmap.SP_FileDialogDetailedView if preset["base"] else QStyle.StandardPixmap.SP_FileIcon
-            ))
+            li.setIcon(line_icon("file" if preset["base"] else "tag", size=18))
             li.setData(Qt.UserRole, preset)
             self.preset_list.addItem(li)
 

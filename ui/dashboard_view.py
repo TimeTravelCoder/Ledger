@@ -3,13 +3,12 @@ import datetime
 from pathlib import Path
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, 
                              QLabel, QPushButton, QTableWidget, QTableWidgetItem, 
-                             QHeaderView, QFrame, QMessageBox, QScrollArea, QProgressBar,
-                             QStyle)
-from PySide6.QtCore import Qt, Signal
+                             QHeaderView, QFrame, QMessageBox, QScrollArea, QProgressBar)
+from PySide6.QtCore import Qt, Signal, QSize
 from config import config
 from db import db
 from file_manager import FileManager
-from ui.icon_utils import decorate_table, file_type_icon, set_button_icon
+from ui.icon_utils import decorate_table, file_type_icon, line_icon
 
 def display_name(tag):
     return tag[1:] if str(tag).startswith("#") else str(tag)
@@ -53,7 +52,8 @@ class DashboardView(QWidget):
         
         self.refresh_btn = QPushButton("刷新数据")
         self.refresh_btn.setObjectName("PrimaryBtn")
-        set_button_icon(self.refresh_btn, QStyle.StandardPixmap.SP_BrowserReload)
+        self.refresh_btn.setIcon(line_icon("refresh", "#FFFFFF", 16))
+        self.refresh_btn.setIconSize(QSize(16, 16))
         self.refresh_btn.clicked.connect(self.on_refresh_clicked)
         header_layout.addWidget(self.refresh_btn, 0, Qt.AlignRight)
         
@@ -63,11 +63,11 @@ class DashboardView(QWidget):
         stats_grid = QGridLayout()
         stats_grid.setSpacing(15)
 
-        self.card_total_files = self.create_stat_card("文件总数", "0", "统计当前工作空间内的所有文件")
-        self.card_total_size = self.create_stat_card("存储容量", "0.00 MB", "工作空间占用的磁盘空间大小")
-        self.card_unorganized = self.create_stat_card("收集箱未整理", "0", "00_Inbox 目录中等待整理的文件")
-        self.card_tags_count = self.create_stat_card("使用标签数", "0", "当前已在文件上打上的标签总数")
-        self.card_recent_count = self.create_stat_card("近7天整理量", "0", "最近 7 天内更新或整理过的文件数")
+        self.card_total_files = self.create_stat_card("文件总数", "0", "统计当前工作空间内的所有文件", "file")
+        self.card_total_size = self.create_stat_card("存储容量", "0.00 MB", "工作空间占用的磁盘空间大小", "workspace")
+        self.card_unorganized = self.create_stat_card("收集箱未整理", "0", "00_Inbox 目录中等待整理的文件", "inbox")
+        self.card_tags_count = self.create_stat_card("使用标签数", "0", "当前已在文件上打上的标签总数", "tag")
+        self.card_recent_count = self.create_stat_card("近7天整理量", "0", "最近 7 天内更新或整理过的文件数", "dashboard")
 
         stats_grid.addWidget(self.card_total_files, 0, 0)
         stats_grid.addWidget(self.card_total_size, 0, 1)
@@ -76,6 +76,20 @@ class DashboardView(QWidget):
         stats_grid.addWidget(self.card_recent_count, 1, 0)
 
         main_layout.addLayout(stats_grid)
+
+        insight_strip = QFrame()
+        insight_strip.setObjectName("InsightStrip")
+        insight_layout = QHBoxLayout(insight_strip)
+        insight_layout.setContentsMargins(12, 8, 12, 8)
+        insight_layout.setSpacing(10)
+        self.pending_chip = QLabel("待处理: --")
+        self.coverage_chip = QLabel("标签覆盖: --")
+        self.recent_chip = QLabel("近7天整理: --")
+        for chip in [self.pending_chip, self.coverage_chip, self.recent_chip]:
+            chip.setObjectName("InsightChip")
+            insight_layout.addWidget(chip)
+        insight_layout.addStretch()
+        main_layout.addWidget(insight_strip)
 
         # 3. Middle Section: Desktop Cleanliness & Backup health
         middle_layout = QHBoxLayout()
@@ -103,12 +117,14 @@ class DashboardView(QWidget):
         desktop_btn_layout = QHBoxLayout()
         self.clean_desktop_btn = QPushButton("一键导入收集箱")
         self.clean_desktop_btn.setObjectName("SuccessBtn")
-        set_button_icon(self.clean_desktop_btn, QStyle.StandardPixmap.SP_DirOpenIcon)
+        self.clean_desktop_btn.setIcon(line_icon("inbox", "#FFFFFF", 16))
+        self.clean_desktop_btn.setIconSize(QSize(16, 16))
         self.clean_desktop_btn.clicked.connect(self.clean_desktop)
         desktop_btn_layout.addWidget(self.clean_desktop_btn)
         
         self.go_to_inbox_btn = QPushButton("前往收集箱")
-        set_button_icon(self.go_to_inbox_btn, QStyle.StandardPixmap.SP_ArrowForward)
+        self.go_to_inbox_btn.setIcon(line_icon("move", size=16))
+        self.go_to_inbox_btn.setIconSize(QSize(16, 16))
         self.go_to_inbox_btn.clicked.connect(lambda: self.switch_to_inbox_signal.emit())
         desktop_btn_layout.addWidget(self.go_to_inbox_btn)
         desktop_layout.addLayout(desktop_btn_layout)
@@ -199,7 +215,7 @@ class DashboardView(QWidget):
 
         self.refresh_data()
 
-    def create_stat_card(self, title, default_val, description):
+    def create_stat_card(self, title, default_val, description, icon_name):
         card = QFrame()
         card.setObjectName("CardPanel")
         card.setMinimumHeight(100)
@@ -208,8 +224,18 @@ class DashboardView(QWidget):
         layout.setSpacing(4)
         layout.setContentsMargins(15, 12, 15, 12)
         
+        title_row = QHBoxLayout()
+        title_row.setContentsMargins(0, 0, 0, 0)
+        title_row.setSpacing(8)
+
+        icon_lbl = QLabel()
+        icon_lbl.setObjectName("MetricIcon")
+        icon_lbl.setPixmap(line_icon(icon_name, size=18).pixmap(18, 18))
+
         title_lbl = QLabel(title)
         title_lbl.setObjectName("CardTitle")
+        title_row.addWidget(icon_lbl)
+        title_row.addWidget(title_lbl, 1)
         
         val_lbl = QLabel(default_val)
         val_lbl.setObjectName("CardValue")
@@ -218,7 +244,7 @@ class DashboardView(QWidget):
         desc_lbl.setStyleSheet("color: #94A3B8; font-size: 11px;")
         desc_lbl.setWordWrap(True)
         
-        layout.addWidget(title_lbl)
+        layout.addLayout(title_row)
         layout.addWidget(val_lbl)
         layout.addWidget(desc_lbl)
         
@@ -277,6 +303,9 @@ class DashboardView(QWidget):
         self.tags_summary.setText(f"标签分布: {tag_summary_text}")
         self.tag_progress.setValue(tag_coverage)
         self.recent_progress.setValue(recent_progress)
+        self.pending_chip.setText(f"待处理: {inbox_count} 个")
+        self.coverage_chip.setText(f"标签覆盖: {tag_coverage}%")
+        self.recent_chip.setText(f"近7天整理: {recent_count} 个")
         self.render_tag_bars(top_tags)
 
         # 3. Check Desktop Cleanliness

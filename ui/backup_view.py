@@ -4,13 +4,12 @@ from pathlib import Path
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, 
                              QLabel, QLineEdit, QPushButton, QFrame, 
                              QProgressBar, QTextEdit, QTableWidget, QTableWidgetItem, 
-                             QHeaderView, QFileDialog, QMessageBox, QScrollArea,
-                             QStyle)
-from PySide6.QtCore import Qt, Signal
+                             QHeaderView, QFileDialog, QMessageBox, QScrollArea)
+from PySide6.QtCore import Qt, Signal, QSize
 from config import config
 from db import db
 from file_manager import FileManager
-from ui.icon_utils import decorate_table, set_button_icon
+from ui.icon_utils import decorate_table, line_icon
 
 class BackupView(QWidget):
     refresh_other_views_signal = Signal()
@@ -89,7 +88,8 @@ class BackupView(QWidget):
         self.input_disk_path.setPlaceholderText("选择您的移动硬盘、U盘备份文件夹路径...")
         grid.addWidget(self.input_disk_path, 0, 1)
         self.btn_browse_disk = QPushButton("浏览...")
-        set_button_icon(self.btn_browse_disk, QStyle.StandardPixmap.SP_DirOpenIcon)
+        self.btn_browse_disk.setIcon(line_icon("folder", size=16))
+        self.btn_browse_disk.setIconSize(QSize(16, 16))
         self.btn_browse_disk.clicked.connect(self.browse_disk_path)
         grid.addWidget(self.btn_browse_disk, 0, 2)
 
@@ -99,7 +99,8 @@ class BackupView(QWidget):
         self.input_cloud_path.setPlaceholderText("选择您的 OneDrive 或 iCloud/Google Drive 映射文件夹...")
         grid.addWidget(self.input_cloud_path, 1, 1)
         self.btn_browse_cloud = QPushButton("浏览...")
-        set_button_icon(self.btn_browse_cloud, QStyle.StandardPixmap.SP_DirOpenIcon)
+        self.btn_browse_cloud.setIcon(line_icon("folder", size=16))
+        self.btn_browse_cloud.setIconSize(QSize(16, 16))
         self.btn_browse_cloud.clicked.connect(self.browse_cloud_path)
         grid.addWidget(self.btn_browse_cloud, 1, 2)
 
@@ -109,13 +110,15 @@ class BackupView(QWidget):
         btn_layout = QHBoxLayout()
         self.btn_run_disk = QPushButton("运行硬盘增量备份")
         self.btn_run_disk.setObjectName("PrimaryBtn")
-        set_button_icon(self.btn_run_disk, QStyle.StandardPixmap.SP_DriveHDIcon)
+        self.btn_run_disk.setIcon(line_icon("backup", "#FFFFFF", 16))
+        self.btn_run_disk.setIconSize(QSize(16, 16))
         self.btn_run_disk.clicked.connect(lambda: self.run_backup("disk"))
         btn_layout.addWidget(self.btn_run_disk)
 
         self.btn_run_cloud = QPushButton("运行云端增量备份")
         self.btn_run_cloud.setObjectName("SuccessBtn")
-        set_button_icon(self.btn_run_cloud, QStyle.StandardPixmap.SP_DirHomeIcon)
+        self.btn_run_cloud.setIcon(line_icon("backup", "#FFFFFF", 16))
+        self.btn_run_cloud.setIconSize(QSize(16, 16))
         self.btn_run_cloud.clicked.connect(lambda: self.run_backup("cloud"))
         btn_layout.addWidget(self.btn_run_cloud)
 
@@ -230,16 +233,12 @@ class BackupView(QWidget):
             
             item_time = QTableWidgetItem(h["timestamp"])
             item_type = QTableWidgetItem(b_type)
-            item_type.setIcon(self.style().standardIcon(
-                QStyle.StandardPixmap.SP_DriveHDIcon if is_disk_backup else QStyle.StandardPixmap.SP_DirHomeIcon
-            ))
+            item_type.setIcon(line_icon("backup", size=16))
             item_files = QTableWidgetItem(str(h["files_copied"]))
             item_size = QTableWidgetItem(sz_str)
             is_success = h["status"] == "success"
             item_status = QTableWidgetItem("成功" if is_success else f"失败 ({h['status']})")
-            item_status.setIcon(self.style().standardIcon(
-                QStyle.StandardPixmap.SP_DialogApplyButton if is_success else QStyle.StandardPixmap.SP_MessageBoxCritical
-            ))
+            item_status.setIcon(line_icon("success" if is_success else "warning", size=16))
             
             item_time.setFlags(item_time.flags() & ~Qt.ItemIsEditable)
             item_type.setFlags(item_type.flags() & ~Qt.ItemIsEditable)

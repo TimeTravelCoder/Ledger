@@ -4,12 +4,12 @@ from pathlib import Path
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QListWidget, 
                              QListWidgetItem, QLabel, QLineEdit, QComboBox, 
                              QPushButton, QFrame, QCheckBox, QTextEdit, 
-                             QMessageBox, QStackedWidget, QScrollArea, QStyle)
+                             QMessageBox, QStackedWidget, QScrollArea)
 from PySide6.QtCore import Qt, Signal, QSize
 from config import config, normalize_tag, display_tag, NAME_PRESET_BASES
 from db import db
 from file_manager import FileManager
-from ui.icon_utils import file_type_icon, set_button_icon
+from ui.icon_utils import file_type_icon, line_icon
 
 STYLE_PREVIEW_NORMAL = """
     QLineEdit {
@@ -75,13 +75,15 @@ class InboxView(QWidget):
         left_layout.addWidget(self.file_list_widget)
 
         self.scan_inbox_btn = QPushButton("扫描收集箱")
-        set_button_icon(self.scan_inbox_btn, QStyle.StandardPixmap.SP_BrowserReload)
+        self.scan_inbox_btn.setIcon(line_icon("refresh", size=16))
+        self.scan_inbox_btn.setIconSize(QSize(16, 16))
         self.scan_inbox_btn.clicked.connect(self.scan_inbox)
         left_layout.addWidget(self.scan_inbox_btn)
 
         self.btn_merge_inboxes = QPushButton("一键合并双收集箱")
         self.btn_merge_inboxes.setObjectName("SuccessBtn")
-        set_button_icon(self.btn_merge_inboxes, QStyle.StandardPixmap.SP_DialogApplyButton)
+        self.btn_merge_inboxes.setIcon(line_icon("inbox", "#FFFFFF", 16))
+        self.btn_merge_inboxes.setIconSize(QSize(16, 16))
         self.btn_merge_inboxes.clicked.connect(self.merge_inboxes)
         left_layout.addWidget(self.btn_merge_inboxes)
 
@@ -220,7 +222,8 @@ class InboxView(QWidget):
         # Organize Button
         self.organize_btn = QPushButton("重命名并分类移动")
         self.organize_btn.setObjectName("PrimaryBtn")
-        set_button_icon(self.organize_btn, QStyle.StandardPixmap.SP_DialogSaveButton)
+        self.organize_btn.setIcon(line_icon("move", "#FFFFFF", 16))
+        self.organize_btn.setIconSize(QSize(16, 16))
         self.organize_btn.clicked.connect(self.run_organize)
         form_layout.addWidget(self.organize_btn)
 

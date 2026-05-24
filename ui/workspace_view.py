@@ -10,7 +10,7 @@ from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QTreeView,
                              QFileSystemModel, QDialog, QCheckBox, QTextEdit, 
                              QMessageBox, QComboBox, QGridLayout, QInputDialog,
                              QListWidget, QListWidgetItem, QSplitter, QAbstractItemView,
-                             QTabWidget, QSizePolicy, QStyle)
+                             QTabWidget, QSizePolicy, QScrollArea)
 from PySide6.QtCore import Qt, QModelIndex, Signal, QDir, QUrl, QSize
 from PySide6.QtGui import QDesktopServices, QPixmap, QIcon, QColor, QPainter, QFont
 from PySide6.QtPdf import QPdfDocument
@@ -18,7 +18,7 @@ from PySide6.QtPdfWidgets import QPdfView
 from config import config, display_tag, normalize_tag
 from db import db
 from file_manager import FileManager
-from ui.icon_utils import set_button_icon
+from ui.icon_utils import format_bytes, line_icon, make_empty_item
 
 class WorkspaceTableWidget(QTableWidget):
     left_double_clicked = Signal(QModelIndex)
@@ -137,12 +137,14 @@ class CreateFileDialog(QDialog):
         
         self.btn_confirm = QPushButton("确认创建")
         self.btn_confirm.setObjectName("PrimaryBtn")
-        set_button_icon(self.btn_confirm, QStyle.StandardPixmap.SP_DialogSaveButton)
+        self.btn_confirm.setIcon(line_icon("file", "#FFFFFF", 16))
+        self.btn_confirm.setIconSize(QSize(16, 16))
         self.btn_confirm.clicked.connect(self.create_file)
         btn_layout.addWidget(self.btn_confirm)
 
         self.btn_cancel = QPushButton("取消")
-        set_button_icon(self.btn_cancel, QStyle.StandardPixmap.SP_DialogCancelButton)
+        self.btn_cancel.setIcon(line_icon("delete", size=16))
+        self.btn_cancel.setIconSize(QSize(16, 16))
         self.btn_cancel.clicked.connect(self.reject)
         btn_layout.addWidget(self.btn_cancel)
         layout.addLayout(btn_layout)
@@ -313,12 +315,14 @@ class CreateFolderDialog(QDialog):
 
         self.btn_confirm = QPushButton("确认创建")
         self.btn_confirm.setObjectName("PrimaryBtn")
-        set_button_icon(self.btn_confirm, QStyle.StandardPixmap.SP_FileDialogNewFolder)
+        self.btn_confirm.setIcon(line_icon("folder", "#FFFFFF", 16))
+        self.btn_confirm.setIconSize(QSize(16, 16))
         self.btn_confirm.clicked.connect(self.do_create_folder)
         btn_layout.addWidget(self.btn_confirm)
 
         btn_cancel = QPushButton("取消")
-        set_button_icon(btn_cancel, QStyle.StandardPixmap.SP_DialogCancelButton)
+        btn_cancel.setIcon(line_icon("delete", size=16))
+        btn_cancel.setIconSize(QSize(16, 16))
         btn_cancel.clicked.connect(self.reject)
         btn_layout.addWidget(btn_cancel)
 
@@ -451,190 +455,86 @@ class WorkspaceView(QWidget):
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(8)
 
-        # ── Toolbar Panel ─────────────────────────────────────────────────────
+        # ── Compact Toolbar Panel ─────────────────────────────────────────────
         top_panel = QFrame()
-        top_panel.setObjectName("CardPanel")
+        top_panel.setObjectName("ToolbarPanel")
         top_panel.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Maximum)
-        top_panel.setMaximumHeight(210)
+        top_panel.setMaximumHeight(112)
         top_vbox = QVBoxLayout(top_panel)
-        top_vbox.setContentsMargins(14, 10, 14, 8)
+        top_vbox.setContentsMargins(12, 8, 12, 8)
         top_vbox.setSpacing(6)
 
-        # ── Row 1: Search + Status + Reset ────────────────────────────────────
-        row1 = QHBoxLayout()
-        row1.setSpacing(6)
+        toolbar_row = QHBoxLayout()
+        toolbar_row.setSpacing(8)
 
-        # Search icon + input wrapper
         search_wrapper = QFrame()
-        search_wrapper.setStyleSheet("""
-            QFrame {
-                background-color: #0F172A;
-                border: 1.5px solid #334155;
-                border-radius: 8px;
-            }
-        """)
+        search_wrapper.setObjectName("SearchBox")
         search_inner = QHBoxLayout(search_wrapper)
         search_inner.setContentsMargins(12, 0, 8, 0)
         search_inner.setSpacing(6)
         lbl_search_icon = QLabel()
-        lbl_search_icon.setPixmap(self.style().standardIcon(QStyle.StandardPixmap.SP_FileDialogContentsView).pixmap(16, 16))
+        lbl_search_icon.setPixmap(line_icon("search", size=16).pixmap(16, 16))
         lbl_search_icon.setStyleSheet("background: transparent; border: none;")
         search_inner.addWidget(lbl_search_icon)
         self.search_input = QLineEdit()
+        self.search_input.setObjectName("ToolbarSearchInput")
         self.search_input.setPlaceholderText("搜索文件名、备注关键词...")
-        self.search_input.setFixedHeight(34)
-        self.search_input.setStyleSheet("""
-            QLineEdit { background: transparent; border: none; font-size: 14px; color: #F8FAFC; }
-        """)
+        self.search_input.setFixedHeight(30)
         self.search_input.textChanged.connect(self.run_search)
         search_inner.addWidget(self.search_input, 1)
-        search_wrapper.setFixedHeight(40)
-        row1.addWidget(search_wrapper, 1)
+        search_wrapper.setFixedHeight(36)
+        toolbar_row.addWidget(search_wrapper, 1)
 
-        # Status combo
         status_lbl = QLabel("状态筛选")
-        status_lbl.setStyleSheet("color: #94A3B8; font-size: 13px; font-weight: 500;")
-        row1.addWidget(status_lbl)
+        status_lbl.setObjectName("ToolbarLabel")
+        toolbar_row.addWidget(status_lbl)
         self.status_combo = QComboBox()
-        self.status_combo.setFixedHeight(32)
+        self.status_combo.setFixedHeight(30)
         self.status_combo.setMinimumWidth(110)
         self.refresh_status_combo()
         self.status_combo.currentIndexChanged.connect(self.run_search)
-        row1.addWidget(self.status_combo)
+        toolbar_row.addWidget(self.status_combo)
 
-        # Divider
-        sep1 = QFrame(); sep1.setFrameShape(QFrame.VLine)
-        sep1.setStyleSheet("color: #2D3748;"); row1.addWidget(sep1)
-
-        # Reset button
-        self.reset_search_btn = QPushButton("重置筛选")
-        self.reset_search_btn.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_BrowserReload))
+        self.reset_search_btn = QPushButton("重置")
+        self.reset_search_btn.setObjectName("ToolbarBtn")
+        self.reset_search_btn.setIcon(line_icon("refresh", size=16))
         self.reset_search_btn.setIconSize(QSize(16, 16))
-        self.reset_search_btn.setFixedHeight(32)
-        self.reset_search_btn.setStyleSheet("""
-            QPushButton {
-                background: transparent;
-                border: 1.5px solid #334155;
-                border-radius: 10px;
-                padding: 0 18px;
-                color: #94A3B8;
-                font-size: 13px;
-                font-weight: 500;
-            }
-            QPushButton:hover {
-                border-color: #6366F1;
-                color: #C7D2FE;
-                background: rgba(99,102,241,0.08);
-            }
-        """)
+        self.reset_search_btn.setFixedHeight(30)
         self.reset_search_btn.clicked.connect(self.reset_filters)
-        row1.addWidget(self.reset_search_btn)
-        top_vbox.addLayout(row1)
-
-        # ── Divider ────────────────────────────────────────────────────────────
-        hdiv1 = QFrame(); hdiv1.setFrameShape(QFrame.HLine)
-        hdiv1.setFixedHeight(1)
-        hdiv1.setStyleSheet("color: #1E293B;"); top_vbox.addWidget(hdiv1)
-
-        # ── Row 2: Large action buttons (centered) ────────────────────────────
-        row2 = QHBoxLayout()
-        row2.setSpacing(10)
-        row2.setContentsMargins(0, 0, 0, 0)
-        row2.addStretch()
+        toolbar_row.addWidget(self.reset_search_btn)
 
         self.create_file_btn = QPushButton("新建文件")
-        self.create_file_btn.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_FileIcon))
-        self.create_file_btn.setIconSize(QSize(18, 18))
-        self.create_file_btn.setFixedHeight(38)
-        self.create_file_btn.setMinimumWidth(150)
-        self.create_file_btn.setStyleSheet("""
-            QPushButton {
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
-                    stop:0 #818CF8, stop:0.5 #6366F1, stop:1 #4F46E5);
-                border: none;
-                border-radius: 12px;
-                padding: 0 28px;
-                color: #FFFFFF;
-                font-size: 15px;
-                font-weight: 700;
-                letter-spacing: 0.5px;
-            }
-            QPushButton:hover {
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
-                    stop:0 #A5B4FC, stop:0.5 #818CF8, stop:1 #6366F1);
-            }
-            QPushButton:pressed {
-                background: #4338CA;
-            }
-        """)
+        self.create_file_btn.setObjectName("ToolbarPrimaryBtn")
+        self.create_file_btn.setIcon(line_icon("file", "#FFFFFF", 16))
+        self.create_file_btn.setIconSize(QSize(16, 16))
+        self.create_file_btn.setFixedHeight(30)
         self.create_file_btn.clicked.connect(self.create_new_file)
-        row2.addWidget(self.create_file_btn)
+        toolbar_row.addWidget(self.create_file_btn)
 
         self.create_folder_btn = QPushButton("新建文件夹")
-        self.create_folder_btn.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_FileDialogNewFolder))
-        self.create_folder_btn.setIconSize(QSize(18, 18))
-        self.create_folder_btn.setFixedHeight(38)
-        self.create_folder_btn.setMinimumWidth(150)
-        self.create_folder_btn.setStyleSheet("""
-            QPushButton {
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
-                    stop:0 #38BDF8, stop:0.5 #0EA5E9, stop:1 #0284C7);
-                border: none;
-                border-radius: 12px;
-                padding: 0 28px;
-                color: #FFFFFF;
-                font-size: 15px;
-                font-weight: 700;
-                letter-spacing: 0.5px;
-            }
-            QPushButton:hover {
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
-                    stop:0 #7DD3FC, stop:0.5 #38BDF8, stop:1 #0EA5E9);
-            }
-            QPushButton:pressed {
-                background: #0369A1;
-            }
-        """)
+        self.create_folder_btn.setObjectName("ToolbarBtn")
+        self.create_folder_btn.setIcon(line_icon("folder", size=16))
+        self.create_folder_btn.setIconSize(QSize(16, 16))
+        self.create_folder_btn.setFixedHeight(30)
         self.create_folder_btn.clicked.connect(self.create_new_folder)
-        row2.addWidget(self.create_folder_btn)
+        toolbar_row.addWidget(self.create_folder_btn)
+        top_vbox.addLayout(toolbar_row)
 
-        row2.addStretch()
-        top_vbox.addLayout(row2)
-
-        # ── Divider ────────────────────────────────────────────────────────────
-        hdiv2 = QFrame(); hdiv2.setFrameShape(QFrame.HLine)
-        hdiv2.setFixedHeight(1)
-        hdiv2.setStyleSheet("color: #1E293B;"); top_vbox.addWidget(hdiv2)
-
-        # ── Row 3: Tag chips (scrollable) ─────────────────────────────────────
-        row3 = QHBoxLayout()
-        row3.setSpacing(6)
-        row3.setContentsMargins(0, 0, 0, 0)
+        tag_row = QHBoxLayout()
+        tag_row.setSpacing(6)
+        tag_row.setContentsMargins(0, 0, 0, 0)
 
         tag_lbl = QLabel("标签筛选")
-        tag_lbl.setStyleSheet(
-            "color: #64748B; font-size: 12px; font-weight: 600; letter-spacing: 0.5px;"
-        )
+        tag_lbl.setObjectName("ToolbarLabel")
         tag_lbl.setFixedWidth(56)
-        row3.addWidget(tag_lbl)
+        tag_row.addWidget(tag_lbl)
 
-        from PySide6.QtWidgets import QScrollArea as _QScrollArea
-        self._tag_scroll = _QScrollArea()
+        self._tag_scroll = QScrollArea()
         self._tag_scroll.setFrameShape(QFrame.NoFrame)
         self._tag_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         self._tag_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self._tag_scroll.setWidgetResizable(True)
         self._tag_scroll.setFixedHeight(28)
-        self._tag_scroll.setStyleSheet("""
-            QScrollArea { background: transparent; border: none; }
-            QScrollBar:horizontal {
-                height: 3px; background: transparent; margin: 0;
-            }
-            QScrollBar::handle:horizontal {
-                background: #475569; border-radius: 1px; min-width: 24px;
-            }
-            QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal { width: 0; }
-        """)
 
         self.tag_buttons_container = QWidget()
         self.tag_buttons_container.setStyleSheet("background: transparent;")
@@ -644,12 +544,12 @@ class WorkspaceView(QWidget):
         self.tag_flow.addStretch()
 
         self._tag_scroll.setWidget(self.tag_buttons_container)
-        row3.addWidget(self._tag_scroll, 1)
+        tag_row.addWidget(self._tag_scroll, 1)
 
         self.tag_btn_references = {}
         self.selected_filter_tags = set()
 
-        top_vbox.addLayout(row3)
+        top_vbox.addLayout(tag_row)
 
 
 
@@ -712,60 +612,83 @@ class WorkspaceView(QWidget):
         self.files_table.itemSelectionChanged.connect(self.on_table_selection_changed)
         grid_layout.addWidget(self.files_table)
 
-        batch_panel = QFrame()
-        batch_panel.setObjectName("CardPanel")
-        batch_layout = QGridLayout(batch_panel)
-        batch_layout.setContentsMargins(12, 12, 12, 12)
-        batch_layout.setHorizontalSpacing(10)
-        batch_layout.setVerticalSpacing(10)
+        self.file_empty_label = QLabel("暂无文件。可以调整筛选条件，或从收集箱导入后再查看。")
+        self.file_empty_label.setObjectName("EmptyState")
+        self.file_empty_label.setAlignment(Qt.AlignCenter)
+        self.file_empty_label.setWordWrap(True)
+        self.file_empty_label.hide()
+        grid_layout.addWidget(self.file_empty_label)
+
+        self.batch_panel = QFrame()
+        self.batch_panel.setObjectName("BatchToolbar")
+        self.batch_panel.setProperty("active", False)
+        batch_layout = QHBoxLayout(self.batch_panel)
+        batch_layout.setContentsMargins(10, 8, 10, 8)
+        batch_layout.setSpacing(8)
 
         self.selection_status_label = QLabel("当前未选择文件")
+        self.selection_status_label.setObjectName("BatchStatus")
         self.selection_status_label.setWordWrap(True)
-        batch_layout.addWidget(self.selection_status_label, 0, 0, 1, 3)
+        self.selection_status_label.setMinimumWidth(150)
+        batch_layout.addWidget(self.selection_status_label, 1)
 
-        batch_layout.addWidget(QLabel("批量标签:"), 1, 0)
+        batch_layout.addWidget(QLabel("标签"))
         self.batch_tags_input = QLineEdit()
+        self.batch_tags_input.setFixedWidth(180)
         self.batch_tags_input.setPlaceholderText("如：论文, 课程学习")
-        batch_layout.addWidget(self.batch_tags_input, 1, 1)
+        batch_layout.addWidget(self.batch_tags_input)
         self.batch_apply_tags_btn = QPushButton("追加标签")
-        self.batch_apply_tags_btn.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_DialogApplyButton))
+        self.batch_apply_tags_btn.setObjectName("ToolbarBtn")
+        self.batch_apply_tags_btn.setIcon(line_icon("tag", size=16))
         self.batch_apply_tags_btn.setIconSize(QSize(16, 16))
         self.batch_apply_tags_btn.clicked.connect(self.apply_batch_tags)
-        batch_layout.addWidget(self.batch_apply_tags_btn, 1, 2)
+        batch_layout.addWidget(self.batch_apply_tags_btn)
 
-        batch_layout.addWidget(QLabel("移动到:"), 2, 0)
+        batch_layout.addWidget(QLabel("移动到"))
         self.batch_target_dir = QComboBox()
+        self.batch_target_dir.setFixedWidth(150)
         for d in config.get_standard_dirs():
             if d != config.get_inbox_name():
                 self.batch_target_dir.addItem(d)
-        batch_layout.addWidget(self.batch_target_dir, 2, 1)
+        batch_layout.addWidget(self.batch_target_dir)
         self.batch_move_btn = QPushButton("批量移动")
-        self.batch_move_btn.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_ArrowForward))
+        self.batch_move_btn.setObjectName("ToolbarBtn")
+        self.batch_move_btn.setIcon(line_icon("move", size=16))
         self.batch_move_btn.setIconSize(QSize(16, 16))
         self.batch_move_btn.clicked.connect(self.apply_batch_move)
-        batch_layout.addWidget(self.batch_move_btn, 2, 2)
+        batch_layout.addWidget(self.batch_move_btn)
 
-        batch_layout.addWidget(QLabel("重复检测:"), 3, 0)
+        batch_layout.addWidget(QLabel("重复"))
         self.duplicate_mode_combo = QComboBox()
+        self.duplicate_mode_combo.setFixedWidth(90)
         self.duplicate_mode_combo.addItems(["文件名", "大小", "哈希"])
-        batch_layout.addWidget(self.duplicate_mode_combo, 3, 1)
+        batch_layout.addWidget(self.duplicate_mode_combo)
         self.duplicate_check_btn = QPushButton("扫描重复")
-        self.duplicate_check_btn.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_FileDialogInfoView))
+        self.duplicate_check_btn.setObjectName("ToolbarBtn")
+        self.duplicate_check_btn.setIcon(line_icon("scan", size=16))
         self.duplicate_check_btn.setIconSize(QSize(16, 16))
         self.duplicate_check_btn.clicked.connect(self.show_duplicates)
-        batch_layout.addWidget(self.duplicate_check_btn, 3, 2)
+        batch_layout.addWidget(self.duplicate_check_btn)
 
-        batch_layout.addWidget(QLabel("规则建议:"), 4, 0)
         self.rule_hint_label = QLabel("自动归类未启用")
+        self.rule_hint_label.setObjectName("BatchHint")
         self.rule_hint_label.setWordWrap(True)
-        batch_layout.addWidget(self.rule_hint_label, 4, 1)
+        batch_layout.addWidget(self.rule_hint_label, 1)
         self.rule_apply_btn = QPushButton("按建议归类")
-        self.rule_apply_btn.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_DialogYesButton))
+        self.rule_apply_btn.setObjectName("ToolbarBtn")
+        self.rule_apply_btn.setIcon(line_icon("success", size=16))
         self.rule_apply_btn.setIconSize(QSize(16, 16))
         self.rule_apply_btn.clicked.connect(self.apply_rule_suggestion)
-        batch_layout.addWidget(self.rule_apply_btn, 4, 2)
+        batch_layout.addWidget(self.rule_apply_btn)
 
-        grid_layout.addWidget(batch_panel)
+        self.batch_control_widgets = [
+            self.batch_tags_input,
+            self.batch_apply_tags_btn,
+            self.batch_target_dir,
+            self.batch_move_btn,
+            self.rule_apply_btn,
+        ]
+        grid_layout.addWidget(self.batch_panel)
         self.main_splitter.addWidget(grid_container)
 
         # Right: Preview Panel
@@ -860,15 +783,20 @@ class WorkspaceView(QWidget):
         duplicate_tools_layout = QHBoxLayout(self.duplicate_tools)
         duplicate_tools_layout.setContentsMargins(0, 0, 0, 0)
         duplicate_tools_layout.setSpacing(8)
-        self.keep_one_btn = QPushButton("删除文件")
-        self.keep_one_btn.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_TrashIcon))
+        self.duplicate_hint_label = QLabel("选择重复文件后删除；建议每组至少保留 1 个。")
+        self.duplicate_hint_label.setObjectName("MutedText")
+        duplicate_tools_layout.addWidget(self.duplicate_hint_label, 1)
+
+        self.keep_one_btn = QPushButton("删除选中的重复文件")
+        self.keep_one_btn.setObjectName("DangerBtn")
+        self.keep_one_btn.setIcon(line_icon("delete", "#FFFFFF", 16))
         self.keep_one_btn.setIconSize(QSize(16, 16))
         self.keep_one_btn.clicked.connect(self.delete_selected_duplicate_files)
         duplicate_tools_layout.addWidget(self.keep_one_btn)
         preview_layout.addWidget(self.duplicate_tools)
 
         self.preview_open_btn = QPushButton("在系统中打开")
-        self.preview_open_btn.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_DialogOpenButton))
+        self.preview_open_btn.setIcon(line_icon("open", size=16))
         self.preview_open_btn.setIconSize(QSize(16, 16))
         self.preview_open_btn.clicked.connect(self.open_current_preview_file)
         preview_layout.addWidget(self.preview_open_btn)
@@ -887,6 +815,7 @@ class WorkspaceView(QWidget):
         # Populate
         self.setup_models()
         self.refresh_tags_cloud()
+        self.update_batch_toolbar_state(0)
         self.run_search()
 
     def setup_models(self):
@@ -972,6 +901,20 @@ class WorkspaceView(QWidget):
                     rel_paths.append(rel)
         return rel_paths
 
+    def set_operation_status(self, message):
+        self.selection_status_label.setText(message)
+
+    def update_batch_toolbar_state(self, selected_count):
+        active = selected_count > 0
+        self.batch_panel.setProperty("active", active)
+        self.batch_panel.style().unpolish(self.batch_panel)
+        self.batch_panel.style().polish(self.batch_panel)
+
+        status = f"已选择 {selected_count} 个文件" if active else "未选择文件，批量工具保持待命"
+        self.selection_status_label.setText(status)
+        for widget in self.batch_control_widgets:
+            widget.setEnabled(active)
+
     def on_table_selection_changed(self):
         selected = self.get_selected_rel_paths()
         if not selected:
@@ -982,14 +925,14 @@ class WorkspaceView(QWidget):
             self.preview_info_type.setText("类型: --")
             self.preview_info_size.setText("大小: --")
             self.preview_info_path.setText("路径: --")
-            self.selection_status_label.setText("当前未选择文件")
+            self.update_batch_toolbar_state(0)
             self.current_preview_rel_path = ""
             return
 
         first_rel = selected[0]
         self.current_preview_rel_path = first_rel
         self.load_preview(first_rel)
-        self.selection_status_label.setText(f"当前已选择 {len(selected)} 个文件")
+        self.update_batch_toolbar_state(len(selected))
         self.refresh_rule_hint(first_rel)
 
     def load_preview(self, rel_path):
@@ -1093,37 +1036,37 @@ class WorkspaceView(QWidget):
     def apply_batch_tags(self):
         rel_paths = self.get_selected_rel_paths()
         if not rel_paths:
-            QMessageBox.information(self, "提示", "请先选择至少一个文件。")
+            self.set_operation_status("请先选择至少一个文件。")
             return
         raw = self.batch_tags_input.text().strip()
         tags = [normalize_tag(tag.strip()) for tag in raw.replace(";", ",").split(",") if tag.strip()]
         if not tags:
-            QMessageBox.information(self, "提示", "请输入要追加的标签。")
+            self.set_operation_status("请输入要追加的标签。")
             return
         FileManager.bulk_update_tags(rel_paths, tags, mode="append")
         self.run_search()
         self.refresh_other_views_signal.emit()
-        QMessageBox.information(self, "完成", f"已为 {len(rel_paths)} 个文件追加标签。")
+        self.set_operation_status(f"已为 {len(rel_paths)} 个文件追加标签。")
 
     def apply_batch_move(self):
         rel_paths = self.get_selected_rel_paths()
         if not rel_paths:
-            QMessageBox.information(self, "提示", "请先选择至少一个文件。")
+            self.set_operation_status("请先选择至少一个文件。")
             return
         target_dir = self.batch_target_dir.currentText().strip()
         moved = FileManager.bulk_move_files(rel_paths, target_dir)
         self.selection_status_label.setText(f"批量移动完成，共 {len(moved)} 个文件。")
-        QMessageBox.information(self, "完成", f"已批量移动 {len(moved)} 个文件到 {target_dir}。")
         self.run_search()
         self.refresh_other_views_signal.emit()
+        self.set_operation_status(f"已批量移动 {len(moved)} 个文件到 {target_dir}。")
 
     def apply_rule_suggestion(self):
         if not getattr(config, "auto_rule_enabled", False):
-            QMessageBox.information(self, "提示", "请先在设置页启用规则归类。")
+            self.set_operation_status("请先在设置页启用规则归类。")
             return
         rel_paths = self.get_selected_rel_paths()
         if not rel_paths:
-            QMessageBox.information(self, "提示", "请先选择一个文件。")
+            self.set_operation_status("请先选择一个文件。")
             return
         moved = 0
         for rel_path in rel_paths:
@@ -1136,7 +1079,7 @@ class WorkspaceView(QWidget):
                     pass
         self.run_search()
         self.refresh_other_views_signal.emit()
-        QMessageBox.information(self, "完成", f"已按规则归类 {moved} 个文件。")
+        self.set_operation_status(f"已按规则归类 {moved} 个文件。")
 
     def refresh_rule_hint_for_current_selection(self):
         if self.current_preview_rel_path:
@@ -1148,29 +1091,36 @@ class WorkspaceView(QWidget):
         duplicates = FileManager.find_duplicates(mode=mode)
         self.duplicates_list.clear()
         if not duplicates:
-            empty_item = QListWidgetItem("未发现重复文件。\n当前规则下没有需要处理的重复项。")
-            empty_item.setFlags(Qt.NoItemFlags)
-            empty_item.setSizeHint(QSize(0, 66))
-            self.duplicates_list.addItem(empty_item)
-            self.selection_status_label.setText("未发现重复文件。")
+            self.duplicates_list.addItem(make_empty_item("未发现重复文件", "当前规则下没有需要处理的重复项。", "success"))
+            self.set_operation_status("未发现重复文件。")
             if activate:
                 self.preview_tabs.setCurrentWidget(self.duplicates_list)
             return
 
         for index, (group_key, records) in enumerate(duplicates.items(), start=1):
-            header = QListWidgetItem(f"重复组 {index}    {len(records)} 个文件\n{group_key}")
-            header.setFlags(Qt.NoItemFlags)
-            header.setSizeHint(QSize(0, 58))
+            total_size = sum(record.get("file_size", 0) or 0 for record in records)
+            largest_size = max((record.get("file_size", 0) or 0 for record in records), default=0)
+            reclaim_size = max(0, total_size - largest_size)
+            sample_paths = " | ".join(record["filepath"] for record in records[:2])
+            if len(records) > 2:
+                sample_paths += f" | 另 {len(records) - 2} 个"
+            header_text = (
+                f"重复组 {index}    {len(records)} 个文件    总计 {format_bytes(total_size)}    可清理约 {format_bytes(reclaim_size)}\n"
+                f"匹配值: {group_key}\n路径: {sample_paths}"
+            )
+            header = QListWidgetItem(line_icon("duplicate", size=22), header_text)
+            header.setFlags(Qt.ItemIsEnabled)
+            header.setSizeHint(QSize(0, 86))
             self.duplicates_list.addItem(header)
             for record in records:
                 rel_path = record["filepath"]
-                item = QListWidgetItem(f"{Path(rel_path).name}\n{rel_path}")
+                item = QListWidgetItem(f"{Path(rel_path).name}    {format_bytes(record.get('file_size', 0))}\n{rel_path}")
                 item.setIcon(self.get_file_type_icon(rel_path))
-                item.setSizeHint(QSize(0, 50))
+                item.setSizeHint(QSize(0, 54))
                 item.setToolTip(rel_path)
                 item.setData(Qt.UserRole, rel_path)
                 self.duplicates_list.addItem(item)
-        self.selection_status_label.setText(f"发现 {len(duplicates)} 组重复文件。")
+        self.set_operation_status(f"发现 {len(duplicates)} 组重复文件，选择要删除的重复项。")
         if activate:
             self.preview_tabs.setCurrentWidget(self.duplicates_list)
 
@@ -1199,7 +1149,7 @@ class WorkspaceView(QWidget):
         target_paths = list(dict.fromkeys(target_paths))
 
         if not target_paths:
-            QMessageBox.information(self, "提示", "请先选择一个文件。")
+            self.set_operation_status("请先选择一个文件。")
             return
         preview = "\n".join(target_paths[:5])
         if len(target_paths) > 5:
@@ -1222,7 +1172,7 @@ class WorkspaceView(QWidget):
         self.run_search()
         self.show_duplicates(activate=False)
         self.refresh_other_views_signal.emit()
-        QMessageBox.information(self, "完成", f"已删除 {deleted} 个文件。")
+        self.set_operation_status(f"已删除 {deleted} 个文件。")
 
     def create_new_file(self):
         dialog = CreateFileDialog(self.current_folder_rel, self)
@@ -1282,18 +1232,20 @@ class WorkspaceView(QWidget):
 
     def populate_table(self, file_records):
         self.files_table.setRowCount(0)
+        self.file_empty_label.setVisible(len(file_records) == 0)
         
         for i, r in enumerate(file_records):
             self.files_table.insertRow(i)
             
             # File size readable
             sz = r["file_size"]
-            sz_str = f"{sz / 1024:.1f} KB" if sz < 1024*1024 else f"{sz / (1024*1024):.1f} MB"
+            sz_str = format_bytes(sz)
             
             # Backup icons
             disk_ok = "已备份" if r["backup_disk_status"] else "未备份"
             cloud_ok = "已备份" if r["backup_cloud_status"] else "未备份"
             backup_str = f"硬盘: {disk_ok} | 云端: {cloud_ok}"
+            backup_complete = bool(r["backup_disk_status"] and r["backup_cloud_status"])
             tags_display = "--"
             if r["tags"]:
                 tags_display = ", ".join(
@@ -1305,6 +1257,7 @@ class WorkspaceView(QWidget):
             item_size = QTableWidgetItem(sz_str)
             item_tags = QTableWidgetItem(tags_display)
             item_backup = QTableWidgetItem(backup_str)
+            item_backup.setIcon(line_icon("success" if backup_complete else "warning", size=16))
             
             # Store full record path inside name item for double click
             item_name.setData(Qt.UserRole, r["filepath"])

@@ -1,11 +1,12 @@
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QSize
-from PySide6.QtGui import QColor, QFont, QIcon, QPainter, QPixmap
-from PySide6.QtWidgets import QAbstractItemView
+from PySide6.QtCore import Qt, QSize, QRectF
+from PySide6.QtGui import QColor, QFont, QIcon, QPainter, QPen, QPixmap
+from PySide6.QtWidgets import QAbstractItemView, QListWidgetItem
 
 
 _FILE_ICON_CACHE = {}
+_LINE_ICON_CACHE = {}
 
 
 _TYPE_META = {
@@ -80,6 +81,136 @@ def decorate_table(table, row_height=36, icon_size=24):
     table.setEditTriggers(QAbstractItemView.NoEditTriggers)
 
 
-def set_button_icon(button, standard_icon, size=16):
-    button.setIcon(button.style().standardIcon(standard_icon))
-    button.setIconSize(QSize(size, size))
+def format_bytes(num_bytes):
+    try:
+        value = float(num_bytes or 0)
+    except (TypeError, ValueError):
+        value = 0.0
+    units = ["B", "KB", "MB", "GB", "TB"]
+    for unit in units:
+        if value < 1024 or unit == units[-1]:
+            return f"{value:.0f} {unit}" if unit == "B" else f"{value:.1f} {unit}"
+        value /= 1024
+    return "0 B"
+
+
+def line_icon(name, color="#AAD9F2", size=24):
+    """Return a small linear icon drawn with one visual language."""
+    cache_key = (name, color, size)
+    if cache_key in _LINE_ICON_CACHE:
+        return _LINE_ICON_CACHE[cache_key]
+
+    pixmap = QPixmap(size, size)
+    pixmap.fill(Qt.transparent)
+    painter = QPainter(pixmap)
+    painter.setRenderHint(QPainter.Antialiasing)
+    scale = size / 24
+
+    def x(value):
+        return value * scale
+
+    pen = QPen(QColor(color), max(1.4, 1.8 * scale), Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin)
+    painter.setPen(pen)
+    painter.setBrush(Qt.NoBrush)
+
+    if name == "dashboard":
+        painter.drawRoundedRect(QRectF(x(4), x(4), x(7), x(7)), x(1.5), x(1.5))
+        painter.drawRoundedRect(QRectF(x(13), x(4), x(7), x(4)), x(1.5), x(1.5))
+        painter.drawRoundedRect(QRectF(x(13), x(10), x(7), x(10)), x(1.5), x(1.5))
+        painter.drawRoundedRect(QRectF(x(4), x(13), x(7), x(7)), x(1.5), x(1.5))
+    elif name == "inbox":
+        painter.drawRoundedRect(QRectF(x(4), x(6), x(16), x(13)), x(2.2), x(2.2))
+        painter.drawLine(x(4), x(12), x(9), x(12))
+        painter.drawLine(x(15), x(12), x(20), x(12))
+        painter.drawLine(x(9), x(12), x(10.5), x(15))
+        painter.drawLine(x(13.5), x(15), x(15), x(12))
+    elif name == "workspace":
+        painter.drawRoundedRect(QRectF(x(3.5), x(7), x(17), x(12)), x(2), x(2))
+        painter.drawLine(x(5), x(7), x(8), x(4.5))
+        painter.drawLine(x(8), x(4.5), x(12), x(4.5))
+        painter.drawLine(x(12), x(4.5), x(14), x(7))
+    elif name == "backup":
+        painter.drawArc(QRectF(x(5), x(5), x(14), x(14)), 35 * 16, 270 * 16)
+        painter.drawLine(x(6), x(7), x(5), x(12))
+        painter.drawLine(x(6), x(7), x(10.5), x(7.5))
+    elif name == "settings":
+        painter.drawEllipse(QRectF(x(8), x(8), x(8), x(8)))
+        for sx, sy, ex, ey in [(12, 3.5, 12, 6), (12, 18, 12, 20.5), (3.5, 12, 6, 12), (18, 12, 20.5, 12), (5.5, 5.5, 7.2, 7.2), (16.8, 16.8, 18.5, 18.5), (18.5, 5.5, 16.8, 7.2), (7.2, 16.8, 5.5, 18.5)]:
+            painter.drawLine(x(sx), x(sy), x(ex), x(ey))
+    elif name == "search":
+        painter.drawEllipse(QRectF(x(5), x(5), x(10), x(10)))
+        painter.drawLine(x(13), x(13), x(19), x(19))
+    elif name == "refresh":
+        painter.drawArc(QRectF(x(5), x(5), x(14), x(14)), 45 * 16, 250 * 16)
+        painter.drawLine(x(17.5), x(6.5), x(18.5), x(11))
+        painter.drawLine(x(17.5), x(6.5), x(13.2), x(7.4))
+    elif name == "file":
+        painter.drawRoundedRect(QRectF(x(6), x(4), x(12), x(16)), x(1.6), x(1.6))
+        painter.drawLine(x(14), x(4), x(18), x(8))
+        painter.drawLine(x(14), x(4), x(14), x(8))
+        painter.drawLine(x(14), x(8), x(18), x(8))
+    elif name == "folder":
+        painter.drawRoundedRect(QRectF(x(3.5), x(7), x(17), x(12)), x(2), x(2))
+        painter.drawLine(x(5), x(7), x(8), x(5))
+        painter.drawLine(x(8), x(5), x(12), x(5))
+    elif name == "tag":
+        painter.drawRoundedRect(QRectF(x(4), x(6), x(14), x(11)), x(2), x(2))
+        painter.drawLine(x(18), x(6), x(21), x(9))
+        painter.drawLine(x(18), x(17), x(21), x(14))
+        painter.drawEllipse(QRectF(x(7), x(9), x(2), x(2)))
+    elif name == "move":
+        painter.drawLine(x(4), x(12), x(18), x(12))
+        painter.drawLine(x(14), x(7.5), x(18.5), x(12))
+        painter.drawLine(x(14), x(16.5), x(18.5), x(12))
+        painter.drawRoundedRect(QRectF(x(3), x(5), x(8), x(14)), x(2), x(2))
+    elif name == "scan":
+        painter.drawRoundedRect(QRectF(x(5), x(5), x(14), x(14)), x(2), x(2))
+        painter.drawLine(x(4), x(12), x(20), x(12))
+        painter.drawLine(x(8), x(8), x(16), x(8))
+        painter.drawLine(x(8), x(16), x(13), x(16))
+    elif name == "delete":
+        painter.drawLine(x(7), x(8), x(17), x(8))
+        painter.drawLine(x(10), x(8), x(10), x(18))
+        painter.drawLine(x(14), x(8), x(14), x(18))
+        painter.drawRoundedRect(QRectF(x(8), x(8), x(8), x(11)), x(1.5), x(1.5))
+        painter.drawLine(x(9), x(5), x(15), x(5))
+    elif name == "open":
+        painter.drawRoundedRect(QRectF(x(5), x(6), x(13), x(13)), x(2), x(2))
+        painter.drawLine(x(12), x(5), x(19), x(5))
+        painter.drawLine(x(19), x(5), x(19), x(12))
+        painter.drawLine(x(19), x(5), x(11), x(13))
+    elif name == "success":
+        painter.drawEllipse(QRectF(x(4), x(4), x(16), x(16)))
+        painter.drawLine(x(8), x(12.5), x(11), x(15.5))
+        painter.drawLine(x(11), x(15.5), x(16.5), x(8.5))
+    elif name == "warning":
+        painter.drawLine(x(12), x(4), x(21), x(19))
+        painter.drawLine(x(21), x(19), x(3), x(19))
+        painter.drawLine(x(3), x(19), x(12), x(4))
+        painter.drawLine(x(12), x(9), x(12), x(13))
+        painter.drawPoint(x(12), x(16))
+    elif name == "duplicate":
+        painter.drawRoundedRect(QRectF(x(7), x(5), x(11), x(13)), x(2), x(2))
+        painter.drawRoundedRect(QRectF(x(4), x(8), x(11), x(11)), x(2), x(2))
+    elif name == "theme":
+        painter.drawEllipse(QRectF(x(5), x(5), x(14), x(14)))
+        painter.drawArc(QRectF(x(8), x(3), x(10), x(18)), 90 * 16, 180 * 16)
+    elif name == "info":
+        painter.drawEllipse(QRectF(x(4), x(4), x(16), x(16)))
+        painter.drawLine(x(12), x(11), x(12), x(16))
+        painter.drawPoint(x(12), x(8))
+    else:
+        painter.drawRoundedRect(QRectF(x(5), x(5), x(14), x(14)), x(3), x(3))
+
+    painter.end()
+    icon = QIcon(pixmap)
+    _LINE_ICON_CACHE[cache_key] = icon
+    return icon
+
+
+def make_empty_item(title, subtitle="", icon_name="info"):
+    text = title if not subtitle else f"{title}\n{subtitle}"
+    item = QListWidgetItem(line_icon(icon_name, "#85B3CB", 24), text)
+    item.setFlags(Qt.ItemIsEnabled)
+    item.setSizeHint(QSize(0, 78))
+    return item

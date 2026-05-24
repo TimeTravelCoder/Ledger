@@ -7,6 +7,7 @@ from PySide6.QtWidgets import (QMainWindow, QWidget, QHBoxLayout, QVBoxLayout,
 from PySide6.QtCore import Qt, QThread, Signal, Slot, QTimer, QSize
 from PySide6.QtGui import QIcon
 from config import config
+from ui.icon_utils import line_icon
 from ui.styles import get_stylesheet
 
 # Import views
@@ -133,11 +134,11 @@ class MainWindow(QMainWindow):
 
         # Navigation Buttons
         self.nav_buttons = []
-        self.btn_dash = self.create_nav_button("控制面板", 0, QStyle.StandardPixmap.SP_ComputerIcon)
-        self.btn_inbox = self.create_nav_button("智能收集箱", 1, QStyle.StandardPixmap.SP_DirOpenIcon)
-        self.btn_ws = self.create_nav_button("工作空间浏览器", 2, QStyle.StandardPixmap.SP_DirIcon)
-        self.btn_backup = self.create_nav_button("3-2-1 备份卫士", 3, QStyle.StandardPixmap.SP_DriveHDIcon)
-        self.btn_settings = self.create_nav_button("软件参数设置", 4, QStyle.StandardPixmap.SP_FileDialogDetailedView)
+        self.btn_dash = self.create_nav_button("控制面板", 0, "dashboard")
+        self.btn_inbox = self.create_nav_button("智能收集箱", 1, "inbox")
+        self.btn_ws = self.create_nav_button("工作空间浏览器", 2, "workspace")
+        self.btn_backup = self.create_nav_button("3-2-1 备份卫士", 3, "backup")
+        self.btn_settings = self.create_nav_button("软件参数设置", 4, "settings")
 
         for btn in [self.btn_dash, self.btn_inbox, self.btn_ws, self.btn_backup, self.btn_settings]:
             sidebar_layout.addWidget(btn)
@@ -207,14 +208,14 @@ class MainWindow(QMainWindow):
                 return QIcon(str(icon_path))
         return self.style().standardIcon(QStyle.StandardPixmap.SP_DirIcon)
 
-    def create_nav_button(self, text, index, standard_icon):
+    def create_nav_button(self, text, index, icon_name):
         btn = QPushButton(text)
         btn.setObjectName("SidebarBtn")
         btn.setCheckable(True)
         btn.setAutoExclusive(True)
         btn.setProperty("nav_label", text)
         btn.setToolTip(text)
-        btn.setIcon(self.style().standardIcon(standard_icon))
+        btn.setIcon(line_icon(icon_name, size=18))
         btn.setIconSize(QSize(18, 18))
         btn.clicked.connect(lambda: self.switch_tab(index))
         return btn
@@ -255,13 +256,11 @@ class MainWindow(QMainWindow):
     def update_theme_btn_text(self):
         if config.theme == "dark":
             self.btn_theme_toggle.setText("切换浅色模式")
-            self.btn_theme_toggle.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_DesktopIcon))
         elif config.theme == "light":
             self.btn_theme_toggle.setText("切换幽竹清溪")
-            self.btn_theme_toggle.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_DirHomeIcon))
         else:
             self.btn_theme_toggle.setText("切换深色模式")
-            self.btn_theme_toggle.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_ComputerIcon))
+        self.btn_theme_toggle.setIcon(line_icon("theme", size=16))
         self.btn_theme_toggle.setIconSize(QSize(16, 16))
         theme_text = self.btn_theme_toggle.text()
         self.btn_theme_toggle.setProperty("expanded_text", theme_text)
@@ -349,7 +348,7 @@ class MainWindow(QMainWindow):
     def setup_tray_icon(self):
         self.tray_icon = QSystemTrayIcon(self)
         
-        self.tray_icon.setIcon(self.app_icon)
+        self.tray_icon.setIcon(line_icon("workspace", "#D1FFFF", 16))
         self.tray_icon.setToolTip("电脑文档规范分类与管理系统")
         self.tray_icon.show()
 

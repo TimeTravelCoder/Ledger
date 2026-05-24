@@ -138,6 +138,35 @@ def get_stylesheet(theme="dark"):
         border-radius: 10px;
     }}
 
+    QFrame#ToolbarPanel {{
+        background-color: {bg_secondary};
+        border: 1px solid {border_color};
+        border-radius: 12px;
+    }}
+
+    QFrame#SearchBox {{
+        background-color: {bg_primary};
+        border: 1px solid {border_color};
+        border-radius: 9px;
+    }}
+
+    QFrame#BatchToolbar {{
+        background-color: {bg_primary};
+        border: 1px solid {border_color};
+        border-radius: 12px;
+    }}
+
+    QFrame#BatchToolbar[active="true"] {{
+        background-color: {bg_secondary};
+        border: 1px solid {accent_color};
+    }}
+
+    QFrame#InsightStrip {{
+        background-color: {bg_secondary};
+        border: 1px solid {border_color};
+        border-radius: 12px;
+    }}
+
     QFrame#RenamePreviewCard {{
         background-color: {bg_primary};
         border: 1px dashed {border_hover};
@@ -156,6 +185,23 @@ def get_stylesheet(theme="dark"):
         font-size: 24px;
         font-weight: bold;
         color: {text_primary};
+    }}
+
+    QLabel#MetricIcon {{
+        background-color: {bg_tertiary};
+        border: 1px solid {border_color};
+        border-radius: 8px;
+        padding: 5px;
+    }}
+
+    QLabel#InsightChip {{
+        background-color: {bg_primary};
+        border: 1px solid {border_color};
+        border-radius: 10px;
+        padding: 5px 10px;
+        color: {text_secondary};
+        font-size: 12px;
+        font-weight: 700;
     }}
 
     QLabel#PreviewFileName {{
@@ -206,9 +252,37 @@ def get_stylesheet(theme="dark"):
         border: 1px solid {success_color};
     }}
 
+    QLineEdit#ToolbarSearchInput {{
+        background-color: transparent;
+        border: none;
+        padding: 5px 2px;
+    }}
+
     QLabel#MutedText {{
         color: {text_disabled};
         font-size: 12px;
+    }}
+
+    QLabel#ToolbarLabel, QLabel#BatchHint {{
+        color: {text_disabled};
+        font-size: 12px;
+        font-weight: 600;
+    }}
+
+    QLabel#BatchStatus {{
+        color: {text_secondary};
+        font-size: 12px;
+        font-weight: 700;
+    }}
+
+    QLabel#EmptyState {{
+        background-color: {bg_primary};
+        border: 1px dashed {border_color};
+        border-radius: 12px;
+        padding: 12px;
+        color: {text_disabled};
+        font-size: 12px;
+        font-weight: 600;
     }}
 
     /* Normal Push Buttons */
@@ -238,6 +312,33 @@ def get_stylesheet(theme="dark"):
     }}
     
     QPushButton#PrimaryBtn:hover {{
+        background-color: {border_hover};
+    }}
+
+    QPushButton#ToolbarBtn {{
+        background-color: transparent;
+        border: 1px solid {border_color};
+        border-radius: 8px;
+        padding: 6px 12px;
+        color: {text_primary};
+        font-weight: 700;
+    }}
+
+    QPushButton#ToolbarBtn:hover {{
+        background-color: {bg_tertiary};
+        border-color: {accent_color};
+    }}
+
+    QPushButton#ToolbarPrimaryBtn {{
+        background-color: {accent_color};
+        border: none;
+        border-radius: 8px;
+        padding: 6px 12px;
+        color: #FFFFFF;
+        font-weight: 700;
+    }}
+
+    QPushButton#ToolbarPrimaryBtn:hover {{
         background-color: {border_hover};
     }}
 
