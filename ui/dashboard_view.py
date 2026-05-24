@@ -576,7 +576,6 @@ class DashboardView(QWidget):
         all_files = db.search_files()
         total_count = len(all_files)
         total_bytes = sum(f["file_size"] for f in all_files)
-        
         # Convert bytes to MB/GB
         if total_bytes > 1024*1024*1024:
             size_str = f"{total_bytes / (1024*1024*1024):.2f} GB"
@@ -596,8 +595,10 @@ class DashboardView(QWidget):
 
         # Count tags
         unique_tags = set()
+        tagged_files_count = 0
         for f in all_files:
             if f["tags"]:
+                tagged_files_count += 1
                 for t in f["tags"].split(","):
                     if t.strip():
                         unique_tags.add(t.strip())
@@ -607,7 +608,7 @@ class DashboardView(QWidget):
         tag_distribution = db.get_tag_distribution()
         top_tags = sorted(tag_distribution.items(), key=lambda item: item[1], reverse=True)[:5]
         tag_summary_text = "、".join(f"{tag}({count})" for tag, count in top_tags) if top_tags else "--"
-        tag_coverage = min(100, int((tags_count / max(1, total_count)) * 100))
+        tag_coverage = min(100, int((tagged_files_count / max(1, total_count)) * 100))
         recent_progress = min(100, int((recent_count / max(1, total_count)) * 100))
 
         # Update card values
@@ -705,10 +706,12 @@ class DashboardView(QWidget):
         else:
             self.backup_score_lbl.setStyleSheet("color: #EF4444; font-size: 16px; font-weight: bold;")
 
+        # Retrieve recent backups history globally first to prevent NameError inside cloud logic
+        recent_backups = db.get_backup_history(limit=5)
+
         # Update disk label
         if has_disk:
             # Check if recently backed up
-            recent_backups = db.get_backup_history(limit=5)
             disk_ok = any(b["backup_type"] == "disk" and b["status"] == "success" for b in recent_backups)
             if disk_ok:
                 self.backup_disk_status.setText("2. 外部介质 (移动硬盘): 已配置并备份")

@@ -1412,7 +1412,7 @@ class WorkspaceView(QWidget):
             self.run_search()
 
     def get_abs_path(self, rel_path):
-        return (Path(config.workspace_dir) / rel_path).resolve()
+        return FileManager.safe_workspace_path(rel_path)
 
     def _add_menu_action(self, menu, text, handler, icon_name=None, icon_color="#AAD9F2"):
         action = menu.addAction(text) if not icon_name else menu.addAction(line_icon(icon_name, icon_color, 16), text)

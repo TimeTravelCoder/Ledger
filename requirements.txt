@@ -1,0 +1,11 @@
+# Ledger - 电脑文档规范分类与管理系统依赖文件
+# 使用方法: pip install -r requirements.txt
+
+# 核心跨平台GUI与图形库
+PySide6>=6.4.0
+
+# 核心文件系统实时监视器（用于下载目录自动导入和收集箱自动感知）
+watchdog>=3.0.0
+
+# Windows 平台可选附加依赖（若启用本地 Word COM 高级渲染预览，取消下方注释）
+# pywin32>=306 ; sys_platform == 'win32'

@@ -63,19 +63,37 @@ class FileManager:
         return dest
 
     @staticmethod
+    def safe_workspace_path(rel_path):
+        """Sanitize and validate that resolved paths never escape the workspace root.
+        Rejects absolute paths and parent traversals (..) outside the workspace."""
+        ws_root = Path(config.workspace_dir).resolve()
+        
+        # Check if the path is absolute
+        p = Path(rel_path)
+        if p.is_absolute():
+            resolved = p.resolve()
+        else:
+            resolved = (ws_root / rel_path).resolve()
+            
+        if resolved == ws_root or resolved.is_relative_to(ws_root):
+            return resolved
+            
+        raise PermissionError(f"安全边界拦截：路径 '{rel_path}' 尝试越界访问工作空间外部！")
+
+    @staticmethod
     def delete_file(rel_path):
         """Delete a workspace file and its database record safely."""
-        ws_root = Path(config.workspace_dir).resolve()
-        abs_path = (ws_root / rel_path).resolve()
-
         try:
+            abs_path = FileManager.safe_workspace_path(rel_path)
             if abs_path.exists():
                 if abs_path.is_dir():
                     shutil.rmtree(abs_path)
                 else:
                     abs_path.unlink()
-        finally:
+            # Only delete database record if physical deletion succeeded or file didn't exist
             db.delete_file_record(rel_path)
+        except Exception as e:
+            raise e
 
     @staticmethod
     def get_desktop_path():
@@ -179,27 +197,33 @@ class FileManager:
 
     @staticmethod
     def create_file(relative_path: str, content: str = ""):
-        """Create a new file at the given workspace-relative path.
+        """Create a new file at the given workspace-relative path safely.
         Returns (success: bool, message: str)."""
         try:
-            ws_root = Path(config.workspace_dir)
-            file_path = ws_root / relative_path
+            file_path = FileManager.safe_workspace_path(relative_path)
             file_path.parent.mkdir(parents=True, exist_ok=True)
             if file_path.exists():
                 return False, f"文件已存在: {relative_path}"
-            with open(file_path, "w", encoding="utf-8") as f:
-                f.write(content)
+                
+            # Handle Office binary formats as 0-byte clean files to prevent corruptions
+            ext = file_path.suffix.lower()
+            if ext in [".docx", ".xlsx", ".pptx"]:
+                with open(file_path, "wb") as f:
+                    pass
+            else:
+                with open(file_path, "w", encoding="utf-8") as f:
+                    f.write(content)
+                    
             return True, f"文件创建成功: {relative_path}"
         except Exception as e:
             return False, f"创建文件失败: {str(e)}"
 
     @staticmethod
     def create_folder(relative_path: str):
-        """Create a new folder at the given workspace-relative path.
+        """Create a new folder at the given workspace-relative path safely.
         Returns (success: bool, message: str)."""
         try:
-            ws_root = Path(config.workspace_dir)
-            folder_path = ws_root / relative_path
+            folder_path = FileManager.safe_workspace_path(relative_path)
 
             # Depth check: folder itself should not exceed 4 levels under workspace root
             is_violation, depth = FileManager.check_folder_depth_violation(relative_path)
@@ -334,10 +358,10 @@ class FileManager:
 
     @staticmethod
     def organize_file(src_path, dest_rel_path, new_filename):
-        """Move and rename a file into the structured workspace."""
+        """Move and rename a file into the structured workspace safely."""
         ws_root = Path(config.workspace_dir)
         src = Path(src_path)
-        dest = ws_root / dest_rel_path
+        dest = FileManager.safe_workspace_path(dest_rel_path)
 
         if src.resolve() == dest.resolve():
             return str(dest.relative_to(ws_root)).replace("\\", "/")
@@ -406,9 +430,15 @@ class FileManager:
             
         dest_path = Path(dest_dir)
         
-        # Verify drive root connectivity (especially useful for unplugged USB drives/SSDs on Windows/macOS)
+        # Verify drive root connectivity and enforce loop-backup prevention
         try:
             dest_abs = dest_path.resolve()
+            ws_root_abs = ws_root.resolve()
+            
+            # Enforce Loop Backup Prevention: backup path cannot be equal to or inside the workspace
+            if dest_abs == ws_root_abs or dest_abs.is_relative_to(ws_root_abs):
+                return False, "安全拦截：备份目标目录不能设定在工作空间内部，否则会导致循环套娃备份！"
+
             drive_root = dest_abs.anchor
             # Check if anchor is resolved and physically online/exists
             if drive_root and not os.path.exists(drive_root):
@@ -572,6 +602,7 @@ class FileManager:
             if not src_abs.exists():
                 continue
             new_name = f"{prefix}{src_abs.stem}{suffix}{src_abs.suffix}"
-            final_rel = FileManager.organize_file(str(src_abs), rel_path, new_name)
+            new_rel = str(Path(rel_path).parent / new_name).replace("\\", "/")
+            final_rel = FileManager.organize_file(str(src_abs), new_rel, new_name)
             renamed.append(final_rel)
         return renamed

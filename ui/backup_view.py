@@ -177,6 +177,16 @@ class BackupView(QWidget):
     def browse_disk_path(self):
         dir_path = QFileDialog.getExistingDirectory(self, "选择移动硬盘备份目录", config.backup_disk_dir)
         if dir_path:
+            # Enforce Loop Backup Prevention
+            try:
+                ws_root = Path(config.workspace_dir).resolve()
+                selected = Path(dir_path).resolve()
+                if selected == ws_root or selected.is_relative_to(ws_root):
+                    QMessageBox.warning(self, "路径无效", "安全拦截：备份目录不能选择在工作空间目录内部，否则会导致循环备份！")
+                    return
+            except Exception:
+                pass
+                
             self.input_disk_path.setText(dir_path)
             config.backup_disk_dir = dir_path
             config.save()
@@ -185,6 +195,16 @@ class BackupView(QWidget):
     def browse_cloud_path(self):
         dir_path = QFileDialog.getExistingDirectory(self, "选择云盘映射备份目录", config.backup_cloud_dir)
         if dir_path:
+            # Enforce Loop Backup Prevention
+            try:
+                ws_root = Path(config.workspace_dir).resolve()
+                selected = Path(dir_path).resolve()
+                if selected == ws_root or selected.is_relative_to(ws_root):
+                    QMessageBox.warning(self, "路径无效", "安全拦截：备份目录不能选择在工作空间目录内部，否则会导致循环备份！")
+                    return
+            except Exception:
+                pass
+                
             self.input_cloud_path.setText(dir_path)
             config.backup_cloud_dir = dir_path
             config.save()
@@ -196,6 +216,22 @@ class BackupView(QWidget):
             config.backup_disk_dir = self.input_disk_path.text().strip()
         else:
             config.backup_cloud_dir = self.input_cloud_path.text().strip()
+            
+        # Enforce Loop Backup Prevention on manual edits
+        try:
+            ws_root = Path(config.workspace_dir).resolve()
+            if backup_type == "disk" and config.backup_disk_dir:
+                selected = Path(config.backup_disk_dir).resolve()
+                if selected == ws_root or selected.is_relative_to(ws_root):
+                    QMessageBox.warning(self, "备份失败", "安全拦截：外部介质备份路径不能设定在工作空间内部，防止循环备份！")
+                    return
+            if backup_type == "cloud" and config.backup_cloud_dir:
+                selected = Path(config.backup_cloud_dir).resolve()
+                if selected == ws_root or selected.is_relative_to(ws_root):
+                    QMessageBox.warning(self, "备份失败", "安全拦截：云端同步备份路径不能设定在工作空间内部，防止循环备份！")
+                    return
+        except Exception:
+            pass
         
         config.save()
 
