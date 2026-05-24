@@ -267,6 +267,8 @@ class MainWindow(QMainWindow):
             self.view_workspace.run_search()
         elif index == 3:
             self.view_backup.refresh_history()
+        elif index == 4:
+            self.view_settings.update_workspace_stats()
 
     def toggle_theme(self):
         if config.theme == "dark":

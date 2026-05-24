@@ -1,15 +1,214 @@
 import os
+import datetime
+import shutil
 from pathlib import Path
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, 
                              QLabel, QLineEdit, QPushButton, QFrame, 
                              QCheckBox, QMessageBox, QFileDialog, QTextEdit, 
                              QComboBox, QScrollArea, QListWidget, QListWidgetItem,
-                             QTabWidget)
-from PySide6.QtCore import Qt, Signal, QSize
+                             QTabWidget, QLayout, QProgressBar)
+from PySide6.QtCore import Qt, Signal, QSize, QPoint, QRect
+from PySide6.QtGui import QIcon, QCursor
 from config import config, DEFAULT_TAGS, normalize_tags, display_tag, NAME_PRESET_BASES
 from file_manager import FileManager
-from ui.icon_utils import line_icon
+from ui.icon_utils import line_icon, format_bytes
 from ui.toast import show_toast
+
+class FlowLayout(QLayout):
+    """
+    Custom dynamic flow layout that wraps widgets horizontally as window width resizes.
+    Perfect for modern capsule tag pools.
+    """
+    def __init__(self, parent=None, margin=0, hspacing=6, vspacing=6):
+        super().__init__(parent)
+        self._items = []
+        self._hspacing = hspacing
+        self._vspacing = vspacing
+        self.setContentsMargins(margin, margin, margin, margin)
+
+    def __del__(self):
+        del self._items
+
+    def addItem(self, item):
+        self._items.append(item)
+
+    def horizontalSpacing(self):
+        return self._hspacing
+
+    def verticalSpacing(self):
+        return self._vspacing
+
+    def count(self):
+        return len(self._items)
+
+    def itemAt(self, index):
+        if 0 <= index < len(self._items):
+            return self._items[index]
+        return None
+
+    def takeAt(self, index):
+        if 0 <= index < len(self._items):
+            return self._items.pop(index)
+        return None
+
+    def expandingDirections(self):
+        return Qt.Orientations(0)
+
+    def hasHeightForWidth(self):
+        return True
+
+    def heightForWidth(self, width):
+        return self._do_layout(QRect(0, 0, width, 0), True)
+
+    def setGeometry(self, rect):
+        super().setGeometry(rect)
+        self._do_layout(rect, False)
+
+    def sizeHint(self):
+        return self.minimumSize()
+
+    def minimumSize(self):
+        size = QSize()
+        for item in self._items:
+            size = size.expandedTo(item.minimumSize())
+        margins = self.contentsMargins()
+        size += QSize(margins.left() + margins.right(), margins.top() + margins.bottom())
+        return size
+
+    def _do_layout(self, rect, test_only):
+        margins = self.contentsMargins()
+        x = rect.x() + margins.left()
+        y = rect.y() + margins.top()
+        line_height = 0
+        h_space = self.horizontalSpacing()
+        v_space = self.verticalSpacing()
+
+        for item in self._items:
+            space_x = h_space
+            space_y = v_space
+            next_x = x + item.sizeHint().width() + space_x
+            if next_x - space_x > rect.right() and line_height > 0:
+                x = rect.x() + margins.left()
+                y = y + line_height + space_y
+                next_x = x + item.sizeHint().width() + space_x
+                line_height = 0
+
+            if not test_only:
+                item.setGeometry(QRect(QPoint(x, y), item.sizeHint()))
+
+            x = next_x
+            line_height = max(line_height, item.sizeHint().height())
+
+        return y + line_height - rect.y() + margins.bottom()
+
+
+class VisualTagPool(QWidget):
+    """
+    Interactive flow-wrap Tag pool that renders tags as high-end capsules 
+    with dynamic deletion buttons and a real-time inline quick-add input.
+    """
+    def __init__(self, category_type, parent=None):
+        super().__init__(parent)
+        self.category_type = category_type # "primary", "secondary", "status"
+        self.tags = []
+        
+        self.main_layout = QVBoxLayout(self)
+        self.main_layout.setContentsMargins(0, 0, 0, 0)
+        self.main_layout.setSpacing(8)
+        
+        # Scroll area for capsules to prevent vertical UI bloat
+        self.scroll = QScrollArea()
+        self.scroll.setWidgetResizable(True)
+        self.scroll.setFrameShape(QFrame.NoFrame)
+        self.scroll.setMinimumHeight(70)
+        self.scroll.setMaximumHeight(160)
+        self.scroll.setStyleSheet("QScrollArea { background: transparent; }")
+        
+        self.capsule_widget = QWidget()
+        self.capsule_widget.setObjectName("CapsuleWidgetContainer")
+        self.capsule_widget.setStyleSheet("#CapsuleWidgetContainer { background: transparent; }")
+        self.capsule_layout = FlowLayout(self.capsule_widget, margin=0, hspacing=6, vspacing=6)
+        self.scroll.setWidget(self.capsule_widget)
+        self.main_layout.addWidget(self.scroll)
+        
+        # Inline input for quick-adding new tags
+        self.input_layout = QHBoxLayout()
+        self.input_layout.setSpacing(8)
+        
+        self.add_input = QLineEdit()
+        self.add_input.setPlaceholderText("+ 输入标签名称，按回车快速添加...")
+        self.add_input.setObjectName("TagQuickAddInput")
+        self.add_input.returnPressed.connect(self.add_tag_from_input)
+        self.input_layout.addWidget(self.add_input)
+        
+        self.btn_add = QPushButton("添加")
+        self.btn_add.setObjectName("PrimaryBtn")
+        self.btn_add.setFixedWidth(60)
+        self.btn_add.clicked.connect(self.add_tag_from_input)
+        self.input_layout.addWidget(self.btn_add)
+        
+        self.main_layout.addLayout(self.input_layout)
+        
+    def set_tags(self, tags):
+        self.tags = list(tags)
+        self.refresh_capsules()
+        
+    def refresh_capsules(self):
+        # Clear existing capsules safely
+        while self.capsule_layout.count() > 0:
+            item = self.capsule_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+                
+        # Generate new capsule pills
+        for tag in self.tags:
+            capsule = self.create_capsule(tag)
+            self.capsule_layout.addWidget(capsule)
+            
+    def create_capsule(self, tag):
+        capsule = QFrame()
+        capsule.setObjectName(f"TagCapsule_{self.category_type}")
+        capsule.setProperty("category", self.category_type)
+        
+        layout = QHBoxLayout(capsule)
+        layout.setContentsMargins(10, 4, 10, 4)
+        layout.setSpacing(6)
+        
+        lbl = QLabel(display_tag(tag))
+        lbl.setStyleSheet("background: transparent; border: none; font-weight: bold; font-size: 11px;")
+        layout.addWidget(lbl)
+        
+        btn_close = QPushButton("×")
+        btn_close.setObjectName("CapsuleCloseBtn")
+        btn_close.setFixedSize(14, 14)
+        btn_close.setCursor(Qt.PointingHandCursor)
+        btn_close.clicked.connect(lambda checked=False, t=tag: self.remove_tag(t))
+        layout.addWidget(btn_close)
+        
+        return capsule
+        
+    def remove_tag(self, tag):
+        if tag in self.tags:
+            self.tags.remove(tag)
+            self.refresh_capsules()
+            
+    def add_tag_from_input(self):
+        text = self.add_input.text().strip()
+        if not text:
+            return
+            
+        tags = normalize_tags([text])
+        if tags:
+            t = tags[0]
+            if t not in self.tags:
+                self.tags.append(t)
+                self.refresh_capsules()
+                
+        self.add_input.clear()
+        
+    def get_tags(self):
+        return self.tags
+
 
 class SettingsView(QWidget):
     refresh_other_views_signal = Signal()
@@ -17,14 +216,18 @@ class SettingsView(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.init_ui()
+        
+        # Load initial configuration data and stats
+        self.populate_rule_list()
+        self.populate_name_presets()
+        self.load_tags_to_pools()
+        self.update_workspace_stats()
 
     def init_ui(self):
         outer_layout = QVBoxLayout(self)
         outer_layout.setContentsMargins(0, 0, 0, 0)
         outer_layout.setSpacing(0)
         
-        # Modern scroll area to handle different window heights beautifully
-        scroll = QScrollArea(self)
         # 1. Page Header (Modern Title Panel)
         header_panel = QFrame()
         header_panel.setObjectName("ToolbarPanel")
@@ -111,6 +314,44 @@ class SettingsView(QWidget):
         dir_layout.addLayout(init_layout)
         
         layout_paths.addWidget(dir_card)
+        
+        # Workspace Health & Disk Usage Meter Card
+        stats_card = QFrame()
+        stats_card.setObjectName("CardPanel")
+        stats_layout = QVBoxLayout(stats_card)
+        stats_layout.setContentsMargins(18, 18, 18, 18)
+        stats_layout.setSpacing(12)
+        
+        stats_title = QLabel("空间健康与磁盘状况")
+        stats_title.setObjectName("SettingsCardTitle")
+        stats_layout.addWidget(stats_title)
+        
+        stats_grid = QGridLayout()
+        stats_grid.setSpacing(12)
+        
+        self.lbl_file_count = QLabel("文件总量: 计算中...")
+        self.lbl_file_count.setStyleSheet("font-weight: 600;")
+        stats_grid.addWidget(self.lbl_file_count, 0, 0)
+        
+        self.lbl_ws_size = QLabel("总占用空间: 计算中...")
+        self.lbl_ws_size.setStyleSheet("font-weight: 600;")
+        stats_grid.addWidget(self.lbl_ws_size, 0, 1)
+        
+        self.lbl_disk_free = QLabel("磁盘剩余容量: 计算中...")
+        self.lbl_disk_free.setStyleSheet("font-weight: 600;")
+        stats_grid.addWidget(self.lbl_disk_free, 1, 0, 1, 2)
+        stats_layout.addLayout(stats_grid)
+        
+        # Drive Usage Progress Bar (Styled as sleek line meter)
+        self.disk_bar = QProgressBar()
+        self.disk_bar.setObjectName("DiskUsageBar")
+        self.disk_bar.setRange(0, 100)
+        self.disk_bar.setValue(0)
+        self.disk_bar.setFixedHeight(8)
+        self.disk_bar.setTextVisible(False)
+        stats_layout.addWidget(self.disk_bar)
+        
+        layout_paths.addWidget(stats_card)
         layout_paths.addStretch()
         
         # ── Tab 2: 空间向导 (Workspace Wizard) ──────────────────────────────
@@ -123,6 +364,7 @@ class SettingsView(QWidget):
         wiz_scroll.setWidgetResizable(True)
         wiz_scroll.setFrameShape(QFrame.NoFrame)
         wiz_scroll.setStyleSheet("QScrollArea { background: transparent; }")
+        
         wiz_scroll_content = QWidget()
         wiz_scroll_content.setObjectName("WizScrollContent")
         wiz_scroll_content.setStyleSheet("#WizScrollContent { background: transparent; }")
@@ -228,23 +470,23 @@ class SettingsView(QWidget):
         tag_title.setObjectName("SettingsCardTitle")
         tag_layout.addWidget(tag_title)
         
-        tag_desc = QLabel("配置系统的标签下拉池与筛选器。各标签以英文逗号分隔，系统会自动处理 # 前缀。")
+        tag_desc = QLabel("配置系统的全局标签下拉池与智能归类体系。系统会自动规范并添加 '#' 前缀。")
         tag_desc.setObjectName("MutedText")
         tag_layout.addWidget(tag_desc)
         
         tag_grid = QGridLayout()
-        tag_grid.setSpacing(10)
-        tag_grid.addWidget(QLabel("一级分类标签:"), 0, 0)
-        self.input_p_tags = QLineEdit(",".join(display_tag(tag) for tag in config.tags["primary"]))
-        tag_grid.addWidget(self.input_p_tags, 0, 1)
+        tag_grid.setSpacing(15)
+        tag_grid.addWidget(QLabel("一级分类标签 (Primary):"), 0, 0)
+        self.tag_pool_primary = VisualTagPool("primary")
+        tag_grid.addWidget(self.tag_pool_primary, 0, 1)
         
-        tag_grid.addWidget(QLabel("二级细分标签:"), 1, 0)
-        self.input_s_tags = QLineEdit(",".join(display_tag(tag) for tag in config.tags["secondary"]))
-        tag_grid.addWidget(self.input_s_tags, 1, 1)
+        tag_grid.addWidget(QLabel("二级细分标签 (Secondary):"), 1, 0)
+        self.tag_pool_secondary = VisualTagPool("secondary")
+        tag_grid.addWidget(self.tag_pool_secondary, 1, 1)
         
-        tag_grid.addWidget(QLabel("状态属性标签:"), 2, 0)
-        self.input_st_tags = QLineEdit(",".join(display_tag(tag) for tag in config.tags["status"]))
-        tag_grid.addWidget(self.input_st_tags, 2, 1)
+        tag_grid.addWidget(QLabel("状态属性标签 (Status):"), 2, 0)
+        self.tag_pool_status = VisualTagPool("status")
+        tag_grid.addWidget(self.tag_pool_status, 2, 1)
         tag_layout.addLayout(tag_grid)
         
         tag_btn_layout = QHBoxLayout()
@@ -366,6 +608,7 @@ class SettingsView(QWidget):
         self.btn_preset_delete.setIconSize(QSize(16, 16))
         self.btn_preset_delete.clicked.connect(self.delete_name_preset)
         preset_btn_layout.addWidget(self.btn_preset_delete)
+        
         self.btn_preset_save = QPushButton("保存模板")
         self.btn_preset_save.setObjectName("PrimaryBtn")
         self.btn_preset_save.setIcon(line_icon("success", "#FFFFFF", 16))
@@ -373,10 +616,45 @@ class SettingsView(QWidget):
         self.btn_preset_save.clicked.connect(self.save_name_presets)
         preset_btn_layout.addWidget(self.btn_preset_save)
         preset_layout.addLayout(preset_btn_layout)
-
-        inner_layout.addWidget(preset_card)
-
-        inner_layout.addStretch()
+        
+        # Real-time Sandbox Rename Preview
+        self.sandbox_preview_box = QFrame()
+        self.sandbox_preview_box.setObjectName("RenamePreviewCard")
+        sandbox_layout = QVBoxLayout(self.sandbox_preview_box)
+        sandbox_layout.setContentsMargins(12, 12, 12, 12)
+        sandbox_layout.setSpacing(6)
+        
+        sandbox_title = QLabel("命名模板沙盒实时预览:")
+        sandbox_title.setStyleSheet("font-size: 11px; font-weight: bold; text-transform: uppercase; color: #85B3CB;")
+        sandbox_layout.addWidget(sandbox_title)
+        
+        self.sandbox_preview_lbl = QLabel("预览结果: --")
+        self.sandbox_preview_lbl.setObjectName("PreviewFileName")
+        self.sandbox_preview_lbl.setWordWrap(True)
+        sandbox_layout.addWidget(self.sandbox_preview_lbl)
+        
+        preset_layout.addWidget(self.sandbox_preview_box)
+        
+        rules_scroll_inner.addWidget(preset_card)
+        rules_scroll_inner.addStretch()
+        
+        rules_scroll.setWidget(rules_scroll_content)
+        layout_rules.addWidget(rules_scroll)
+        
+        # Connect Naming Editor selections and live sandbox updates
+        self.preset_list.currentRowChanged.connect(self.on_preset_selected)
+        self.input_preset_label.textChanged.connect(self.on_preset_edited)
+        self.input_preset_prefix.textChanged.connect(self.on_preset_edited)
+        self.input_preset_format.textChanged.connect(self.on_preset_edited)
+        
+        # 3. Mount all tabs with linear icons into central QTabWidget
+        self.tabs.addTab(tab_paths, line_icon("folder", size=16), "常规路径")
+        self.tabs.addTab(tab_wiz, line_icon("workspace", size=16), "空间向导")
+        self.tabs.addTab(tab_tags, line_icon("tag", size=16), "标签字典")
+        self.tabs.addTab(tab_rules, line_icon("settings", size=16), "自动规则")
+        
+        # 4. Add QTabWidget to settings panel layout
+        outer_layout.addWidget(self.tabs)
 
     def browse_workspace(self):
         dir_path = QFileDialog.getExistingDirectory(self, "选择主工作空间根目录", config.workspace_dir)
@@ -404,11 +682,12 @@ class SettingsView(QWidget):
         config.downloads_dir = dl
         config.save()
 
-        # Reload database connection dynamically in db.py!
+        # Reload database connection dynamically in db.py
         from db import db
         db.close() # Connection will reopen automatically at the new path
         
         show_toast(self, "新路径参数已生效。", title="应用成功", level="success")
+        self.update_workspace_stats()
         self.refresh_other_views_signal.emit()
 
     def run_init_workspace(self):
@@ -425,22 +704,18 @@ class SettingsView(QWidget):
         else:
             QMessageBox.critical(self, "错误", msg)
             
+        self.update_workspace_stats()
         self.refresh_other_views_signal.emit()
 
+    def load_tags_to_pools(self):
+        self.tag_pool_primary.set_tags(config.tags["primary"])
+        self.tag_pool_secondary.set_tags(config.tags["secondary"])
+        self.tag_pool_status.set_tags(config.tags["status"])
+
     def save_tags(self):
-        p_str = self.input_p_tags.text().strip()
-        s_str = self.input_s_tags.text().strip()
-        st_str = self.input_st_tags.text().strip()
-
-        # Sanitize commas and spaces
-        def parse_tags_input(raw_str):
-            # Split by comma or semicolon
-            parts = raw_str.replace(";", ",").split(",")
-            return normalize_tags(parts)
-
-        config.tags["primary"] = parse_tags_input(p_str)
-        config.tags["secondary"] = parse_tags_input(s_str)
-        config.tags["status"] = parse_tags_input(st_str)
+        config.tags["primary"] = self.tag_pool_primary.get_tags()
+        config.tags["secondary"] = self.tag_pool_secondary.get_tags()
+        config.tags["status"] = self.tag_pool_status.get_tags()
         
         config.save()
         show_toast(self, "自定义标签字典已保存。", title="保存成功", level="success")
@@ -454,10 +729,8 @@ class SettingsView(QWidget):
             config.tags = DEFAULT_TAGS.copy()
             config.save()
             
-            # Refresh inputs
-            self.input_p_tags.setText(",".join(display_tag(tag) for tag in config.tags["primary"]))
-            self.input_s_tags.setText(",".join(display_tag(tag) for tag in config.tags["secondary"]))
-            self.input_st_tags.setText(",".join(display_tag(tag) for tag in config.tags["status"]))
+            # Refresh visual pools
+            self.load_tags_to_pools()
             
             show_toast(self, "标签字典已重置为默认设置。", title="重置成功", level="success")
             self.refresh_other_views_signal.emit()
@@ -523,12 +796,55 @@ class SettingsView(QWidget):
             show_toast(self, f"新工作空间已切换到 {target_path}。", title="生成成功", level="success", duration=4200)
             
             self.input_wiz_path.clear()
+            self.update_workspace_stats()
             self.refresh_other_views_signal.emit()
 
     def save_use_custom_dirs(self, state):
         config.use_custom_dirs = bool(state)
         config.save()
         self.refresh_other_views_signal.emit()
+
+    def update_workspace_stats(self):
+        """
+        Calculates file count, workspace physical size, and disk partition stats.
+        Updates path-dashboard elements in real time.
+        """
+        ws_dir = config.workspace_dir
+        if not os.path.exists(ws_dir):
+            self.lbl_file_count.setText("文件总量: --")
+            self.lbl_ws_size.setText("总占用空间: --")
+            self.lbl_disk_free.setText("磁盘剩余容量: 未初始化/路径不存在")
+            self.disk_bar.setValue(0)
+            return
+
+        # 1. Accumulate files and sizes inside workspace recursively
+        file_count = 0
+        total_size = 0
+        try:
+            for root, dirs, files in os.walk(ws_dir):
+                for f in files:
+                    fp = os.path.join(root, f)
+                    try:
+                        # Follow_symlinks=False to prevent circular issues
+                        total_size += os.path.getsize(fp)
+                        file_count += 1
+                    except OSError:
+                        pass
+        except Exception:
+            pass
+
+        # 2. Get partition info
+        try:
+            total, used, free = shutil.disk_usage(ws_dir)
+            percent = int((used / total) * 100)
+            self.lbl_disk_free.setText(f"磁盘剩余容量: {format_bytes(free)} (磁盘总大小 {format_bytes(total)})")
+            self.disk_bar.setValue(percent)
+        except Exception:
+            self.lbl_disk_free.setText("磁盘剩余容量: 无法获取")
+            self.disk_bar.setValue(0)
+
+        self.lbl_file_count.setText(f"文件总量: {file_count} 个规范文件")
+        self.lbl_ws_size.setText(f"总占用空间: {format_bytes(total_size)}")
 
     def populate_rule_list(self):
         while self.rule_scroll_layout.count():
@@ -597,6 +913,8 @@ class SettingsView(QWidget):
     def populate_name_presets(self):
         self.preset_list.clear()
         self.name_presets = []
+        
+        # Load bases
         for base in NAME_PRESET_BASES:
             self.name_presets.append({
                 "label": base["label"],
@@ -604,6 +922,7 @@ class SettingsView(QWidget):
                 "format": base["default_format"],
                 "base": True
             })
+        # Load customs
         for item in getattr(config, "custom_name_templates", []):
             self.name_presets.append({
                 "label": item.get("label", "自定义"),
@@ -611,27 +930,109 @@ class SettingsView(QWidget):
                 "format": item.get("format", "{date}_{topic}"),
                 "base": False
             })
+            
+        # Add to list widget
         for preset in self.name_presets:
             li = QListWidgetItem(f"{preset['label']} | 前缀: {preset['prefix']} | 格式: {preset['format']}")
             li.setIcon(line_icon("file" if preset["base"] else "tag", size=18))
             li.setData(Qt.UserRole, preset)
             self.preset_list.addItem(li)
+            
+        # Select first preset automatically if items exist
+        if self.preset_list.count() > 0:
+            self.preset_list.setCurrentRow(0)
+
+    def on_preset_selected(self, row):
+        if row < 0 or row >= len(self.name_presets):
+            return
+        preset = self.name_presets[row]
+        
+        # Block signals temporarily to prevent cyclic update cascades while rendering
+        self.input_preset_label.blockSignals(True)
+        self.input_preset_prefix.blockSignals(True)
+        self.input_preset_format.blockSignals(True)
+        
+        self.input_preset_label.setText(preset["label"])
+        self.input_preset_prefix.setText(preset["prefix"])
+        self.input_preset_format.setText(preset["format"])
+        
+        # Enable editing only for custom templates
+        is_custom = not preset.get("base", False)
+        self.input_preset_label.setEnabled(is_custom)
+        self.input_preset_prefix.setEnabled(is_custom)
+        self.input_preset_format.setEnabled(is_custom)
+        
+        self.input_preset_label.blockSignals(False)
+        self.input_preset_prefix.blockSignals(False)
+        self.input_preset_format.blockSignals(False)
+        
+        self.update_sandbox_preview()
+
+    def on_preset_edited(self):
+        row = self.preset_list.currentRow()
+        if row < 0 or row >= len(self.name_presets):
+            return
+        preset = self.name_presets[row]
+        if preset.get("base"):
+            return  # Locked base template
+            
+        preset["label"] = self.input_preset_label.text().strip()
+        preset["prefix"] = self.input_preset_prefix.text().strip()
+        preset["format"] = self.input_preset_format.text().strip()
+        
+        # Synchronize list text dynamically
+        item = self.preset_list.item(row)
+        if item:
+            item.setText(f"{preset['label']} | 前缀: {preset['prefix']} | 格式: {preset['format']}")
+            
+        self.update_sandbox_preview()
+
+    def update_sandbox_preview(self):
+        """
+        Dynamically computes naming format variables in real time using mock data.
+        """
+        prefix = self.input_preset_prefix.text().strip() or "01"
+        fmt = self.input_preset_format.text().strip() or "{date}_{topic}"
+        
+        # Today's date mock
+        mock_date = datetime.date.today().strftime("%Y%m%d")
+        
+        mock_map = {
+            "{date}": mock_date,
+            "{topic}": "项目研究报告",
+            "{version}": "V1.0",
+            "{status}": "进行中",
+            "{stem}": "原始文档名"
+        }
+        
+        result_name = fmt
+        for placeholder, replacement in mock_map.items():
+            result_name = result_name.replace(placeholder, replacement)
+            
+        ext = ".docx" # Standard file ext mock
+        
+        full_path_result = f"规范输出结果: {prefix}_{result_name}{ext}"
+        self.sandbox_preview_lbl.setText(full_path_result)
 
     def add_name_preset(self):
-        self.name_presets.append({"label": "新模板", "prefix": "01", "format": "{date}_{topic}", "base": False})
+        self.name_presets.append({"label": "新自定义模板", "prefix": "05", "format": "{date}_{topic}", "base": False})
         self.sync_name_preset_inputs()
+        
+        # Auto-select the newly added preset
+        self.preset_list.setCurrentRow(self.preset_list.count() - 1)
 
     def delete_name_preset(self):
         row = self.preset_list.currentRow()
         if row < 0:
-            QMessageBox.information(self, "提示", "请先选中一个模板。")
+            QMessageBox.information(self, "提示", "请先选中一个自定义模板。")
             return
         preset = self.preset_list.item(row).data(Qt.UserRole)
         if preset and preset.get("base"):
-            QMessageBox.information(self, "提示", "基础模板不能删除。")
+            QMessageBox.information(self, "提示", "基础系统模板为只读，不能删除。")
             return
-        custom = [p for p in self.name_presets if p.get("label") != preset.get("label")]
-        self.name_presets = custom
+            
+        # Remove selected from custom set
+        self.name_presets.pop(row)
         self.sync_name_preset_inputs()
 
     def sync_name_preset_inputs(self):
@@ -643,24 +1044,6 @@ class SettingsView(QWidget):
         config.custom_name_templates = [p for p in self.name_presets if not p.get("base")]
         config.save()
         show_toast(self, "命名模板已保存。", title="保存成功", level="success")
-        self.refresh_other_views_signal.emit()
-
-    def save_auto_rules(self):
-        rules = []
-        for row in self.rule_widgets:
-            widgets = row.property("rule_widgets")
-            if not widgets:
-                continue
-            name_w, keywords_w, exts_w, prefix_w = widgets
-            rules.append({
-                "name": name_w.text().strip() or "未命名规则",
-                "keywords": [p.strip() for p in keywords_w.text().split(",") if p.strip()],
-                "extensions": [p.strip().lower() if p.strip().startswith(".") else f".{p.strip().lower()}" for p in exts_w.text().split(",") if p.strip()],
-                "target_prefix": prefix_w.text().strip() or "01",
-            })
-        config.auto_rules = rules
-        config.save()
-        show_toast(self, "规则归类配置已保存。", title="保存成功", level="success")
         self.refresh_other_views_signal.emit()
 
     def save_custom_dirs(self):

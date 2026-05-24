@@ -315,6 +315,68 @@ def get_stylesheet(theme="dark"):
         padding-bottom: 6px;
     }}
 
+    /* Tag Capsules Pools */
+    QFrame#TagCapsule_primary {{
+        background-color: rgba(79, 70, 229, 0.08);
+        border: 1px solid {accent_color};
+        border-radius: 12px;
+    }}
+    
+    QFrame#TagCapsule_primary QLabel {{
+        color: {accent_color};
+    }}
+
+    QFrame#TagCapsule_secondary {{
+        background-color: rgba(5, 150, 105, 0.08);
+        border: 1px solid {success_color};
+        border-radius: 12px;
+    }}
+    
+    QFrame#TagCapsule_secondary QLabel {{
+        color: {success_color};
+    }}
+
+    QFrame#TagCapsule_status {{
+        background-color: rgba(217, 119, 6, 0.08);
+        border: 1px solid {warning_color};
+        border-radius: 12px;
+    }}
+    
+    QFrame#TagCapsule_status QLabel {{
+        color: {warning_color};
+    }}
+
+    QPushButton#CapsuleCloseBtn {{
+        border: none;
+        background: transparent;
+        color: {text_disabled};
+        font-size: 13px;
+        font-weight: bold;
+        padding: 0px 2px;
+    }}
+
+    QPushButton#CapsuleCloseBtn:hover {{
+        color: {error_color};
+    }}
+    
+    QLineEdit#TagQuickAddInput {{
+        font-size: 12px;
+        padding: 6px 10px;
+    }}
+
+    /* Sleek line progress bar for disk usage */
+    QProgressBar#DiskUsageBar {{
+        border: none;
+        border-radius: 4px;
+        background-color: {bg_tertiary};
+        height: 8px;
+    }}
+    
+    QProgressBar#DiskUsageBar::chunk {{
+        background-color: {accent_color};
+        border-radius: 4px;
+    }}
+
     QLabel#ToolbarLabel, QLabel#BatchHint {{
         color: {text_disabled};
         font-size: 12px;
