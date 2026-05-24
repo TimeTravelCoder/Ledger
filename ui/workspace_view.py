@@ -865,7 +865,8 @@ class WorkspaceView(QWidget):
         self._tag_scroll.setFixedHeight(32)
 
         self.tag_buttons_container = QWidget()
-        self.tag_buttons_container.setStyleSheet("background: transparent;")
+        self.tag_buttons_container.setObjectName("TagButtonsContainer")
+        self.tag_buttons_container.setStyleSheet("QWidget#TagButtonsContainer { background: transparent; }")
         self.tag_flow = QHBoxLayout(self.tag_buttons_container)
         self.tag_flow.setContentsMargins(2, 1, 2, 1)
         self.tag_flow.setSpacing(6)
