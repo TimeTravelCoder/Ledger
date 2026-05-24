@@ -67,7 +67,7 @@ class DatabaseManager:
 
         if self._conn is None:
             self._db_path = current_db_path
-            self._conn = sqlite3.connect(self._db_path)
+            self._conn = sqlite3.connect(self._db_path, timeout=20.0)
             self._conn.row_factory = sqlite3.Row
             self._init_db()
 

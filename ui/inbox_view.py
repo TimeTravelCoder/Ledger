@@ -145,18 +145,63 @@ class InboxView(QWidget):
         preset_layout.addWidget(self.preset_combo, 1)
         form_layout.addLayout(preset_layout)
 
-        # Dynamic name input fields
+        # Dynamic name input fields container
         self.fields_container = QFrame()
         self.fields_layout = QVBoxLayout(self.fields_container)
         self.fields_layout.setSpacing(8)
         self.fields_layout.setContentsMargins(0, 0, 0, 0)
         
-        # Initialize inputs
+        # Row 1: Date
+        self.row_date = QFrame()
+        layout_date = QHBoxLayout(self.row_date)
+        layout_date.setContentsMargins(0, 0, 0, 0)
+        self.lbl_date = QLabel("日期 / 年份:")
+        self.lbl_date.setFixedWidth(80)
         self.input_date = QLineEdit()
-        self.input_topic = QLineEdit()
-        self.input_version = QLineEdit()
-        self.input_status = QComboBox()
+        layout_date.addWidget(self.lbl_date)
+        layout_date.addWidget(self.input_date, 1)
+        self.fields_layout.addWidget(self.row_date)
         
+        # Row 2: Topic
+        self.row_topic = QFrame()
+        layout_topic = QHBoxLayout(self.row_topic)
+        layout_topic.setContentsMargins(0, 0, 0, 0)
+        self.lbl_topic = QLabel("主题 / 标题:")
+        self.lbl_topic.setFixedWidth(80)
+        self.input_topic = QLineEdit()
+        layout_topic.addWidget(self.lbl_topic)
+        layout_topic.addWidget(self.input_topic, 1)
+        self.fields_layout.addWidget(self.row_topic)
+        
+        # Row 3: Version
+        self.row_version = QFrame()
+        layout_version = QHBoxLayout(self.row_version)
+        layout_version.setContentsMargins(0, 0, 0, 0)
+        self.lbl_version = QLabel("版本:")
+        self.lbl_version.setFixedWidth(80)
+        self.input_version = QLineEdit()
+        layout_version.addWidget(self.lbl_version)
+        layout_version.addWidget(self.input_version, 1)
+        self.fields_layout.addWidget(self.row_version)
+        
+        # Row 4: Status
+        self.row_status = QFrame()
+        layout_status = QHBoxLayout(self.row_status)
+        layout_status.setContentsMargins(0, 0, 0, 0)
+        self.lbl_status = QLabel("状态:")
+        self.lbl_status.setFixedWidth(80)
+        self.input_status = QComboBox()
+        self.input_status.addItems(["", "Draft", "Review", "Done", "Final", "Release"])
+        layout_status.addWidget(self.lbl_status)
+        layout_status.addWidget(self.input_status, 1)
+        self.fields_layout.addWidget(self.row_status)
+        
+        # Row 5: Keep Info Row
+        self.row_keep_info = QLabel("保持原有文件名称，只进行物理分类与标签元数据录入。")
+        self.row_keep_info.setStyleSheet("color: #94A3B8; font-style: italic; font-size: 11px;")
+        self.fields_layout.addWidget(self.row_keep_info)
+        
+        # Connect stable signals once
         self.input_date.textChanged.connect(self.update_name_preview)
         self.input_topic.textChanged.connect(self.update_name_preview)
         self.input_version.textChanged.connect(self.update_name_preview)
@@ -257,26 +302,6 @@ class InboxView(QWidget):
             self.preset_combo.addItem(preset["label"])
         self.preset_combo.blockSignals(False)
 
-    def _clear_dynamic_fields(self):
-        for i in reversed(range(self.fields_layout.count())):
-            item = self.fields_layout.takeAt(i)
-            widget = item.widget()
-            if widget:
-                widget.deleteLater()
-            layout = item.layout()
-            if layout:
-                while layout.count():
-                    child = layout.takeAt(0)
-                    child_widget = child.widget()
-                    if child_widget:
-                        child_widget.deleteLater()
-
-    def _add_field_row(self, label_text, widget):
-        row = QHBoxLayout()
-        row.addWidget(QLabel(label_text))
-        row.addWidget(widget)
-        self.fields_layout.addLayout(row)
-
     def _preset_default_value(self, preset_key, field_key):
         today = datetime.datetime.now()
         defaults = {
@@ -296,10 +321,10 @@ class InboxView(QWidget):
         return defaults[field_key]
 
     def render_template_name(self, fmt):
-        date = self.input_date.text().strip() if hasattr(self, "input_date") else ""
-        topic = self.input_topic.text().strip() if hasattr(self, "input_topic") else ""
-        ver = self.input_version.text().strip() if hasattr(self, "input_version") else ""
-        status = self.input_status.currentText().strip() if hasattr(self, "input_status") else ""
+        date = self.input_date.text().strip() if self.row_date.isVisible() else ""
+        topic = self.input_topic.text().strip() if self.row_topic.isVisible() else ""
+        ver = self.input_version.text().strip() if self.row_version.isVisible() else ""
+        status = self.input_status.currentText().strip() if self.row_status.isVisible() else ""
         stem = Path(self.selected_file_path).stem if self.selected_file_path else ""
 
         mapping = {
@@ -419,53 +444,53 @@ class InboxView(QWidget):
             self.preset_combo.setCurrentIndex(0)  # Regular template
 
     def on_preset_changed(self, idx):
-        # Clear old dynamic inputs
-        self._clear_dynamic_fields()
         preset = self.preset_defs[idx]
         fmt = preset["format"]
         key = preset["key"]
 
-        self.input_date = QLineEdit(self._preset_default_value(key, "date"))
-        self.input_topic = QLineEdit("")
-        self.input_version = QLineEdit(self._preset_default_value(key, "version"))
-        self.input_status = QComboBox()
-        self.input_status.addItems(["", "Draft", "Review", "Done", "Final", "Release"])
+        # Determine placeholder row visibility
+        show_date = "{date}" in fmt
+        show_topic = "{topic}" in fmt
+        show_version = "{version}" in fmt
+        show_status = "{status}" in fmt
+        show_keep = (key == "keep")
 
-        if "{date}" in fmt:
-            self._add_field_row("日期 / 年份:", self.input_date)
-            self.input_date.textChanged.connect(self.update_name_preview)
+        # Toggle inputs container visibility dynamically
+        self.row_date.setVisible(show_date)
+        self.row_topic.setVisible(show_topic)
+        self.row_version.setVisible(show_version)
+        self.row_status.setVisible(show_status)
+        self.row_keep_info.setVisible(show_keep)
 
-        if "{topic}" in fmt:
-            self._add_field_row("主题 / 标题:", self.input_topic)
-            self.input_topic.textChanged.connect(self.update_name_preview)
-
-        if "{version}" in fmt:
+        # Set default text values gracefully without destroying fields
+        if show_date:
+            self.input_date.setText(self._preset_default_value(key, "date"))
+            
+        if show_version:
             version_label = "版本:" if key not in ["image"] else "序号:"
-            self._add_field_row(version_label, self.input_version)
-            self.input_version.textChanged.connect(self.update_name_preview)
+            self.lbl_version.setText(version_label)
+            self.input_version.setText(self._preset_default_value(key, "version"))
 
-        if "{status}" in fmt:
-            self._add_field_row("状态:", self.input_status)
-            self.input_status.currentIndexChanged.connect(self.update_name_preview)
-
-        if key == "keep":
-            self.fields_layout.addWidget(QLabel("保持原有文件名称，只进行物理分类与标签元数据录入。"))
-        else:
-            if self.selected_file_path and "{topic}" in fmt:
+        if show_topic:
+            self.input_topic.clear()
+            if self.selected_file_path:
                 stem = Path(self.selected_file_path).stem
                 clean_stem = stem.replace(" ", "_").replace("-", "_")
                 self.input_topic.setText(clean_stem)
-            elif self.selected_file_path and "{date}" in fmt and key == "paper":
+
+        if self.selected_file_path:
+            if show_date and key == "paper":
                 self.input_date.setText(datetime.datetime.now().strftime("%Y"))
-            elif self.selected_file_path and "{date}" in fmt and key == "image":
+            elif show_date and key == "image":
                 self.input_date.setText(datetime.datetime.now().strftime("%Y%m%d"))
-            elif self.selected_file_path and "{date}" in fmt and key == "exp":
+            elif show_date and key == "exp":
                 self.input_date.setText("Exp01")
-            elif self.selected_file_path:
+            elif show_date:
                 self.input_date.setText(datetime.datetime.now().strftime("%Y-%m-%d"))
 
         self.select_combo_by_prefix(self.dir_combo, preset["prefix"])
 
+        # Auto select checkboxes
         if key == "paper":
             for cb in self.secondary_checkboxes:
                 if cb.property("tag_value") == normalize_tag("学术论文"):

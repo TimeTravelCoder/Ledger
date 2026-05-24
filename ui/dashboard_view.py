@@ -53,8 +53,13 @@ class TagDistributionChart(QFrame):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
         rect = self.rect().adjusted(12, 12, -12, -12)
+        
+        theme = config.theme
+        is_light = theme in ["light", "zhongguose"]
+        text_muted = QColor("#475569") if is_light else QColor("#85B3CB")
+
         if not self.items:
-            painter.setPen(QColor("#85B3CB"))
+            painter.setPen(text_muted)
             painter.drawText(rect, Qt.AlignCenter, "暂无标签数据")
             return
 
@@ -67,10 +72,15 @@ class TagDistributionChart(QFrame):
             color = tag_color(tag)
             muted = QColor(color)
             muted.setAlpha(72)
-            label_color = QColor(color)
-            label_color = label_color.lighter(140)
-            count_color = QColor(color)
-            count_color = count_color.lighter(165)
+            
+            # Theme-aware text lightness adjustments for charts
+            if is_light:
+                label_color = color.darker(115)
+                count_color = color.darker(130)
+            else:
+                label_color = color.lighter(140)
+                count_color = color.lighter(165)
+                
             painter.setPen(label_color)
             painter.drawText(label_rect, Qt.AlignVCenter | Qt.AlignLeft, name[:10])
             painter.setPen(Qt.NoPen)
@@ -99,13 +109,31 @@ class WeeklyTrendChart(QFrame):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
         rect = self.rect().adjusted(12, 12, -12, -22)
+        
+        theme = config.theme
+        is_light = theme in ["light", "zhongguose"]
+        
+        # Define high-contrast adaptive color tokens
+        if is_light:
+            axis_color = QColor("#94A3B8")       # Slate light axis
+            bar_color = QColor("#4F46E5") if theme == "light" else QColor("#127A60")  # Indigo or Jade
+            text_muted = QColor("#475569")       # Dark Slate labels
+            text_value = QColor("#0F172A")       # Deep Slate bold numbers
+            line_color = QColor("#6366F1") if theme == "light" else QColor("#1BA784")  # Soft line color
+        else:
+            axis_color = QColor("#4A6FA6")       # Cyan blue axis
+            bar_color = QColor("#4A6FA6")
+            text_muted = QColor("#85B3CB")       # Muted Ice Blue labels
+            text_value = QColor("#D1FFFF")       # Cyan value labels
+            line_color = QColor("#AAD9F2")       # Light blue lines
+
         if not self.items:
-            painter.setPen(QColor("#85B3CB"))
+            painter.setPen(text_muted)
             painter.drawText(self.rect(), Qt.AlignCenter, "暂无近 7 天数据")
             return
 
         max_count = max(count for _, count in self.items) or 1
-        painter.setPen(QPen(QColor("#4A6FA6"), 1))
+        painter.setPen(QPen(axis_color, 1))
         painter.drawLine(rect.left(), rect.bottom(), rect.right(), rect.bottom())
         gap = 8
         bar_w = max(10, (rect.width() - gap * (len(self.items) - 1)) / max(1, len(self.items)))
@@ -115,16 +143,16 @@ class WeeklyTrendChart(QFrame):
             h = max(6, rect.height() * count / max_count)
             bar_rect = QRectF(x, rect.bottom() - h, bar_w, h)
             painter.setPen(Qt.NoPen)
-            painter.setBrush(QColor("#4A6FA6"))
+            painter.setBrush(bar_color)
             painter.drawRoundedRect(bar_rect, 6, 6)
             points.append(QPointF(bar_rect.center().x(), bar_rect.top()))
-            painter.setPen(QColor("#85B3CB"))
+            painter.setPen(text_muted)
             painter.drawText(QRectF(x - 6, rect.bottom() + 3, bar_w + 12, 18), Qt.AlignCenter, label)
-            painter.setPen(QColor("#D1FFFF"))
+            painter.setPen(text_value)
             painter.drawText(QRectF(x - 6, bar_rect.top() - 18, bar_w + 12, 16), Qt.AlignCenter, str(count))
 
         if len(points) > 1:
-            painter.setPen(QPen(QColor("#AAD9F2"), 2, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
+            painter.setPen(QPen(line_color, 2, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
             for left, right in zip(points, points[1:]):
                 painter.drawLine(left, right)
 
@@ -630,6 +658,7 @@ class DashboardView(QWidget):
             bar.setRange(0, total)
             bar.setValue(count)
             bar.setFormat(str(count))
+            text_color_name = color.darker(130).name() if config.theme in ["light", "zhongguose"] else color.lighter(165).name()
             bar.setStyleSheet(
                 f"""
                 QProgressBar {{
@@ -637,7 +666,7 @@ class DashboardView(QWidget):
                     border-radius: 6px;
                     text-align: center;
                     background: {soft.name(QColor.HexArgb)};
-                    color: {color.lighter(165).name()};
+                    color: {text_color_name};
                     height: 16px;
                 }}
                 QProgressBar::chunk {{

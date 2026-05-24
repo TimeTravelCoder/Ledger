@@ -66,7 +66,21 @@ class FileManager:
 
     @staticmethod
     def get_desktop_path():
-        """Returns the user's desktop path on Windows."""
+        """Returns the user's authentic desktop path on Windows, handling OneDrive redirection."""
+        if os.name == "nt":
+            try:
+                import winreg
+                key = winreg.OpenKey(
+                    winreg.HKEY_CURRENT_USER,
+                    r"Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders"
+                )
+                path, _ = winreg.QueryValueEx(key, "Desktop")
+                winreg.CloseKey(key)
+                expanded = os.path.expandvars(path)
+                if os.path.exists(expanded):
+                    return expanded
+            except Exception:
+                pass
         return str(Path.home() / "Desktop")
 
     @staticmethod
@@ -327,19 +341,25 @@ class FileManager:
         # 3. Create parent directories
         dest.parent.mkdir(parents=True, exist_ok=True)
 
-        # 4. Replace existing destination instead of creating duplicates
+        # 4. Handle duplicate name collisions safely by appending incremental numeric suffixes
         if dest.exists():
-            FileManager._delete_workspace_record(dest)
-            if dest.is_file():
-                dest.unlink()
-            else:
-                shutil.rmtree(dest)
+            stem = dest.stem
+            ext = dest.suffix
+            counter = 1
+            while True:
+                candidate_name = f"{stem}_{counter}{ext}"
+                candidate_dest = dest.parent / candidate_name
+                if not candidate_dest.exists():
+                    dest = candidate_dest
+                    new_filename = candidate_name
+                    break
+                counter += 1
 
         # 5. Physical Move
         shutil.move(str(src), str(dest))
         
         # 6. Database Update
-        # Calculate new relative path
+        # Calculate new relative path dynamically based on final dest position
         new_rel_path = str(dest.relative_to(ws_root)).replace("\\", "/")
         
         # Check if source was already in workspace (renaming/moving) or external (importing)
@@ -354,7 +374,7 @@ class FileManager:
         if src_is_inside:
             db.rename_file_record(src_rel_path, new_rel_path, new_filename)
         else:
-            # Sync fresh file
+            # Sync fresh file metadata
             stat = dest.stat()
             db.sync_file_metadata(new_rel_path, new_filename, stat.st_size, stat.st_mtime)
             
@@ -407,6 +427,13 @@ class FileManager:
                 try:
                     dst_file.parent.mkdir(parents=True, exist_ok=True)
                     shutil.copy2(str(src_file), str(dst_file))
+                    
+                    # Verify integrity via SHA256 checksums
+                    src_hash = FileManager.calculate_file_hash(src_file)
+                    dst_hash = FileManager.calculate_file_hash(dst_file)
+                    if src_hash != dst_hash:
+                        raise ValueError(f"文件 {rel_path} 备份完整性校验失败，校验和不一致！")
+                        
                     copied_files_count += 1
                     copied_bytes_count += src_file.stat().st_size
                 except Exception as e:
