@@ -92,7 +92,7 @@ class MainWindow(QMainWindow):
             QTimer.singleShot(600, self.show_first_run_welcome)
 
     def init_ui(self):
-        self.setWindowTitle("电脑文档分类与管理软件")
+        self.setWindowTitle("Ledger")
         self.resize(1150, 750)
         self.setMinimumSize(600, 400)  # Allow resizing with reasonable minimum
         
@@ -129,7 +129,7 @@ class MainWindow(QMainWindow):
         # Pixmap will be set dynamically in refresh_nav_icons() based on active theme
         title_container.addWidget(self.sidebar_logo_lbl)
         
-        self.sidebar_title_lbl = QLabel("文档分类与管理")
+        self.sidebar_title_lbl = QLabel("Ledger")
         self.sidebar_title_lbl.setObjectName("SidebarTitle")
         title_container.addWidget(self.sidebar_title_lbl, 1)
         sidebar_layout.addLayout(title_container)
@@ -390,7 +390,7 @@ class MainWindow(QMainWindow):
         self.tray_icon = QSystemTrayIcon(self)
         
         self.tray_icon.setIcon(line_icon("workspace", "#D1FFFF", 16))
-        self.tray_icon.setToolTip("电脑文档规范分类与管理系统")
+        self.tray_icon.setToolTip("Ledger - 电脑文档规范分类与管理系统")
         self.tray_icon.show()
 
     def resizeEvent(self, event):
@@ -430,7 +430,7 @@ class MainWindow(QMainWindow):
     def show_first_run_welcome(self):
         ws_dir = config.workspace_dir
         msg = (
-            "<b>欢迎使用电脑文档分类与管理系统！</b><br><br>"
+            "<b>欢迎使用 Ledger 电脑文档规范分类与管理系统！</b><br><br>"
             "检测到您是第一次启动本软件，系统已为您自动初始化并创建了符合规范的专属工作空间（Workspace）以及 12 个日常分类标准的文件夹：<br>"
             f"<font color='#6366F1'><b>{ws_dir}</b></font><br><br>"
             "<b>快速上手整理建议：</b><br>"

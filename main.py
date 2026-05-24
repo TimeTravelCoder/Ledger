@@ -6,8 +6,8 @@ from file_manager import FileManager
 def main():
     # 1. Initialize QApplication
     app = QApplication(sys.argv)
-    app.setApplicationName("ComputerDocumentManager")
-    app.setApplicationDisplayName("电脑文档分类与管理软件")
+    app.setApplicationName("Ledger")
+    app.setApplicationDisplayName("Ledger")
 
     # 2. Check if first run (workspace directory doesn't exist yet)
     from config import config
