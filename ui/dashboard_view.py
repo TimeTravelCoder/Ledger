@@ -5,7 +5,7 @@ from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
                              QLabel, QPushButton, QTableWidget, QTableWidgetItem, 
                              QHeaderView, QFrame, QMessageBox, QScrollArea, QProgressBar)
 from PySide6.QtCore import Qt, Signal, QSize, QRectF, QPointF
-from PySide6.QtGui import QColor, QPainter, QPen
+from PySide6.QtGui import QColor, QPainter, QPen, QLinearGradient, QPainterPath
 from config import config
 from db import db
 from file_manager import FileManager
@@ -68,10 +68,11 @@ class TagDistributionChart(QFrame):
         for index, (tag, name, count) in enumerate(self.items):
             y = rect.top() + index * row_h + 3
             label_rect = QRectF(rect.left(), y, 86, row_h - 6)
-            bar_rect = QRectF(rect.left() + 94, y + 4, rect.width() - 142, row_h - 14)
+            bar_rect = QRectF(rect.left() + 94, y + 5, rect.width() - 142, row_h - 16)
             color = tag_color(tag)
-            muted = QColor(color)
-            muted.setAlpha(72)
+            
+            # Calculate theme-adaptive background track color
+            track_color = QColor(0, 0, 0, 13) if is_light else QColor(255, 255, 255, 13)
             
             # Theme-aware text lightness adjustments for charts
             if is_light:
@@ -81,15 +82,34 @@ class TagDistributionChart(QFrame):
                 label_color = color.lighter(140)
                 count_color = color.lighter(165)
                 
+            # Draw label
             painter.setPen(label_color)
             painter.drawText(label_rect, Qt.AlignVCenter | Qt.AlignLeft, name[:10])
+            
+            # Draw background track
             painter.setPen(Qt.NoPen)
-            painter.setBrush(muted)
-            painter.drawRoundedRect(bar_rect, 6, 6)
+            painter.setBrush(track_color)
+            painter.drawRoundedRect(bar_rect, 4, 4)
+            
+            # Draw active bar
             active = QRectF(bar_rect)
             active.setWidth(max(6, bar_rect.width() * count / max_count))
-            painter.setBrush(color)
-            painter.drawRoundedRect(active, 6, 6)
+            
+            # Gradient fill for active bar
+            grad = QLinearGradient(active.left(), active.top(), active.right(), active.top())
+            color_start = color
+            color_end = QColor(color)
+            if is_light:
+                color_end = color_end.lighter(110)
+            else:
+                color_end = color_end.darker(110)
+            grad.setColorAt(0.0, color_start)
+            grad.setColorAt(1.0, color_end)
+            
+            painter.setBrush(grad)
+            painter.drawRoundedRect(active, 4, 4)
+            
+            # Draw count value
             painter.setPen(count_color)
             painter.drawText(QRectF(bar_rect.right() + 8, y, 42, row_h - 6), Qt.AlignVCenter | Qt.AlignRight, str(count))
 
@@ -108,7 +128,9 @@ class WeeklyTrendChart(QFrame):
         super().paintEvent(event)
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
-        rect = self.rect().adjusted(12, 12, -12, -22)
+        
+        # Margins: bottom needs some space for text labels (24px)
+        rect = self.rect().adjusted(24, 12, -24, -24)
         
         theme = config.theme
         is_light = theme in ["light", "zhongguose"]
@@ -116,13 +138,11 @@ class WeeklyTrendChart(QFrame):
         # Define high-contrast adaptive color tokens
         if is_light:
             axis_color = QColor("#94A3B8")       # Slate light axis
-            bar_color = QColor("#4F46E5") if theme == "light" else QColor("#127A60")  # Indigo or Jade
             text_muted = QColor("#475569")       # Dark Slate labels
             text_value = QColor("#0F172A")       # Deep Slate bold numbers
             line_color = QColor("#6366F1") if theme == "light" else QColor("#1BA784")  # Soft line color
         else:
             axis_color = QColor("#4A6FA6")       # Cyan blue axis
-            bar_color = QColor("#4A6FA6")
             text_muted = QColor("#85B3CB")       # Muted Ice Blue labels
             text_value = QColor("#D1FFFF")       # Cyan value labels
             line_color = QColor("#AAD9F2")       # Light blue lines
@@ -133,28 +153,122 @@ class WeeklyTrendChart(QFrame):
             return
 
         max_count = max(count for _, count in self.items) or 1
+        
+        # Draw bottom axis line
         painter.setPen(QPen(axis_color, 1))
         painter.drawLine(rect.left(), rect.bottom(), rect.right(), rect.bottom())
-        gap = 8
-        bar_w = max(10, (rect.width() - gap * (len(self.items) - 1)) / max(1, len(self.items)))
+        
+        # Top safe margin of 25px
+        usable_h = rect.height() - 25
+        
+        # Calculate spacing
+        n = len(self.items)
+        segment_w = rect.width() / float(max(1, n - 1))
+        
+        # Compute points
         points = []
-        for index, (label, count) in enumerate(self.items):
-            x = rect.left() + index * (bar_w + gap)
-            h = max(6, rect.height() * count / max_count)
-            bar_rect = QRectF(x, rect.bottom() - h, bar_w, h)
-            painter.setPen(Qt.NoPen)
-            painter.setBrush(bar_color)
-            painter.drawRoundedRect(bar_rect, 6, 6)
-            points.append(QPointF(bar_rect.center().x(), bar_rect.top()))
-            painter.setPen(text_muted)
-            painter.drawText(QRectF(x - 6, rect.bottom() + 3, bar_w + 12, 18), Qt.AlignCenter, label)
-            painter.setPen(text_value)
-            painter.drawText(QRectF(x - 6, bar_rect.top() - 18, bar_w + 12, 16), Qt.AlignCenter, str(count))
-
+        for i, (label, count) in enumerate(self.items):
+            x = rect.left() + i * segment_w
+            y = rect.bottom() - (usable_h * count / max_count)
+            points.append(QPointF(x, y))
+            
+        # Draw horizontal gridlines for premium look
+        grid_pen = QPen()
+        grid_pen.setColor(QColor(0, 0, 0, 12) if is_light else QColor(255, 255, 255, 12))
+        grid_pen.setStyle(Qt.DashLine)
+        grid_pen.setWidth(1)
+        painter.setPen(grid_pen)
+        
+        for g in range(1, 4):
+            gy = rect.bottom() - (usable_h * (g / 4.0))
+            painter.drawLine(rect.left(), gy, rect.right(), gy)
+            
+        # Draw the spline area gradient (only if we have more than 1 point)
         if len(points) > 1:
-            painter.setPen(QPen(line_color, 2, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
-            for left, right in zip(points, points[1:]):
-                painter.drawLine(left, right)
+            # Reconstruct spline tangents for smooth Catmull-Rom-like Bezier path
+            tangents = []
+            for i in range(n):
+                prev_pt = points[i-1] if i > 0 else points[0]
+                next_pt = points[i+1] if i < n-1 else points[n-1]
+                tangents.append(QPointF((next_pt.x() - prev_pt.x()) / 6.0, (next_pt.y() - prev_pt.y()) / 6.0))
+                
+            # Area path for vertical gradient fill
+            area_path = QPainterPath()
+            area_path.moveTo(points[0].x(), rect.bottom())
+            area_path.lineTo(points[0])
+            
+            for i in range(n - 1):
+                p1 = points[i]
+                p2 = points[i+1]
+                c1 = p1 + tangents[i]
+                c2 = p2 - tangents[i+1]
+                area_path.cubicTo(c1, c2, p2)
+                
+            area_path.lineTo(points[-1].x(), rect.bottom())
+            area_path.closeSubpath()
+            
+            # Fill gradient
+            grad = QLinearGradient(0, rect.top() + 25, 0, rect.bottom())
+            color_start = QColor(line_color)
+            color_start.setAlpha(60)
+            color_end = QColor(line_color)
+            color_end.setAlpha(0)
+            grad.setColorAt(0.0, color_start)
+            grad.setColorAt(1.0, color_end)
+            
+            painter.setBrush(grad)
+            painter.setPen(Qt.NoPen)
+            painter.drawPath(area_path)
+            
+            # Spline line path
+            line_path = QPainterPath()
+            line_path.moveTo(points[0])
+            for i in range(n - 1):
+                p1 = points[i]
+                p2 = points[i+1]
+                c1 = p1 + tangents[i]
+                c2 = p2 - tangents[i+1]
+                line_path.cubicTo(c1, c2, p2)
+                
+            painter.setPen(QPen(line_color, 2.5, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
+            painter.setBrush(Qt.NoBrush)
+            painter.drawPath(line_path)
+        else:
+            # Fallback if only 1 point
+            pt = points[0]
+            painter.setPen(QPen(line_color, 2.5, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
+            painter.drawLine(rect.left(), pt.y(), rect.right(), pt.y())
+            
+        # Draw labels and nodes
+        for i, (label, count) in enumerate(self.items):
+            pt = points[i]
+            
+            # Bottom date label
+            painter.setPen(text_muted)
+            painter.setFont(painter.font()) # Reset/maintain font
+            painter.drawText(QRectF(pt.x() - 30, rect.bottom() + 4, 60, 18), Qt.AlignCenter, label)
+            
+            # Value label cleanly above the point
+            painter.setPen(text_value)
+            # Make the value text bold for contrast
+            f = painter.font()
+            f.setBold(True)
+            painter.setFont(f)
+            painter.drawText(QRectF(pt.x() - 20, pt.y() - 20, 40, 16), Qt.AlignCenter, str(count))
+            f.setBold(False)
+            painter.setFont(f)
+            
+            # Glowing node
+            glow_color = QColor(line_color)
+            glow_color.setAlpha(40)
+            painter.setBrush(glow_color)
+            painter.setPen(Qt.NoPen)
+            painter.drawEllipse(pt, 7, 7)
+            
+            # Inner dot
+            painter.setBrush(QColor("#FFFFFF") if is_light else QColor("#1E293B"))
+            painter.setPen(QPen(line_color, 1.5))
+            painter.drawEllipse(pt, 3.5, 3.5)
 
 
 class DashboardView(QWidget):
