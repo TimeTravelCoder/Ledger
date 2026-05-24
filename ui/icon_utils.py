@@ -212,6 +212,15 @@ def line_icon(name, color=None, size=24):
         painter.drawEllipse(QRectF(x(4), x(4), x(16), x(16)))
         painter.drawLine(x(12), x(11), x(12), x(16))
         painter.drawPoint(x(12), x(8))
+    elif name == "logo":
+        # Draw a beautiful, premium, vector stacked-document logo
+        painter.drawRoundedRect(QRectF(x(3.5), x(3.5), x(11), x(14)), x(1.8), x(1.8))
+        painter.drawRoundedRect(QRectF(x(9.5), x(6.5), x(11), x(14)), x(1.8), x(1.8))
+        # Add beautiful stylized text line indicators inside documents
+        painter.drawLine(x(6), x(7.5), x(12), x(7.5))
+        painter.drawLine(x(6), x(11.5), x(10), x(11.5))
+        painter.drawLine(x(12), x(10.5), x(18), x(10.5))
+        painter.drawLine(x(12), x(14.5), x(16), x(14.5))
     else:
         painter.drawRoundedRect(QRectF(x(5), x(5), x(14), x(14)), x(3), x(3))
 

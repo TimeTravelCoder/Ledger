@@ -125,8 +125,8 @@ class MainWindow(QMainWindow):
         title_container.setContentsMargins(15, 10, 15, 20)
         
         self.sidebar_logo_lbl = QLabel()
-        self.sidebar_logo_lbl.setFixedSize(30, 30)
-        self.sidebar_logo_lbl.setPixmap(self.app_icon.pixmap(30, 30))
+        self.sidebar_logo_lbl.setFixedSize(26, 26)
+        # Pixmap will be set dynamically in refresh_nav_icons() based on active theme
         title_container.addWidget(self.sidebar_logo_lbl)
         
         self.sidebar_title_lbl = QLabel("文档分类与管理")
@@ -224,15 +224,21 @@ class MainWindow(QMainWindow):
         return btn
 
     def refresh_nav_icons(self):
-        # Determine unselected icon color based on current theme to ensure high contrast and readability
+        # Determine unselected icon color and logo color based on current theme
         if config.theme == "dark":
             unselected_color = "#AAD9F2"
+            logo_color = "#0A84B1"
         elif config.theme == "zhongguose":
             unselected_color = "#4A6E56"
+            logo_color = "#127A60"
         else:
             unselected_color = "#475569"
+            logo_color = "#4F46E5"
             
         selected_color = "#FFFFFF"  # Pure white on selected solid backgrounds
+        
+        # Update logo icon dynamically to match the current theme's accent color
+        self.sidebar_logo_lbl.setPixmap(line_icon("logo", color=logo_color, size=26).pixmap(26, 26))
         
         for btn in self.nav_buttons:
             icon_name = btn.property("icon_name")
