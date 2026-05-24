@@ -205,7 +205,7 @@ class MainWindow(QMainWindow):
 
     def load_app_icon(self):
         root = Path(__file__).parent.parent
-        for filename in ("app_icon.ico", "app_icon.png"):
+        for filename in ("app_icon.png", "app_icon.ico"):
             icon_path = root / filename
             if icon_path.exists():
                 return QIcon(str(icon_path))
