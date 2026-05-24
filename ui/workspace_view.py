@@ -2514,6 +2514,86 @@ class WorkspaceView(QWidget):
             self.status_combo.addItem(display_tag(tag), tag)
         self.status_combo.blockSignals(False)
 
+    def open_theater_mode(self):
+        if not hasattr(self, "current_preview_rel_path") or not self.current_preview_rel_path:
+            QMessageBox.information(self, "提示", "请先在左侧选择一个待预览文件。")
+            return
+
+        abs_path = self.get_abs_path(self.current_preview_rel_path)
+        if not abs_path.exists():
+            QMessageBox.warning(self, "警告", "选中的预览文件在磁盘中不存在！")
+            return
+
+        dialog = PreviewTheaterDialog(str(abs_path), self)
+        dialog.exec()
+
+    def safe_vault_zip(self, rel_paths):
+        # Determine zip output target directory: 10归档区 (or customized)
+        archive_dir_name = "10归档区" if "10归档区" in config.get_standard_dirs() else config.get_standard_dirs()[-1]
+        archive_dir = Path(config.workspace_dir) / archive_dir_name
+        archive_dir.mkdir(parents=True, exist_ok=True)
+
+        # Show custom input dialog
+        dialog = ZipArchiveDialog(self)
+        if dialog.exec() == QDialog.Accepted:
+            zip_name = dialog.input_zipname.text().strip()
+            password = dialog.input_password.text().strip() if dialog.cb_encrypt.isChecked() else None
+
+            if not zip_name.endswith(".zip"):
+                zip_name += ".zip"
+
+            dest_zip_path = archive_dir / zip_name
+
+            # Warn if zip already exists
+            if dest_zip_path.exists():
+                reply = QMessageBox.question(self, "覆盖确认", "归档区已存在同名压缩文件，是否覆盖它？", QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+                if reply != QMessageBox.Yes:
+                    return
+
+            # Gather absolute paths
+            abs_paths = [self.get_abs_path(p) for p in rel_paths]
+
+            # Start background ZipWorker thread to prevent UI thread blocking
+            self.zip_worker = ZipWorker(abs_paths, dest_zip_path, password, self)
+            self.zip_worker.finished_signal.connect(self.on_zip_completed)
+            self.zip_worker.error_signal.connect(self.on_zip_error)
+
+            # Show a beautiful non-modal loading dialog
+            self.zip_progress_dialog = QMessageBox(self)
+            self.zip_progress_dialog.setWindowTitle("安全保险箱归档中")
+            self.zip_progress_dialog.setText("正在打包归档文件并清理数据库，请稍候...")
+            self.zip_progress_dialog.setStandardButtons(QMessageBox.NoButton)
+
+            self.zip_worker.start()
+            self.zip_progress_dialog.show()
+
+    def on_zip_completed(self, zip_path_str, files_count):
+        if hasattr(self, "zip_progress_dialog"):
+            self.zip_progress_dialog.close()
+
+        # Register the new zipped archive in database
+        try:
+            rel_zip = str(Path(zip_path_str).relative_to(Path(config.workspace_dir))).replace("\\", "/")
+            db.register_file(rel_zip, Path(zip_path_str).name)
+            db.update_file_tags(rel_zip, ["#物理备份", "#归档区"])
+            db.update_file_description(rel_zip, f"安全保险箱打包归档文件。包含 {files_count} 个历史整理文档。")
+        except Exception as e:
+            print(f"Error registering zip in DB: {e}")
+
+        show_toast(self, f"成功归档 {files_count} 个文件并打包存入 {Path(zip_path_str).name}！", title="保险箱归档成功", level="success", duration=3600)
+
+        self.clear_preview_resources()
+        self.current_preview_rel_path = ""
+        self.refresh_tree_view()
+        self.run_search()
+        self.show_duplicates(activate=False)
+        self.refresh_other_views_signal.emit()
+
+    def on_zip_error(self, err_msg):
+        if hasattr(self, "zip_progress_dialog"):
+            self.zip_progress_dialog.close()
+        QMessageBox.critical(self, "归档错误", f"打包归档中途失败：\n{err_msg}")
+
 # Interactive Metadata/Tags Editor Dialog
 class FileDetailsDialog(QDialog):
     def __init__(self, rel_path, parent=None):
@@ -2659,87 +2739,6 @@ class FileDetailsDialog(QDialog):
                 self.accept()
             except Exception as e:
                 QMessageBox.critical(self, "错误", f"删除文件失败：{str(e)}")
-
-    def open_theater_mode(self):
-        if not hasattr(self, "current_preview_rel_path") or not self.current_preview_rel_path:
-            QMessageBox.information(self, "提示", "请先在左侧选择一个待预览文件。")
-            return
-
-        abs_path = self.get_abs_path(self.current_preview_rel_path)
-        if not abs_path.exists():
-            QMessageBox.warning(self, "警告", "选中的预览文件在磁盘中不存在！")
-            return
-
-        dialog = PreviewTheaterDialog(str(abs_path), self)
-        dialog.exec()
-
-    def safe_vault_zip(self, rel_paths):
-        # Determine zip output target directory: 10归档区 (or customized)
-        archive_dir_name = "10归档区" if "10归档区" in config.get_standard_dirs() else config.get_standard_dirs()[-1]
-        archive_dir = Path(config.workspace_dir) / archive_dir_name
-        archive_dir.mkdir(parents=True, exist_ok=True)
-
-        # Show custom input dialog
-        dialog = ZipArchiveDialog(self)
-        if dialog.exec() == QDialog.Accepted:
-            zip_name = dialog.input_zipname.text().strip()
-            password = dialog.input_password.text().strip() if dialog.cb_encrypt.isChecked() else None
-
-            if not zip_name.endswith(".zip"):
-                zip_name += ".zip"
-
-            dest_zip_path = archive_dir / zip_name
-
-            # Warn if zip already exists
-            if dest_zip_path.exists():
-                reply = QMessageBox.question(self, "覆盖确认", "归档区已存在同名压缩文件，是否覆盖它？", QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
-                if reply != QMessageBox.Yes:
-                    return
-
-            # Gather absolute paths
-            abs_paths = [self.get_abs_path(p) for p in rel_paths]
-
-            # Start background ZipWorker thread to prevent UI thread blocking
-            self.zip_worker = ZipWorker(abs_paths, dest_zip_path, password, self)
-            self.zip_worker.finished_signal.connect(self.on_zip_completed)
-            self.zip_worker.error_signal.connect(self.on_zip_error)
-
-            # Show a beautiful non-modal loading dialog
-            self.zip_progress_dialog = QMessageBox(self)
-            self.zip_progress_dialog.setWindowTitle("安全保险箱归档中")
-            self.zip_progress_dialog.setText("正在打包归档文件并清理数据库，请稍候...")
-            self.zip_progress_dialog.setStandardButtons(QMessageBox.NoButton)
-
-            self.zip_worker.start()
-            self.zip_progress_dialog.show()
-
-    def on_zip_completed(self, zip_path_str, files_count):
-        if hasattr(self, "zip_progress_dialog"):
-            self.zip_progress_dialog.close()
-
-        # Register the new zipped archive in database
-        try:
-            rel_zip = str(Path(zip_path_str).relative_to(Path(config.workspace_dir))).replace("\\", "/")
-            db.register_file(rel_zip, Path(zip_path_str).name)
-            db.update_file_tags(rel_zip, ["#物理备份", "#归档区"])
-            db.update_file_description(rel_zip, f"安全保险箱打包归档文件。包含 {files_count} 个历史整理文档。")
-        except Exception as e:
-            print(f"Error registering zip in DB: {e}")
-
-        show_toast(self, f"成功归档 {files_count} 个文件并打包存入 {Path(zip_path_str).name}！", title="保险箱归档成功", level="success", duration=3600)
-
-        self.clear_preview_resources()
-        self.current_preview_rel_path = ""
-        self.refresh_tree_view()
-        self.run_search()
-        self.show_duplicates(activate=False)
-        self.refresh_other_views_signal.emit()
-
-    def on_zip_error(self, err_msg):
-        if hasattr(self, "zip_progress_dialog"):
-            self.zip_progress_dialog.close()
-        QMessageBox.critical(self, "归档错误", f"打包归档中途失败：\n{err_msg}")
-
 
 from PySide6.QtWidgets import QDialog, QLineEdit, QCheckBox
 import datetime
