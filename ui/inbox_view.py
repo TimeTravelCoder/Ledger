@@ -4,11 +4,12 @@ from pathlib import Path
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QListWidget, 
                              QListWidgetItem, QLabel, QLineEdit, QComboBox, 
                              QPushButton, QFrame, QCheckBox, QTextEdit, 
-                             QMessageBox, QStackedWidget, QScrollArea)
-from PySide6.QtCore import Qt, Signal
+                             QMessageBox, QStackedWidget, QScrollArea, QStyle)
+from PySide6.QtCore import Qt, Signal, QSize
 from config import config, normalize_tag, display_tag, NAME_PRESET_BASES
 from db import db
 from file_manager import FileManager
+from ui.icon_utils import file_type_icon, set_button_icon
 
 STYLE_PREVIEW_NORMAL = """
     QLineEdit {
@@ -68,16 +69,19 @@ class InboxView(QWidget):
         left_layout.addWidget(left_title)
 
         self.file_list_widget = QListWidget()
-        self.file_list_widget.setStyleSheet("border: none;")
+        self.file_list_widget.setObjectName("FileList")
+        self.file_list_widget.setIconSize(QSize(24, 24))
         self.file_list_widget.itemSelectionChanged.connect(self.on_file_selected)
         left_layout.addWidget(self.file_list_widget)
 
         self.scan_inbox_btn = QPushButton("扫描收集箱")
+        set_button_icon(self.scan_inbox_btn, QStyle.StandardPixmap.SP_BrowserReload)
         self.scan_inbox_btn.clicked.connect(self.scan_inbox)
         left_layout.addWidget(self.scan_inbox_btn)
 
         self.btn_merge_inboxes = QPushButton("一键合并双收集箱")
         self.btn_merge_inboxes.setObjectName("SuccessBtn")
+        set_button_icon(self.btn_merge_inboxes, QStyle.StandardPixmap.SP_DialogApplyButton)
         self.btn_merge_inboxes.clicked.connect(self.merge_inboxes)
         left_layout.addWidget(self.btn_merge_inboxes)
 
@@ -159,7 +163,7 @@ class InboxView(QWidget):
 
         # Name Preview & Live Rule Check
         preview_container = QFrame()
-        preview_container.setStyleSheet("background-color: rgba(99, 102, 241, 0.05); border-radius: 8px; border: 1px dashed rgba(99, 102, 241, 0.3);")
+        preview_container.setObjectName("RenamePreviewCard")
         preview_layout = QVBoxLayout(preview_container)
         preview_layout.setContentsMargins(10, 10, 10, 10)
         
@@ -216,6 +220,7 @@ class InboxView(QWidget):
         # Organize Button
         self.organize_btn = QPushButton("重命名并分类移动")
         self.organize_btn.setObjectName("PrimaryBtn")
+        set_button_icon(self.organize_btn, QStyle.StandardPixmap.SP_DialogSaveButton)
         self.organize_btn.clicked.connect(self.run_organize)
         form_layout.addWidget(self.organize_btn)
 
@@ -346,6 +351,7 @@ class InboxView(QWidget):
                         continue
                     display_name = f"[{label}] {f}" if len(inbox_dirs) > 1 else f
                     item = QListWidgetItem(display_name)
+                    item.setIcon(file_type_icon(f))
                     item.setData(Qt.UserRole, str(inbox_path / f))
                     self.file_list_widget.addItem(item)
                     has_files = True
@@ -487,7 +493,7 @@ class InboxView(QWidget):
         
         # 1. Banned keywords
         if FileManager.is_banned_name(new_filename):
-            warnings.append("❌ 违规拦截：文件名中含有'最终版/最新版/新建文档'等禁用词，请修改！")
+            warnings.append("违规拦截：文件名中含有'最终版/最新版/新建文档'等禁用词，请修改！")
             self.lbl_name_preview.setStyleSheet(STYLE_PREVIEW_WARNING)
             self.organize_btn.setEnabled(False)
         else:
@@ -501,7 +507,7 @@ class InboxView(QWidget):
         
         is_violation, depth = FileManager.check_folder_depth_violation(dest_rel_path)
         if is_violation:
-            warnings.append(f"⚠️ 层级警告：当前目录深度为 {depth} 层，已超过规范建议的 ≤4 层！保存后可能会拦截。")
+            warnings.append(f"层级警告：当前目录深度为 {depth} 层，已超过规范建议的 ≤4 层！保存后可能会拦截。")
             self.organize_btn.setStyleSheet("background-color: #EF4444; border: none; color: #FFFFFF;")
         else:
             self.organize_btn.setStyleSheet("") # Default QSS style
@@ -588,7 +594,7 @@ class InboxView(QWidget):
                 else:
                     os.rmdir(inactive_dir)
                     
-                QMessageBox.information(self, "合并成功 🎉", f"已成功将 {moved_count} 个待整理文件合并移动到 '{active_dir.name}' 中，并清空删除了旧收集箱！")
+                QMessageBox.information(self, "合并成功", f"已成功将 {moved_count} 个待整理文件合并移动到 '{active_dir.name}' 中，并清空删除了旧收集箱！")
             except Exception as e:
                 QMessageBox.critical(self, "合并失败", f"合并中途发生错误:\n{str(e)}")
                 

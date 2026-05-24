@@ -93,6 +93,12 @@ def get_stylesheet(theme="dark"):
         color: #FFFFFF;
         font-weight: bold;
     }}
+
+    QPushButton#SidebarBtn[compact="true"] {{
+        text-align: center;
+        padding: 12px 10px;
+        margin: 5px 12px;
+    }}
     
     /* Theme Toggle Button */
     QPushButton#ThemeToggleBtn {{
@@ -106,6 +112,11 @@ def get_stylesheet(theme="dark"):
     QPushButton#ThemeToggleBtn:hover {{
         border-color: {accent_color};
         background-color: {bg_secondary};
+    }}
+
+    QPushButton#ThemeToggleBtn[compact="true"] {{
+        padding: 8px;
+        margin: 0 6px;
     }}
 
     /* Main Container Panel */
@@ -124,6 +135,12 @@ def get_stylesheet(theme="dark"):
     QFrame#PreviewInfoCard {{
         background-color: {bg_primary};
         border: 1px solid {border_color};
+        border-radius: 10px;
+    }}
+
+    QFrame#RenamePreviewCard {{
+        background-color: {bg_primary};
+        border: 1px dashed {border_hover};
         border-radius: 10px;
     }}
     
@@ -187,6 +204,11 @@ def get_stylesheet(theme="dark"):
 
     QLineEdit#SuccessInput {{
         border: 1px solid {success_color};
+    }}
+
+    QLabel#MutedText {{
+        color: {text_disabled};
+        font-size: 12px;
     }}
 
     /* Normal Push Buttons */
@@ -375,6 +397,31 @@ def get_stylesheet(theme="dark"):
     }}
 
     QListWidget#DuplicateList::item:selected {{
+        background-color: {accent_color};
+        border-color: {accent_color};
+        color: #FFFFFF;
+    }}
+
+    QListWidget#FileList, QListWidget#SettingsList {{
+        background-color: {bg_secondary};
+        border: none;
+        outline: 0;
+    }}
+
+    QListWidget#FileList::item, QListWidget#SettingsList::item {{
+        border: 1px solid transparent;
+        border-radius: 8px;
+        padding: 8px 10px;
+        margin: 2px 0;
+        color: {text_primary};
+    }}
+
+    QListWidget#FileList::item:hover, QListWidget#SettingsList::item:hover {{
+        background-color: {bg_tertiary};
+        border-color: {border_color};
+    }}
+
+    QListWidget#FileList::item:selected, QListWidget#SettingsList::item:selected {{
         background-color: {accent_color};
         border-color: {accent_color};
         color: #FFFFFF;

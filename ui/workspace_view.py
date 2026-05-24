@@ -18,6 +18,7 @@ from PySide6.QtPdfWidgets import QPdfView
 from config import config, display_tag, normalize_tag
 from db import db
 from file_manager import FileManager
+from ui.icon_utils import set_button_icon
 
 class WorkspaceTableWidget(QTableWidget):
     left_double_clicked = Signal(QModelIndex)
@@ -50,7 +51,7 @@ class CreateFileDialog(QDialog):
         layout.setContentsMargins(20, 20, 20, 20)
 
         # Title Label
-        title_lbl = QLabel("📂 新建工作空间文档")
+        title_lbl = QLabel("新建工作空间文档")
         title_lbl.setStyleSheet("font-size: 16px; font-weight: bold; color: #6366F1; margin-bottom: 5px;")
         layout.addWidget(title_lbl)
 
@@ -136,10 +137,12 @@ class CreateFileDialog(QDialog):
         
         self.btn_confirm = QPushButton("确认创建")
         self.btn_confirm.setObjectName("PrimaryBtn")
+        set_button_icon(self.btn_confirm, QStyle.StandardPixmap.SP_DialogSaveButton)
         self.btn_confirm.clicked.connect(self.create_file)
         btn_layout.addWidget(self.btn_confirm)
 
         self.btn_cancel = QPushButton("取消")
+        set_button_icon(self.btn_cancel, QStyle.StandardPixmap.SP_DialogCancelButton)
         self.btn_cancel.clicked.connect(self.reject)
         btn_layout.addWidget(self.btn_cancel)
         layout.addLayout(btn_layout)
@@ -200,7 +203,7 @@ class CreateFileDialog(QDialog):
         
         if success:
             FileManager.scan_workspace_files()
-            QMessageBox.information(self, "创建成功 🎉", f"文件已成功在工作空间创建并同步入库！\n路径: {dest_rel_path}")
+            QMessageBox.information(self, "创建成功", f"文件已成功在工作空间创建并同步入库！\n路径: {dest_rel_path}")
             self.accept()
         else:
             QMessageBox.critical(self, "创建失败", msg)
@@ -230,7 +233,7 @@ class CreateFolderDialog(QDialog):
         layout.setContentsMargins(24, 24, 24, 20)
 
         # ── Title ──────────────────────────────────────────────────────────
-        title_lbl = QLabel("📁 在工作空间中新建文件夹")
+        title_lbl = QLabel("在工作空间中新建文件夹")
         title_lbl.setStyleSheet(
             "font-size: 16px; font-weight: bold; color: #6366F1; margin-bottom: 4px;"
         )
@@ -294,7 +297,7 @@ class CreateFolderDialog(QDialog):
         layout.addLayout(form)
 
         # ── Depth hint label ───────────────────────────────────────────────
-        self.hint_lbl = QLabel("📏 最终路径预览: —")
+        self.hint_lbl = QLabel("最终路径预览: —")
         self.hint_lbl.setStyleSheet("color: #94A3B8; font-size: 12px; padding-left: 4px;")
         layout.addWidget(self.hint_lbl)
 
@@ -308,12 +311,14 @@ class CreateFolderDialog(QDialog):
         btn_layout = QHBoxLayout()
         btn_layout.addStretch()
 
-        self.btn_confirm = QPushButton("✅  确认创建")
+        self.btn_confirm = QPushButton("确认创建")
         self.btn_confirm.setObjectName("PrimaryBtn")
+        set_button_icon(self.btn_confirm, QStyle.StandardPixmap.SP_FileDialogNewFolder)
         self.btn_confirm.clicked.connect(self.do_create_folder)
         btn_layout.addWidget(self.btn_confirm)
 
         btn_cancel = QPushButton("取消")
+        set_button_icon(btn_cancel, QStyle.StandardPixmap.SP_DialogCancelButton)
         btn_cancel.clicked.connect(self.reject)
         btn_layout.addWidget(btn_cancel)
 
@@ -331,12 +336,12 @@ class CreateFolderDialog(QDialog):
     def _update_preview(self):
         rel = self._build_rel_path()
         if not self.input_name.text().strip():
-            self.hint_lbl.setText("📏 最终路径预览: —")
+            self.hint_lbl.setText("最终路径预览: —")
             return
         depth = len([p for p in rel.split("/") if p])
         color = "#F97316" if depth > 4 else "#34D399"
         self.hint_lbl.setText(
-            f"📏 最终路径: <b style='color:{color};'>{rel}</b>  "
+            f"最终路径: <b style='color:{color};'>{rel}</b>  "
             f"<span style='color:{color};'>(深度 {depth}/4 层)</span>"
         )
 
@@ -356,7 +361,7 @@ class CreateFolderDialog(QDialog):
         success, msg = FileManager.create_folder(rel_path)
 
         if success:
-            QMessageBox.information(self, "创建成功 🎉", f"文件夹已成功创建！\n路径: {rel_path}")
+            QMessageBox.information(self, "创建成功", f"文件夹已成功创建！\n路径: {rel_path}")
             self.accept()
         else:
             QMessageBox.critical(self, "创建失败", msg)
@@ -1286,9 +1291,9 @@ class WorkspaceView(QWidget):
             sz_str = f"{sz / 1024:.1f} KB" if sz < 1024*1024 else f"{sz / (1024*1024):.1f} MB"
             
             # Backup icons
-            disk_ok = "✅" if r["backup_disk_status"] else "❌"
-            cloud_ok = "✅" if r["backup_cloud_status"] else "❌"
-            backup_str = f"盘 {disk_ok} | 云 {cloud_ok}"
+            disk_ok = "已备份" if r["backup_disk_status"] else "未备份"
+            cloud_ok = "已备份" if r["backup_cloud_status"] else "未备份"
+            backup_str = f"硬盘: {disk_ok} | 云端: {cloud_ok}"
             tags_display = "--"
             if r["tags"]:
                 tags_display = ", ".join(

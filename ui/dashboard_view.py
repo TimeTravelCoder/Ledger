@@ -3,11 +3,13 @@ import datetime
 from pathlib import Path
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, 
                              QLabel, QPushButton, QTableWidget, QTableWidgetItem, 
-                             QHeaderView, QFrame, QMessageBox, QScrollArea, QProgressBar)
+                             QHeaderView, QFrame, QMessageBox, QScrollArea, QProgressBar,
+                             QStyle)
 from PySide6.QtCore import Qt, Signal
 from config import config
 from db import db
 from file_manager import FileManager
+from ui.icon_utils import decorate_table, file_type_icon, set_button_icon
 
 def display_name(tag):
     return tag[1:] if str(tag).startswith("#") else str(tag)
@@ -51,6 +53,7 @@ class DashboardView(QWidget):
         
         self.refresh_btn = QPushButton("刷新数据")
         self.refresh_btn.setObjectName("PrimaryBtn")
+        set_button_icon(self.refresh_btn, QStyle.StandardPixmap.SP_BrowserReload)
         self.refresh_btn.clicked.connect(self.on_refresh_clicked)
         header_layout.addWidget(self.refresh_btn, 0, Qt.AlignRight)
         
@@ -100,10 +103,12 @@ class DashboardView(QWidget):
         desktop_btn_layout = QHBoxLayout()
         self.clean_desktop_btn = QPushButton("一键导入收集箱")
         self.clean_desktop_btn.setObjectName("SuccessBtn")
+        set_button_icon(self.clean_desktop_btn, QStyle.StandardPixmap.SP_DirOpenIcon)
         self.clean_desktop_btn.clicked.connect(self.clean_desktop)
         desktop_btn_layout.addWidget(self.clean_desktop_btn)
         
         self.go_to_inbox_btn = QPushButton("前往收集箱")
+        set_button_icon(self.go_to_inbox_btn, QStyle.StandardPixmap.SP_ArrowForward)
         self.go_to_inbox_btn.clicked.connect(lambda: self.switch_to_inbox_signal.emit())
         desktop_btn_layout.addWidget(self.go_to_inbox_btn)
         desktop_layout.addLayout(desktop_btn_layout)
@@ -125,15 +130,15 @@ class DashboardView(QWidget):
         self.backup_score_lbl.setStyleSheet("font-size: 16px; font-weight: bold;")
         backup_layout.addWidget(self.backup_score_lbl)
 
-        self.backup_ssd_status = QLabel("1. 主数据 (本地 SSD): 已就绪 ✅")
+        self.backup_ssd_status = QLabel("1. 主数据 (本地 SSD): 已就绪")
         self.backup_ssd_status.setStyleSheet("font-size: 12px;")
         backup_layout.addWidget(self.backup_ssd_status)
 
-        self.backup_disk_status = QLabel("2. 外部介质 (移动硬盘): 未配置 ⚠️")
+        self.backup_disk_status = QLabel("2. 外部介质 (移动硬盘): 未配置")
         self.backup_disk_status.setStyleSheet("font-size: 12px;")
         backup_layout.addWidget(self.backup_disk_status)
 
-        self.backup_cloud_status = QLabel("3. 异地备份 (云盘同步): 未配置 ⚠️")
+        self.backup_cloud_status = QLabel("3. 异地备份 (云盘同步): 未配置")
         self.backup_cloud_status.setStyleSheet("font-size: 12px;")
         backup_layout.addWidget(self.backup_cloud_status)
 
@@ -161,6 +166,7 @@ class DashboardView(QWidget):
         self.recent_table.setSelectionBehavior(QTableWidget.SelectRows)
         self.recent_table.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.recent_table.setFixedHeight(180)
+        decorate_table(self.recent_table, row_height=34, icon_size=22)
         recent_layout.addWidget(self.recent_table)
 
         self.tags_summary = QLabel("标签分布: --")
@@ -313,26 +319,26 @@ class DashboardView(QWidget):
             recent_backups = db.get_backup_history(limit=5)
             disk_ok = any(b["backup_type"] == "disk" and b["status"] == "success" for b in recent_backups)
             if disk_ok:
-                self.backup_disk_status.setText(f"2. 外部介质 (移动硬盘): 已配置并备份 ✅")
+                self.backup_disk_status.setText("2. 外部介质 (移动硬盘): 已配置并备份")
                 self.backup_disk_status.setStyleSheet("color: #10B981; font-size: 12px;")
             else:
-                self.backup_disk_status.setText(f"2. 外部介质 (移动硬盘): 已配置但尚未运行备份 ⚠️")
+                self.backup_disk_status.setText("2. 外部介质 (移动硬盘): 已配置但尚未运行备份")
                 self.backup_disk_status.setStyleSheet("color: #F59E0B; font-size: 12px;")
         else:
-            self.backup_disk_status.setText("2. 外部介质 (移动硬盘): 未配置 ⚠️")
+            self.backup_disk_status.setText("2. 外部介质 (移动硬盘): 未配置")
             self.backup_disk_status.setStyleSheet("color: #EF4444; font-size: 12px;")
 
         # Update cloud label
         if has_cloud:
             cloud_ok = any(b["backup_type"] == "cloud" and b["status"] == "success" for b in recent_backups)
             if cloud_ok:
-                self.backup_cloud_status.setText(f"3. 异地备份 (云盘同步): 已配置并备份 ✅")
+                self.backup_cloud_status.setText("3. 异地备份 (云盘同步): 已配置并备份")
                 self.backup_cloud_status.setStyleSheet("color: #10B981; font-size: 12px;")
             else:
-                self.backup_cloud_status.setText(f"3. 异地备份 (云盘同步): 已配置但尚未运行备份 ⚠️")
+                self.backup_cloud_status.setText("3. 异地备份 (云盘同步): 已配置但尚未运行备份")
                 self.backup_cloud_status.setStyleSheet("color: #F59E0B; font-size: 12px;")
         else:
-            self.backup_cloud_status.setText("3. 异地备份 (云盘同步): 未配置 ⚠️")
+            self.backup_cloud_status.setText("3. 异地备份 (云盘同步): 未配置")
             self.backup_cloud_status.setStyleSheet("color: #EF4444; font-size: 12px;")
 
         # 5. Populate Recent Files
@@ -354,6 +360,7 @@ class DashboardView(QWidget):
             mtime = datetime.datetime.fromtimestamp(f["modified_time"]).strftime("%Y-%m-%d %H:%M:%S")
             
             item_name = QTableWidgetItem(f["filename"])
+            item_name.setIcon(file_type_icon(f["filename"]))
             item_path = QTableWidgetItem(f["filepath"])
             item_size = QTableWidgetItem(sz_str)
             item_mtime = QTableWidgetItem(mtime)
@@ -412,10 +419,10 @@ class DashboardView(QWidget):
             size_str = f"{total_bytes / (1024*1024):.2f} MB"
             
         QMessageBox.information(
-            self, "全量同步成功 🎉", 
+            self, "全量同步成功",
             f"主控制面板与本地磁盘已全量同步自检完成！\n\n"
-            f"📊 文件总数: {total_count} 个\n"
-            f"💾 空间占用: {size_str}\n\n"
+            f"文件总数: {total_count} 个\n"
+            f"空间占用: {size_str}\n\n"
             f"所有其他功能视图已同步刷新！"
         )
 

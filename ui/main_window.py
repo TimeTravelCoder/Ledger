@@ -121,14 +121,14 @@ class MainWindow(QMainWindow):
         title_container = QHBoxLayout()
         title_container.setContentsMargins(15, 10, 15, 20)
         
-        logo_lbl = QLabel()
-        logo_lbl.setFixedSize(30, 30)
-        logo_lbl.setPixmap(self.app_icon.pixmap(30, 30))
-        title_container.addWidget(logo_lbl)
+        self.sidebar_logo_lbl = QLabel()
+        self.sidebar_logo_lbl.setFixedSize(30, 30)
+        self.sidebar_logo_lbl.setPixmap(self.app_icon.pixmap(30, 30))
+        title_container.addWidget(self.sidebar_logo_lbl)
         
-        title_lbl = QLabel("文档分类与管理")
-        title_lbl.setObjectName("SidebarTitle")
-        title_container.addWidget(title_lbl, 1)
+        self.sidebar_title_lbl = QLabel("文档分类与管理")
+        self.sidebar_title_lbl.setObjectName("SidebarTitle")
+        title_container.addWidget(self.sidebar_title_lbl, 1)
         sidebar_layout.addLayout(title_container)
 
         # Navigation Buttons
@@ -212,6 +212,8 @@ class MainWindow(QMainWindow):
         btn.setObjectName("SidebarBtn")
         btn.setCheckable(True)
         btn.setAutoExclusive(True)
+        btn.setProperty("nav_label", text)
+        btn.setToolTip(text)
         btn.setIcon(self.style().standardIcon(standard_icon))
         btn.setIconSize(QSize(18, 18))
         btn.clicked.connect(lambda: self.switch_tab(index))
@@ -261,6 +263,11 @@ class MainWindow(QMainWindow):
             self.btn_theme_toggle.setText("切换深色模式")
             self.btn_theme_toggle.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_ComputerIcon))
         self.btn_theme_toggle.setIconSize(QSize(16, 16))
+        theme_text = self.btn_theme_toggle.text()
+        self.btn_theme_toggle.setProperty("expanded_text", theme_text)
+        self.btn_theme_toggle.setToolTip(theme_text)
+        if self.sidebar_collapsed:
+            self.btn_theme_toggle.setText("")
 
     @Slot()
     def refresh_all_views(self):
@@ -309,7 +316,7 @@ class MainWindow(QMainWindow):
         
         # Don't show if active workspace directory is inside downloads or something
         inbox_name = config.get_inbox_name()
-        reply = QMessageBox.question(self, "检测到新文件下载 📥", 
+        reply = QMessageBox.question(self, "检测到新文件下载",
                                      f"系统检测到新下载的文件:\n'{filename}'\n\n"
                                      f"是否立即将其导入 {inbox_name} 收集箱并运行文件规范重命名和标签分类？",
                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
@@ -356,26 +363,43 @@ class MainWindow(QMainWindow):
         if should_collapse == self.sidebar_collapsed:
             return
         self.sidebar_collapsed = should_collapse
-        if should_collapse:
-            self.sidebar.setVisible(False)
-        else:
-            self.sidebar.setVisible(True)
+        self.apply_sidebar_mode(should_collapse)
+
+    def apply_sidebar_mode(self, collapsed):
+        self.sidebar.setVisible(True)
+        self.sidebar.setFixedWidth(74 if collapsed else 220)
+        self.sidebar_title_lbl.setVisible(not collapsed)
+
+        for btn in self.nav_buttons:
+            label = btn.property("nav_label") or btn.toolTip() or btn.text()
+            btn.setText("" if collapsed else label)
+            btn.setToolTip(label)
+            btn.setProperty("compact", collapsed)
+            btn.style().unpolish(btn)
+            btn.style().polish(btn)
+
+        theme_text = self.btn_theme_toggle.property("expanded_text") or self.btn_theme_toggle.toolTip()
+        self.btn_theme_toggle.setText("" if collapsed else theme_text)
+        self.btn_theme_toggle.setToolTip(theme_text)
+        self.btn_theme_toggle.setProperty("compact", collapsed)
+        self.btn_theme_toggle.style().unpolish(self.btn_theme_toggle)
+        self.btn_theme_toggle.style().polish(self.btn_theme_toggle)
 
     def show_first_run_welcome(self):
         ws_dir = config.workspace_dir
         msg = (
-            "👋 <b>欢迎使用电脑文档分类与管理系统！</b><br><br>"
+            "<b>欢迎使用电脑文档分类与管理系统！</b><br><br>"
             "检测到您是第一次启动本软件，系统已为您自动初始化并创建了符合规范的专属工作空间（Workspace）以及 12 个日常分类标准的文件夹：<br>"
-            f"<font color='#6366F1'><b>👉 {ws_dir}</b></font><br><br>"
-            "<b>💡 快速上手整理建议：</b><br>"
+            f"<font color='#6366F1'><b>{ws_dir}</b></font><br><br>"
+            "<b>快速上手整理建议：</b><br>"
             f"1. 可将您浏览器下载目录中的文件、或桌面堆积的杂乱文件，移动进 <b>{config.get_inbox_name()}（收集箱）</b> 中。<br>"
-            "2. 在左侧切换至 <b>📥 智能收集箱</b> 面板，体验自动根据规范模板改名、勾选中文分类标签、一键物理归档分流！<br>"
-            "3. 建议在 <b>⚙️ 软件参数设置</b> 中配置您所习惯的常用路径与自定义标签字典。<br><br>"
+            "2. 在左侧切换至 <b>智能收集箱</b> 面板，体验自动根据规范模板改名、勾选中文分类标签、一键物理归档分流！<br>"
+            "3. 建议在 <b>软件参数设置</b> 中配置您所习惯的常用路径与自定义标签字典。<br><br>"
             "现在，开启您的高效知识管理与备份之旅吧！"
         )
         # Create RichText QMessageBox
         box = QMessageBox(self)
-        box.setWindowTitle("🎉 首次运行欢迎与规范初始化成功！")
+        box.setWindowTitle("首次运行欢迎与规范初始化成功")
         box.setText(msg)
         box.setTextFormat(Qt.RichText)
         box.setIcon(QMessageBox.Information)
