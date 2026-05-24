@@ -4,7 +4,7 @@ from pathlib import Path
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, 
                              QLabel, QPushButton, QTableWidget, QTableWidgetItem, 
                              QHeaderView, QFrame, QMessageBox, QScrollArea, QProgressBar)
-from PySide6.QtCore import Qt, Signal, QSize, QRectF, QPointF
+from PySide6.QtCore import Qt, Signal, QSize, QRectF, QPointF, QPoint
 from PySide6.QtGui import QColor, QPainter, QPen, QLinearGradient, QPainterPath
 from config import config
 from db import db
@@ -43,10 +43,37 @@ class TagDistributionChart(QFrame):
         super().__init__(parent)
         self.items = []
         self.setMinimumHeight(170)
+        self.setMouseTracking(True)
+        self.hovered_index = -1
+        self.tooltip_pos = QPoint()
 
     def set_data(self, items):
         self.items = [(tag, display_name(tag), count) for tag, count in items[:6]]
         self.update()
+
+    def mouseMoveEvent(self, event):
+        if not self.items:
+            super().mouseMoveEvent(event)
+            return
+        rect = self.rect().adjusted(12, 12, -12, -12)
+        row_h = max(20, rect.height() // max(1, len(self.items)))
+        
+        pos = event.position()
+        y = pos.y() - rect.top()
+        index = int(y // row_h)
+        
+        if 0 <= index < len(self.items):
+            self.hovered_index = index
+            self.tooltip_pos = pos.toPoint()
+        else:
+            self.hovered_index = -1
+        self.update()
+        super().mouseMoveEvent(event)
+
+    def leaveEvent(self, event):
+        self.hovered_index = -1
+        self.update()
+        super().leaveEvent(event)
 
     def paintEvent(self, event):
         super().paintEvent(event)
@@ -93,7 +120,16 @@ class TagDistributionChart(QFrame):
             
             # Draw active bar
             active = QRectF(bar_rect)
-            active.setWidth(max(6, bar_rect.width() * count / max_count))
+            active_w = max(6, bar_rect.width() * count / max_count)
+            active.setWidth(active_w)
+            
+            # If hovered, draw glowing shadow under active bar
+            if index == self.hovered_index:
+                glow = QPainterPath()
+                glow.addRoundedRect(active.adjusted(-2, -2, 2, 2), 5, 5)
+                glow_color = QColor(color)
+                glow_color.setAlpha(60)
+                painter.fillPath(glow, glow_color)
             
             # Gradient fill for active bar
             grad = QLinearGradient(active.left(), active.top(), active.right(), active.top())
@@ -113,16 +149,90 @@ class TagDistributionChart(QFrame):
             painter.setPen(count_color)
             painter.drawText(QRectF(bar_rect.right() + 8, y, 42, row_h - 6), Qt.AlignVCenter | Qt.AlignRight, str(count))
 
+        # Render premium hovering glassmorphic tooltip气泡
+        if self.hovered_index != -1 and self.hovered_index < len(self.items):
+            tag, name, count = self.items[self.hovered_index]
+            tooltip_txt = f"标签: {tag}\n文档数量: {count} 个"
+            
+            # Measure text size
+            fm = painter.fontMetrics()
+            lines = tooltip_txt.split('\n')
+            txt_w = max(fm.horizontalAdvance(line) for line in lines) + 20
+            txt_h = len(lines) * fm.height() + 14
+            
+            # Position tooltip box slightly offset from cursor
+            tip_x = self.tooltip_pos.x() + 15
+            tip_y = self.tooltip_pos.y() - txt_h - 10
+            
+            # Prevent going off bounds
+            if tip_x + txt_w > self.width():
+                tip_x = self.tooltip_pos.x() - txt_w - 15
+            if tip_y < 0:
+                tip_y = self.tooltip_pos.y() + 15
+                
+            tip_rect = QRectF(tip_x, tip_y, txt_w, txt_h)
+            
+            # Draw background (translucent dark acrylic / light frost)
+            painter.setPen(QPen(QColor(255, 255, 255, 50) if not is_light else QColor(0, 0, 0, 30), 1))
+            bg_color = QColor(30, 41, 59, 230) if not is_light else QColor(255, 255, 255, 240)
+            painter.setBrush(bg_color)
+            painter.drawRoundedRect(tip_rect, 8, 8)
+            
+            # Draw glowing line tag accent color on the left of tooltip
+            accent_bar = QRectF(tip_x + 2, tip_y + 6, 3, txt_h - 12)
+            painter.setPen(Qt.NoPen)
+            painter.setBrush(tag_color(tag))
+            painter.drawRoundedRect(accent_bar, 1.5, 1.5)
+            
+            # Draw text
+            painter.setPen(QColor("#F1F5F9") if not is_light else QColor("#0F172A"))
+            text_rect = QRectF(tip_x + 10, tip_y + 7, txt_w - 12, txt_h - 14)
+            painter.drawText(text_rect, Qt.AlignLeft | Qt.AlignVCenter, tooltip_txt)
+
 
 class WeeklyTrendChart(QFrame):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.items = []
         self.setMinimumHeight(170)
+        self.setMouseTracking(True)
+        self.hovered_index = -1
+        self.tooltip_pos = QPoint()
 
     def set_data(self, items):
         self.items = items
         self.update()
+
+    def mouseMoveEvent(self, event):
+        if not self.items:
+            super().mouseMoveEvent(event)
+            return
+        rect = self.rect().adjusted(24, 12, -24, -24)
+        n = len(self.items)
+        segment_w = rect.width() / float(max(1, n - 1))
+        
+        pos = event.position()
+        closest_index = -1
+        min_dist = 9999.0
+        for i in range(n):
+            x = rect.left() + i * segment_w
+            dist = abs(pos.x() - x)
+            if dist < min_dist:
+                min_dist = dist
+                closest_index = i
+                
+        if closest_index != -1 and min_dist < segment_w * 0.6:
+            self.hovered_index = closest_index
+            self.tooltip_pos = pos.toPoint()
+        else:
+            self.hovered_index = -1
+        self.update()
+        super().mouseMoveEvent(event)
+
+    def leaveEvent(self, event):
+        self.hovered_index = -1
+        self.update()
+        super().leaveEvent(event)
 
     def paintEvent(self, event):
         super().paintEvent(event)
@@ -239,6 +349,13 @@ class WeeklyTrendChart(QFrame):
             painter.setPen(QPen(line_color, 2.5, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
             painter.drawLine(rect.left(), pt.y(), rect.right(), pt.y())
             
+        # Draw high-tech vertical alignment line on hovered index
+        if self.hovered_index != -1 and self.hovered_index < len(points):
+            cursor_x = points[self.hovered_index].x()
+            cursor_pen = QPen(QColor(line_color), 1, Qt.DashLine)
+            painter.setPen(cursor_pen)
+            painter.drawLine(cursor_x, rect.top() + 10, cursor_x, rect.bottom())
+
         # Draw labels and nodes
         for i, (label, count) in enumerate(self.items):
             pt = points[i]
@@ -258,17 +375,54 @@ class WeeklyTrendChart(QFrame):
             f.setBold(False)
             painter.setFont(f)
             
-            # Glowing node
+            # Glowing node (bigger on hover)
             glow_color = QColor(line_color)
-            glow_color.setAlpha(40)
+            glow_color.setAlpha(80 if i == self.hovered_index else 40)
             painter.setBrush(glow_color)
             painter.setPen(Qt.NoPen)
-            painter.drawEllipse(pt, 7, 7)
+            painter.drawEllipse(pt, 10 if i == self.hovered_index else 7, 10 if i == self.hovered_index else 7)
             
             # Inner dot
             painter.setBrush(QColor("#FFFFFF") if is_light else QColor("#1E293B"))
             painter.setPen(QPen(line_color, 1.5))
             painter.drawEllipse(pt, 3.5, 3.5)
+
+        # Render floating glassmorphic tooltip for Weekly Trend
+        if self.hovered_index != -1 and self.hovered_index < len(self.items):
+            label, count = self.items[self.hovered_index]
+            tooltip_txt = f"日期: {label}\n整理量: {count} 个"
+            
+            # Measure text size
+            fm = painter.fontMetrics()
+            lines = tooltip_txt.split('\n')
+            txt_w = max(fm.horizontalAdvance(line) for line in lines) + 20
+            txt_h = len(lines) * fm.height() + 14
+            
+            tip_x = self.tooltip_pos.x() + 15
+            tip_y = self.tooltip_pos.y() - txt_h - 10
+            
+            if tip_x + txt_w > self.width():
+                tip_x = self.tooltip_pos.x() - txt_w - 15
+            if tip_y < 0:
+                tip_y = self.tooltip_pos.y() + 15
+                
+            tip_rect = QRectF(tip_x, tip_y, txt_w, txt_h)
+            
+            painter.setPen(QPen(QColor(255, 255, 255, 50) if not is_light else QColor(0, 0, 0, 30), 1))
+            bg_color = QColor(30, 41, 59, 230) if not is_light else QColor(255, 255, 255, 240)
+            painter.setBrush(bg_color)
+            painter.drawRoundedRect(tip_rect, 8, 8)
+            
+            # Accent bar
+            accent_bar = QRectF(tip_x + 2, tip_y + 6, 3, txt_h - 12)
+            painter.setPen(Qt.NoPen)
+            painter.setBrush(line_color)
+            painter.drawRoundedRect(accent_bar, 1.5, 1.5)
+            
+            # Text
+            painter.setPen(QColor("#F1F5F9") if not is_light else QColor("#0F172A"))
+            text_rect = QRectF(tip_x + 10, tip_y + 7, txt_w - 12, txt_h - 14)
+            painter.drawText(text_rect, Qt.AlignLeft | Qt.AlignVCenter, tooltip_txt)
 
 
 class DashboardView(QWidget):
@@ -353,8 +507,10 @@ class DashboardView(QWidget):
         charts_layout.setSpacing(15)
         self.tag_chart = TagDistributionChart()
         self.weekly_chart = WeeklyTrendChart()
-        charts_layout.addWidget(self.create_chart_card("标签分布图", self.tag_chart), 1)
-        charts_layout.addWidget(self.create_chart_card("近 7 天整理趋势", self.weekly_chart), 1)
+        self.chart_card_tags = self.create_chart_card("标签分布图", self.tag_chart)
+        self.chart_card_weekly = self.create_chart_card("近 7 天整理趋势", self.weekly_chart)
+        charts_layout.addWidget(self.chart_card_tags, 1)
+        charts_layout.addWidget(self.chart_card_weekly, 1)
         main_layout.addLayout(charts_layout)
 
         # 3. Middle Section: Desktop Cleanliness & Backup health
@@ -516,6 +672,15 @@ class DashboardView(QWidget):
         recent_layout.addWidget(indicators_frame)
 
         main_layout.addWidget(recent_card)
+
+        # Apply physical hover animations to all main dashboard cards
+        from ui.animations import apply_hover_physics
+        apply_hover_physics([
+            self.card_total_files, self.card_total_size, self.card_unorganized,
+            self.card_tags_count, self.card_recent_count,
+            self.desktop_card, self.backup_card, recent_card,
+            self.chart_card_tags, self.chart_card_weekly
+        ], lift_distance=3, shadow_blur=14)
 
         self.refresh_data()
 

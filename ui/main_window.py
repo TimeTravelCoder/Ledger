@@ -10,6 +10,7 @@ from config import config
 from ui.icon_utils import line_icon
 from ui.styles import get_stylesheet
 from ui.toast import ToastManager
+from ui.animations import apply_hover_physics
 
 # Import views
 from ui.dashboard_view import DashboardView
@@ -228,6 +229,9 @@ class MainWindow(QMainWindow):
 
         # Setup System Tray Icon for desktop convenience
         self.setup_tray_icon()
+
+        # Apply physical hover animations to navigation & theme-switching buttons
+        apply_hover_physics(self.nav_buttons + [self.btn_theme_toggle], lift_distance=3, shadow_blur=14)
 
     def load_app_icon(self):
         root = Path(__file__).parent.parent

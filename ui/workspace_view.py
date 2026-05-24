@@ -1074,6 +1074,14 @@ class WorkspaceView(QWidget):
         preview_name_box.addWidget(self.preview_name_label)
         preview_name_box.addWidget(self.preview_file_label)
         preview_header.addLayout(preview_name_box, 1)
+
+        self.btn_theater_mode = QPushButton()
+        self.btn_theater_mode.setToolTip("全屏剧场模式")
+        self.btn_theater_mode.setIcon(line_icon("info", size=16))
+        self.btn_theater_mode.setFixedSize(28, 28)
+        self.btn_theater_mode.clicked.connect(self.open_theater_mode)
+        preview_header.addWidget(self.btn_theater_mode)
+
         preview_info_layout.addLayout(preview_header)
 
         preview_meta_layout = QHBoxLayout()
@@ -1563,6 +1571,7 @@ class WorkspaceView(QWidget):
         self._add_menu_action(menu, "编辑属性", lambda: self.open_file_details(primary), "file")
         menu.addSeparator()
         self._build_move_menu(menu, rel_paths)
+        self._add_menu_action(menu, f"打包安全归档并清理 ({len(rel_paths)})", lambda: self.safe_vault_zip(rel_paths), "move")
         self._add_menu_action(menu, "定位到资源管理器", lambda: self.reveal_in_explorer(self.get_abs_path(primary)), "folder")
         self._add_menu_action(menu, "复制相对路径", lambda: self.copy_rel_path(primary), "tag")
         self._add_menu_action(menu, "复制完整路径", lambda: self.copy_abs_path(primary), "tag")
@@ -2621,3 +2630,276 @@ class FileDetailsDialog(QDialog):
                 self.accept()
             except Exception as e:
                 QMessageBox.critical(self, "错误", f"删除文件失败：{str(e)}")
+
+    def open_theater_mode(self):
+        if not hasattr(self, "current_preview_rel_path") or not self.current_preview_rel_path:
+            QMessageBox.information(self, "提示", "请先在左侧选择一个待预览文件。")
+            return
+            
+        abs_path = self.get_abs_path(self.current_preview_rel_path)
+        if not abs_path.exists():
+            QMessageBox.warning(self, "警告", "选中的预览文件在磁盘中不存在！")
+            return
+            
+        dialog = PreviewTheaterDialog(str(abs_path), self)
+        dialog.exec()
+
+    def safe_vault_zip(self, rel_paths):
+        # Determine zip output target directory: 10归档区 (or customized)
+        archive_dir_name = "10归档区" if "10归档区" in config.get_standard_dirs() else config.get_standard_dirs()[-1]
+        archive_dir = Path(config.workspace_dir) / archive_dir_name
+        archive_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Show custom input dialog
+        dialog = ZipArchiveDialog(self)
+        if dialog.exec() == QDialog.Accepted:
+            zip_name = dialog.input_zipname.text().strip()
+            password = dialog.input_password.text().strip() if dialog.cb_encrypt.isChecked() else None
+            
+            if not zip_name.endswith(".zip"):
+                zip_name += ".zip"
+                
+            dest_zip_path = archive_dir / zip_name
+            
+            # Warn if zip already exists
+            if dest_zip_path.exists():
+                reply = QMessageBox.question(self, "覆盖确认", "归档区已存在同名压缩文件，是否覆盖它？", QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+                if reply != QMessageBox.Yes:
+                    return
+                    
+            # Gather absolute paths
+            abs_paths = [self.get_abs_path(p) for p in rel_paths]
+            
+            # Start background ZipWorker thread to prevent UI thread blocking
+            self.zip_worker = ZipWorker(abs_paths, dest_zip_path, password, self)
+            self.zip_worker.finished_signal.connect(self.on_zip_completed)
+            self.zip_worker.error_signal.connect(self.on_zip_error)
+            
+            # Show a beautiful non-modal loading dialog
+            self.zip_progress_dialog = QMessageBox(self)
+            self.zip_progress_dialog.setWindowTitle("安全保险箱归档中")
+            self.zip_progress_dialog.setText("正在打包归档文件并清理数据库，请稍候...")
+            self.zip_progress_dialog.setStandardButtons(QMessageBox.NoButton)
+            
+            self.zip_worker.start()
+            self.zip_progress_dialog.show()
+
+    def on_zip_completed(self, zip_path_str, files_count):
+        if hasattr(self, "zip_progress_dialog"):
+            self.zip_progress_dialog.close()
+            
+        # Register the new zipped archive in database
+        try:
+            rel_zip = str(Path(zip_path_str).relative_to(Path(config.workspace_dir))).replace("\\", "/")
+            db.register_file(rel_zip, Path(zip_path_str).name)
+            db.update_file_tags(rel_zip, ["#物理备份", "#归档区"])
+            db.update_file_description(rel_zip, f"安全保险箱打包归档文件。包含 {files_count} 个历史整理文档。")
+        except Exception as e:
+            print(f"Error registering zip in DB: {e}")
+            
+        show_toast(self, f"成功归档 {files_count} 个文件并打包存入 {Path(zip_path_str).name}！", title="保险箱归档成功", level="success", duration=3600)
+        
+        self.clear_preview_resources()
+        self.current_preview_rel_path = ""
+        self.refresh_tree_view()
+        self.run_search()
+        self.show_duplicates(activate=False)
+        self.refresh_other_views_signal.emit()
+
+    def on_zip_error(self, err_msg):
+        if hasattr(self, "zip_progress_dialog"):
+            self.zip_progress_dialog.close()
+        QMessageBox.critical(self, "归档错误", f"打包归档中途失败：\n{err_msg}")
+
+
+from PySide6.QtWidgets import QDialog, QLineEdit, QCheckBox
+import datetime
+import zipfile
+import tempfile
+import shutil
+
+class PreviewTheaterDialog(QDialog):
+    def __init__(self, abs_path, parent=None):
+        super().__init__(parent)
+        self.abs_path = Path(abs_path)
+        self.setWindowTitle(f"Ledger 剧场模式 - {self.abs_path.name}")
+        self.resize(1050, 780)
+        self.setWindowFlags(Qt.Window | Qt.MaximizeButtonHint | Qt.CloseButtonHint)
+        self.init_ui()
+
+    def init_ui(self):
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(15, 15, 15, 15)
+        layout.setSpacing(10)
+        
+        theme = config.theme
+        is_light = theme in ["light", "zhongguose"]
+        
+        # Theater Mode is designed to be elegant dark to prevent glare
+        self.setStyleSheet("""
+            QDialog {
+                background-color: #0B0F19;
+            }
+            QLabel {
+                color: #E2E8F0;
+            }
+            QTextEdit {
+                background-color: #0F172A;
+                border: 1px solid #1E293B;
+                color: #94A3B8;
+                font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+                font-size: 14px;
+                padding: 15px;
+            }
+        """)
+
+        # Header layout
+        header = QHBoxLayout()
+        self.lbl_title = QLabel(self.abs_path.name)
+        self.lbl_title.setStyleSheet("font-size: 16px; font-weight: bold; color: #818CF8;")
+        header.addWidget(self.lbl_title)
+        header.addStretch()
+        
+        self.btn_close = QPushButton("退出全屏")
+        self.btn_close.setObjectName("DangerBtn")
+        self.btn_close.setStyleSheet("background-color: #F43F5E; color: #FFFFFF; font-weight: bold; padding: 6px 12px; border-radius: 6px; border: none;")
+        self.btn_close.clicked.connect(self.close)
+        header.addWidget(self.btn_close)
+        layout.addLayout(header)
+
+        # Content box
+        ext = self.abs_path.suffix.lower()
+        
+        # Text, Markdown, CSV, Log
+        if ext in [".txt", ".md", ".py", ".json", ".csv", ".ini", ".log"]:
+            txt_edit = QTextEdit()
+            txt_edit.setReadOnly(True)
+            try:
+                txt_edit.setPlainText(self.abs_path.read_text(encoding="utf-8"))
+            except UnicodeDecodeError:
+                txt_edit.setPlainText(self.abs_path.read_text(encoding="gbk", errors="ignore"))
+            layout.addWidget(txt_edit, 1)
+            
+        # Images
+        elif ext in [".png", ".jpg", ".jpeg", ".bmp", ".gif"]:
+            lbl_img = QLabel()
+            lbl_img.setAlignment(Qt.AlignCenter)
+            pixmap = QPixmap(str(self.abs_path))
+            if not pixmap.isNull():
+                lbl_img.setPixmap(pixmap.scaled(1000, 700, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+            else:
+                lbl_img.setText("无法加载图片预览。")
+            layout.addWidget(lbl_img, 1)
+            
+        # PDFs
+        elif ext == ".pdf":
+            try:
+                from PySide6.QtPdf import QPdfDocument
+                from PySide6.QtPdfWidgets import QPdfView
+                self.pdf_doc = QPdfDocument(self)
+                self.pdf_view = QPdfView()
+                self.pdf_view.setDocument(self.pdf_doc)
+                self.pdf_doc.load(str(self.abs_path))
+                self.pdf_view.setMinimumHeight(600)
+                layout.addWidget(self.pdf_view, 1)
+            except Exception as e:
+                fallback = QTextEdit()
+                fallback.setReadOnly(True)
+                fallback.setPlainText(f"PDF 加载错误: {e}")
+                layout.addWidget(fallback, 1)
+        else:
+            fallback = QTextEdit()
+            fallback.setReadOnly(True)
+            fallback.setPlainText("不支持该类型文件的直接大屏预览。\n建议通过 context menu 菜单在系统中打开。")
+            layout.addWidget(fallback, 1)
+
+
+class ZipArchiveDialog(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("安全保险箱一键打包归档")
+        self.resize(380, 200)
+        self.init_ui()
+
+    def init_ui(self):
+        layout = QVBoxLayout(self)
+        layout.setSpacing(12)
+        layout.setContentsMargins(20, 20, 20, 20)
+
+        # Name row
+        self.lbl_zipname = QLabel("压缩归档文件名 (*.zip):")
+        self.input_zipname = QLineEdit()
+        today_str = datetime.datetime.now().strftime("%Y%m%d_%H%M")
+        self.input_zipname.setText(f"Ledger_Archive_{today_str}.zip")
+        layout.addWidget(self.lbl_zipname)
+        layout.addWidget(self.input_zipname)
+
+        # Encryption row
+        self.cb_encrypt = QCheckBox("启用安全保险密码保护 (Legacy Zip)")
+        layout.addWidget(self.cb_encrypt)
+
+        self.row_password = QFrame()
+        pwd_layout = QHBoxLayout(self.row_password)
+        pwd_layout.setContentsMargins(0, 0, 0, 0)
+        self.lbl_password = QLabel("设置密码:")
+        self.lbl_password.setFixedWidth(65)
+        self.input_password = QLineEdit()
+        self.input_password.setEchoMode(QLineEdit.Password)
+        pwd_layout.addWidget(self.lbl_password)
+        pwd_layout.addWidget(self.input_password)
+        self.row_password.setVisible(False)
+        layout.addWidget(self.row_password)
+
+        self.cb_encrypt.stateChanged.connect(lambda state: self.row_password.setVisible(state == Qt.Checked))
+
+        # Bottom buttons
+        btn_layout = QHBoxLayout()
+        btn_layout.addStretch()
+        
+        self.btn_confirm = QPushButton("一键归档")
+        self.btn_confirm.setObjectName("PrimaryBtn")
+        self.btn_confirm.setStyleSheet("background-color: #6366F1; color: #FFFFFF;")
+        self.btn_confirm.clicked.connect(self.accept)
+        btn_layout.addWidget(self.btn_confirm)
+
+        self.btn_cancel = QPushButton("取消")
+        self.btn_cancel.clicked.connect(self.reject)
+        btn_layout.addWidget(self.btn_cancel)
+        layout.addLayout(btn_layout)
+
+
+from PySide6.QtCore import QThread, Signal
+
+class ZipWorker(QThread):
+    finished_signal = Signal(str, int)  # Emits (dest_zip_path_str, files_count)
+    error_signal = Signal(str)
+
+    def __init__(self, abs_paths, dest_zip_path, password=None, parent=None):
+        super().__init__(parent)
+        self.abs_paths = abs_paths
+        self.dest_zip_path = Path(dest_zip_path)
+        self.password = password
+
+    def run(self):
+        try:
+            with zipfile.ZipFile(self.dest_zip_path, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+                for filepath in self.abs_paths:
+                    if filepath.exists() and filepath.is_file():
+                        zip_file.write(filepath, arcname=filepath.name)
+            
+            # Cascade delete source files and database records
+            ws_root = Path(config.workspace_dir).resolve()
+            for filepath in self.abs_paths:
+                try:
+                    if filepath.exists():
+                        filepath.unlink()
+                    
+                    # Update database by deleting the file record
+                    rel_path = str(filepath.resolve().relative_to(ws_root)).replace("\\", "/")
+                    db.delete_file(rel_path)
+                except Exception as e:
+                    print(f"Error cascading clean up: {e}")
+                    
+            self.finished_signal.emit(str(self.dest_zip_path), len(self.abs_paths))
+        except Exception as e:
+            self.error_signal.emit(str(e))

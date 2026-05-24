@@ -3,58 +3,64 @@ def get_stylesheet(theme="dark"):
     Returns a highly polished, custom QSS stylesheet for either dark or light theme.
     """
     if theme == "dark":
-        # Premium cyber deep-sea navy theme
-        bg_primary = "#0B1E2B"
-        bg_secondary = "#132D3E"
-        bg_tertiary = "#1E4258"
-        text_primary = "#E2F9FF"
-        text_secondary = "#9BD8EB"
-        text_disabled = "#568296"
-        border_color = "#204F6E"
-        border_hover = "#00D8F6"
-        accent_color = "#0A84B1"
-        success_color = "#00F5D4"
-        success_hover = "#14FCDA"
-        warning_color = "#FFD166"
-        error_color = "#FF5C8A"
-        error_hover = "#FF709B"
-        shadow_effect = "rgba(0, 0, 0, 0.4)"
+        # Premium Cyber Dark theme - Neon indigo accent
+        bg_primary = "#090D16"
+        bg_secondary = "#0F172A"
+        bg_tertiary = "#1E293B"
+        bg_glass = "rgba(15, 23, 42, 0.45)"
+        text_primary = "#F1F5F9"
+        text_secondary = "#94A3B8"
+        text_disabled = "#475569"
+        border_color = "rgba(255, 255, 255, 0.08)"
+        border_glass = "rgba(255, 255, 255, 0.06)"
+        border_hover = "#818CF8"
+        accent_color = "#6366F1"
+        success_color = "#34D399"
+        success_hover = "#10B981"
+        warning_color = "#F59E0B"
+        error_color = "#F43F5E"
+        error_hover = "#EF4444"
+        shadow_effect = "rgba(99, 102, 241, 0.25)"
         text_on_accent = "#FFFFFF"
     elif theme == "zhongguose":
-        # Elegant traditional Chinese colors (Warm Rice-Paper White and Imperial Jade Green)
-        bg_primary = "#F3FAF5"
-        bg_secondary = "#FFFDF9"
-        bg_tertiary = "#E4F3EC"
-        text_primary = "#1F3A2B"
-        text_secondary = "#4A6E56"
-        text_disabled = "#90B29C"
-        border_color = "#D0DFD7"
-        border_hover = "#1BA784"
-        accent_color = "#127A60"
-        success_color = "#15803D"
-        success_hover = "#16A34A"
-        warning_color = "#B45309"
-        error_color = "#B91C1C"
-        error_hover = "#DC2626"
-        shadow_effect = "rgba(27, 167, 132, 0.08)"
-        text_on_accent = "#FFFFFF"
-    else:
-        # Modern professional Slate & Indigo theme
-        bg_primary = "#F8FAFC"
-        bg_secondary = "#FFFFFF"
-        bg_tertiary = "#E2E8F0"
-        text_primary = "#0F172A"
-        text_secondary = "#475569"
-        text_disabled = "#94A3B8"
-        border_color = "#CBD5E1"
-        border_hover = "#4F46E5"
-        accent_color = "#4F46E5"
-        success_color = "#059669"
-        success_hover = "#10B981"
+        # Elegant Traditional Chinese Jade Green theme
+        bg_primary = "#F4F7F5"
+        bg_secondary = "#FCFBF9"
+        bg_tertiary = "#EBF2EE"
+        bg_glass = "rgba(252, 251, 249, 0.65)"
+        text_primary = "#1E2D24"
+        text_secondary = "#3D5B48"
+        text_disabled = "#8FA89B"
+        border_color = "rgba(180, 200, 190, 0.45)"
+        border_glass = "rgba(180, 200, 190, 0.35)"
+        border_hover = "#059669"
+        accent_color = "#047857"
+        success_color = "#10B981"
+        success_hover = "#059669"
         warning_color = "#D97706"
         error_color = "#DC2626"
         error_hover = "#EF4444"
-        shadow_effect = "rgba(15, 23, 42, 0.08)"
+        shadow_effect = "rgba(4, 120, 87, 0.12)"
+        text_on_accent = "#FFFFFF"
+    else:
+        # Modern Premium Slate Light theme
+        bg_primary = "#F8FAFC"
+        bg_secondary = "#FFFFFF"
+        bg_tertiary = "#F1F5F9"
+        bg_glass = "rgba(255, 255, 255, 0.55)"
+        text_primary = "#0F172A"
+        text_secondary = "#475569"
+        text_disabled = "#94A3B8"
+        border_color = "rgba(15, 23, 42, 0.08)"
+        border_glass = "rgba(15, 23, 42, 0.06)"
+        border_hover = "#6366F1"
+        accent_color = "#4F46E5"
+        success_color = "#10B981"
+        success_hover = "#059669"
+        warning_color = "#F59E0B"
+        error_color = "#EF4444"
+        error_hover = "#DC2626"
+        shadow_effect = "rgba(79, 70, 229, 0.12)"
         text_on_accent = "#FFFFFF"
 
     qss = f"""
@@ -137,28 +143,28 @@ def get_stylesheet(theme="dark"):
         padding: 20px;
     }}
     
-    /* Modern Dashboard Card Panel */
+    /* Modern Dashboard Card Panel with Glassmorphism */
     QFrame#CardPanel {{
-        background-color: {bg_secondary};
-        border: 1px solid {border_color};
+        background-color: {bg_glass};
+        border: 1px solid {border_glass};
         border-radius: 12px;
     }}
 
     QFrame#PreviewInfoCard {{
-        background-color: {bg_primary};
-        border: 1px solid {border_color};
+        background-color: {bg_glass};
+        border: 1px solid {border_glass};
         border-radius: 10px;
     }}
 
     QFrame#ToolbarPanel {{
-        background-color: {bg_secondary};
-        border: 1px solid {border_color};
+        background-color: {bg_glass};
+        border: 1px solid {border_glass};
         border-radius: 14px;
     }}
 
     QFrame#SearchBox {{
         background-color: {bg_secondary};
-        border: 1px solid {border_hover};
+        border: 1px solid {border_color};
         border-radius: 12px;
     }}
 
@@ -188,13 +194,13 @@ def get_stylesheet(theme="dark"):
     }}
 
     QFrame#BatchToolbar[active="true"] {{
-        background-color: {bg_secondary};
+        background-color: {bg_glass};
         border: 1px solid {accent_color};
     }}
 
     QFrame#BatchToolbarGroup {{
-        background-color: {bg_secondary};
-        border: 1px solid {border_color};
+        background-color: {bg_glass};
+        border: 1px solid {border_glass};
         border-radius: 10px;
     }}
 
@@ -204,8 +210,8 @@ def get_stylesheet(theme="dark"):
     }}
 
     QFrame#InsightStrip {{
-        background-color: {bg_secondary};
-        border: 1px solid {border_color};
+        background-color: {bg_glass};
+        border: 1px solid {border_glass};
         border-radius: 12px;
     }}
 

@@ -39,6 +39,12 @@ STYLE_PREVIEW_WARNING = """
         padding: 6px 10px;
     }
     QLineEdit:focus {
+        background-color: rgba(239, 68, 68, 0.05);
+        border: 1px solid rgba(239, 68, 68, 0.4);
+        border-radius: 6px;
+        padding: 6px 10px;
+    }
+    QLineEdit:focus {
         border: 1px solid #EF4444;
         background-color: rgba(239, 68, 68, 0.10);
     }
@@ -51,7 +57,48 @@ class InboxView(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.selected_file_path = None
+        self.setAcceptDrops(True) # Accept drag-and-drop desktop imports
         self.init_ui()
+
+    def dragEnterEvent(self, event):
+        if event.mimeData().hasUrls():
+            event.acceptProposedAction()
+        else:
+            super().dragEnterEvent(event)
+
+    def dropEvent(self, event):
+        urls = event.mimeData().urls()
+        if not urls:
+            super().dropEvent(event)
+            return
+            
+        import shutil
+        active_inbox_name = config.get_inbox_name()
+        inbox_path = Path(config.workspace_dir) / active_inbox_name
+        inbox_path.mkdir(parents=True, exist_ok=True)
+        
+        imported_files = []
+        for url in urls:
+            local_file = Path(url.toLocalFile())
+            if local_file.exists() and local_file.is_file():
+                dest_file = inbox_path / local_file.name
+                try:
+                    if local_file.resolve() != dest_file.resolve():
+                        shutil.copy2(local_file, dest_file)
+                        imported_files.append(local_file.name)
+                except Exception as e:
+                    print(f"Error importing drag-dropped file: {e}")
+                    
+        if imported_files:
+            show_toast(self, f"成功导入 {len(imported_files)} 个外部文件至收集箱！", title="导入成功", level="success", duration=3200)
+            self.scan_inbox()
+            # Select the newly imported file
+            for idx in range(self.file_list_widget.count()):
+                item = self.file_list_widget.item(idx)
+                if item.text().endswith(imported_files[-1]):
+                    self.file_list_widget.setCurrentRow(idx)
+                    break
+            self.refresh_other_views_signal.emit()
 
     def init_ui(self):
         main_layout = QHBoxLayout(self)
@@ -97,7 +144,7 @@ class InboxView(QWidget):
         self.placeholder_view = QFrame()
         self.placeholder_view.setObjectName("CardPanel")
         ph_layout = QVBoxLayout(self.placeholder_view)
-        ph_label = QLabel("请从左侧列表选择一个文件进行分类整理\n或者点击“扫描收集箱”刷新")
+        ph_label = QLabel("请将外部文件拖拽投放到此处进行一键导入\n或者从左侧列表选择文件分类整理")
         ph_label.setAlignment(Qt.AlignCenter)
         ph_label.setStyleSheet("color: #94A3B8; font-size: 14px; line-height: 1.6;")
         ph_layout.addWidget(ph_label)
@@ -206,6 +253,8 @@ class InboxView(QWidget):
         self.input_topic.textChanged.connect(self.update_name_preview)
         self.input_version.textChanged.connect(self.update_name_preview)
         self.input_status.currentIndexChanged.connect(self.update_name_preview)
+        
+        self.input_topic.textChanged.connect(self.update_semantic_recommendations)
 
         form_layout.addWidget(self.fields_container)
 
@@ -246,6 +295,28 @@ class InboxView(QWidget):
         subfolder_layout.addWidget(self.input_subfolder)
         form_layout.addLayout(subfolder_layout)
 
+        self.lbl_naming_warning.setWordWrap(True)
+        preview_layout.addWidget(self.lbl_naming_warning)
+
+        form_layout.addWidget(preview_container)
+
+        # Target Directory Choice
+        dir_layout = QHBoxLayout()
+        dir_layout.addWidget(QLabel("分类目标目录:"))
+        self.dir_combo = QComboBox()
+        self.refresh_directory_combo()
+        self.dir_combo.currentIndexChanged.connect(self.update_name_preview)
+        dir_layout.addWidget(self.dir_combo, 1)
+        form_layout.addLayout(dir_layout)
+
+        subfolder_layout = QHBoxLayout()
+        subfolder_layout.addWidget(QLabel("子文件夹 (可选):"))
+        self.input_subfolder = QLineEdit()
+        self.input_subfolder.setPlaceholderText("例如: Math/LinearAlgebra (最多支持4层层级)")
+        self.input_subfolder.textChanged.connect(self.update_name_preview)
+        subfolder_layout.addWidget(self.input_subfolder)
+        form_layout.addLayout(subfolder_layout)
+
         # Tags Checklist (Dynamic Hot Refresh)
         tags_title = QLabel("选择分类标签 (多选)")
         tags_title.setStyleSheet("font-weight: bold; font-size: 12px; margin-top: 5px;")
@@ -258,11 +329,29 @@ class InboxView(QWidget):
         
         self.build_tags_checklist()
 
+        # Smart Semantic Recommendations Section
+        self.recomm_container = QFrame()
+        self.recomm_layout = QHBoxLayout(self.recomm_container)
+        self.recomm_layout.setContentsMargins(0, 4, 0, 4)
+        self.recomm_layout.setSpacing(8)
+        
+        recomm_title = QLabel("智能标签推荐:")
+        recomm_title.setStyleSheet("font-size: 11px; font-weight: bold; color: #94A3B8;")
+        self.recomm_layout.addWidget(recomm_title)
+        
+        self.recomm_chips_layout = QHBoxLayout()
+        self.recomm_chips_layout.setSpacing(6)
+        self.recomm_layout.addLayout(self.recomm_chips_layout)
+        self.recomm_layout.addStretch()
+        
+        form_layout.addWidget(self.recomm_container)
+
         # Description / Notes
         form_layout.addWidget(QLabel("备注 / 摘要 / 文献信息:"))
         self.input_desc = QTextEdit()
         self.input_desc.setFixedHeight(60)
         self.input_desc.setPlaceholderText("可在数据库中进行全文搜索，支持Obsidian笔记大纲...")
+        self.input_desc.textChanged.connect(self.update_semantic_recommendations)
         form_layout.addWidget(self.input_desc)
 
         # Organize Button
@@ -587,8 +676,6 @@ class InboxView(QWidget):
         
         self.selected_file_path = None
         self.scan_inbox()
-        self.refresh_other_views_signal.emit()
-
     def select_combo_by_prefix(self, combo, prefix):
         for i in range(combo.count()):
             if combo.itemText(i).startswith(prefix):
@@ -627,6 +714,7 @@ class InboxView(QWidget):
                 
                 # Delete empty inactive dir
                 if not os.listdir(inactive_dir):
+                    import shutil
                     shutil.rmtree(inactive_dir)
                 else:
                     os.rmdir(inactive_dir)
@@ -637,6 +725,16 @@ class InboxView(QWidget):
                 
             self.scan_inbox()
             self.refresh_other_views_signal.emit()
+
+    def refresh_directory_combo(self):
+        # Block signals to avoid triggering name preview updates while reloading
+        self.dir_combo.blockSignals(True)
+        self.dir_combo.clear()
+        inbox_name = config.get_inbox_name()
+        for d in config.get_standard_dirs():
+            if d != inbox_name:
+                self.dir_combo.addItem(d)
+        self.dir_combo.blockSignals(False)
 
     def build_tags_checklist(self):
         # 1. Clear existing items from self.tags_container_layout
@@ -655,6 +753,7 @@ class InboxView(QWidget):
         for t in config.tags["primary"]:
             cb = QCheckBox(display_tag(t))
             cb.setProperty("tag_value", normalize_tag(t))
+            cb.stateChanged.connect(lambda state: self.update_semantic_recommendations())
             p_layout.addWidget(cb)
             self.primary_checkboxes.append(cb)
         self.tags_container_layout.addWidget(p_frame)
@@ -668,6 +767,7 @@ class InboxView(QWidget):
         for t in config.tags["secondary"]:
             cb = QCheckBox(display_tag(t))
             cb.setProperty("tag_value", normalize_tag(t))
+            cb.stateChanged.connect(lambda state: self.update_semantic_recommendations())
             s_layout.addWidget(cb)
             self.secondary_checkboxes.append(cb)
         self.tags_container_layout.addWidget(s_frame)
@@ -681,16 +781,76 @@ class InboxView(QWidget):
         for t in config.tags["status"]:
             cb = QCheckBox(display_tag(t))
             cb.setProperty("tag_value", normalize_tag(t))
+            cb.stateChanged.connect(lambda state: self.update_semantic_recommendations())
             st_layout.addWidget(cb)
             self.status_checkboxes.append(cb)
         self.tags_container_layout.addWidget(st_frame)
 
-    def refresh_directory_combo(self):
-        # Block signals to avoid triggering name preview updates while reloading
-        self.dir_combo.blockSignals(True)
-        self.dir_combo.clear()
-        inbox_name = config.get_inbox_name()
-        for d in config.get_standard_dirs():
-            if d != inbox_name:
-                self.dir_combo.addItem(d)
-        self.dir_combo.blockSignals(False)
+    def update_semantic_recommendations(self):
+        if not hasattr(self, "recomm_chips_layout"):
+            return
+            
+        # 1. Clear previous chips
+        for i in reversed(range(self.recomm_chips_layout.count())):
+            item = self.recomm_chips_layout.itemAt(i)
+            if item and item.widget():
+                item.widget().setParent(None)
+                
+        # 2. Get recommendations
+        topic = self.input_topic.text().strip()
+        desc = self.input_desc.toPlainText().strip()
+        
+        # If both are empty, fallback to current filename
+        if not topic and not desc and self.selected_file_path:
+            topic = Path(self.selected_file_path).stem
+            
+        try:
+            from semantic_analyzer import SemanticAnalyzer
+            recommended_tags = SemanticAnalyzer.recommend_tags(topic, desc, top_k=3)
+        except Exception as e:
+            print(f"Error loading SemanticAnalyzer: {e}")
+            recommended_tags = []
+            
+        theme = config.theme
+        
+        # 3. Create chips
+        for tag in recommended_tags:
+            # Check if tag is currently active
+            is_checked = False
+            for cb in self.primary_checkboxes + self.secondary_checkboxes + self.status_checkboxes:
+                if cb.property("tag_value") == tag or cb.text() == tag.lstrip("#"):
+                    is_checked = cb.isChecked()
+                    break
+                    
+            btn = QPushButton(tag)
+            btn.setObjectName("SemanticChip")
+            btn.setProperty("tag_value", tag)
+            
+            # Premium glowing chip design
+            if is_checked:
+                # Active glowing state
+                if theme == "dark":
+                    btn.setStyleSheet("background-color: #6366F1; border: 1px solid #6366F1; color: #FFFFFF; font-size: 11px; font-weight: bold; border-radius: 10px; padding: 2px 8px;")
+                elif theme == "zhongguose":
+                    btn.setStyleSheet("background-color: #047857; border: 1px solid #047857; color: #FFFFFF; font-size: 11px; font-weight: bold; border-radius: 10px; padding: 2px 8px;")
+                else:
+                    btn.setStyleSheet("background-color: #4F46E5; border: 1px solid #4F46E5; color: #FFFFFF; font-size: 11px; font-weight: bold; border-radius: 10px; padding: 2px 8px;")
+            else:
+                # Inactive outlined state
+                if theme == "dark":
+                    btn.setStyleSheet("background-color: rgba(99, 102, 241, 0.08); border: 1px dashed rgba(99, 102, 241, 0.4); color: #818CF8; font-size: 11px; border-radius: 10px; padding: 2px 8px;")
+                elif theme == "zhongguose":
+                    btn.setStyleSheet("background-color: rgba(4, 120, 87, 0.08); border: 1px dashed rgba(4, 120, 87, 0.4); color: #059669; font-size: 11px; border-radius: 10px; padding: 2px 8px;")
+                else:
+                    btn.setStyleSheet("background-color: rgba(79, 70, 229, 0.06); border: 1px dashed rgba(79, 70, 229, 0.3); color: #4F46E5; font-size: 11px; border-radius: 10px; padding: 2px 8px;")
+                    
+            btn.setCursor(Qt.PointingHandCursor)
+            # Safe binding
+            btn.clicked.connect(lambda checked=False, t=tag: self.toggle_tag_checkbox(t))
+            self.recomm_chips_layout.addWidget(btn)
+
+    def toggle_tag_checkbox(self, tag_val):
+        for cb in self.primary_checkboxes + self.secondary_checkboxes + self.status_checkboxes:
+            if cb.property("tag_value") == tag_val or cb.text() == tag_val.lstrip("#"):
+                cb.setChecked(not cb.isChecked())
+        self.update_semantic_recommendations()
