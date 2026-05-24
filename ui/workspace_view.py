@@ -3,6 +3,8 @@ import datetime
 import subprocess
 import shutil
 import tempfile
+import zipfile
+import xml.etree.ElementTree as ET
 from difflib import SequenceMatcher
 from html import escape
 from pathlib import Path
@@ -42,6 +44,110 @@ TREE_CATEGORY_COLORS = [
 
 IGNORED_TREE_FILES = {".docman.db", ".config.json"}
 TEXT_SIMILARITY_SUFFIXES = {".md", ".txt", ".py", ".json", ".csv", ".log", ".ini", ".yaml", ".yml"}
+
+PREVIEW_TEXT_EXTENSIONS = {
+    ".md", ".txt", ".py", ".json", ".csv", ".html", ".xml", ".css", ".js", ".ts", 
+    ".sh", ".bat", ".ini", ".cfg", ".conf", ".yaml", ".yml", ".sql", ".log", 
+    ".java", ".cpp", ".c", ".h", ".cs", ".go", ".rs", ".diff", ".patch", ".gradle",
+    ".properties", ".toml", ".gitconfig", ".gitignore"
+}
+
+PREVIEW_IMAGE_EXTENSIONS = {
+    ".png", ".jpg", ".jpeg", ".bmp", ".webp", ".gif", ".ico"
+}
+
+def _read_docx_text(abs_path):
+    try:
+        with zipfile.ZipFile(abs_path) as z:
+            xml_content = z.read('word/document.xml')
+            root = ET.fromstring(xml_content)
+            paragraphs = []
+            for p in root.iter():
+                if p.tag.endswith('}p'):
+                    texts = []
+                    for elem in p.iter():
+                        if elem.tag.endswith('}t') and elem.text:
+                            texts.append(elem.text)
+                    if texts:
+                        paragraphs.append("".join(texts))
+            return "\n".join(paragraphs)[:4000]
+    except Exception as e:
+        return f"无法读取 DOCX 内容: {e}"
+
+def _read_pptx_text(abs_path):
+    try:
+        with zipfile.ZipFile(abs_path) as z:
+            slide_files = [f for f in z.namelist() if f.startswith('ppt/slides/slide') and f.endswith('.xml')]
+            slide_files.sort(key=lambda x: int(''.join(filter(str.isdigit, x)) or 0))
+            
+            slide_texts = []
+            for i, slide_file in enumerate(slide_files[:10]):
+                xml_content = z.read(slide_file)
+                root = ET.fromstring(xml_content)
+                texts = []
+                for elem in root.iter():
+                    if elem.tag.endswith('}t') and elem.text:
+                        texts.append(elem.text)
+                if texts:
+                    slide_texts.append(f"--- [第 {i+1} 页幻灯片] ---\n" + " ".join(texts))
+            return "\n\n".join(slide_texts)[:4000]
+    except Exception as e:
+        return f"无法读取 PPTX 内容: {e}"
+
+def _read_xlsx_text(abs_path):
+    try:
+        with zipfile.ZipFile(abs_path) as z:
+            shared_strings = []
+            try:
+                ss_xml = z.read('xl/sharedStrings.xml')
+                ss_root = ET.fromstring(ss_xml)
+                for elem in ss_root.iter():
+                    if elem.tag.endswith('}t') and elem.text:
+                        shared_strings.append(elem.text)
+            except KeyError:
+                pass
+            
+            sheet_xml = z.read('xl/worksheets/sheet1.xml')
+            sheet_root = ET.fromstring(sheet_xml)
+            
+            rows = {}
+            for row in sheet_root.iter():
+                if row.tag.endswith('}row'):
+                    row_idx = int(row.get('r', 1))
+                    cells = []
+                    for c in row.iter():
+                        if c.tag.endswith('}c'):
+                            val_elem = None
+                            for child in c:
+                                if child.tag.endswith('}v'):
+                                    val_elem = child
+                                    break
+                            
+                            val = ""
+                            if val_elem is not None and val_elem.text:
+                                val = val_elem.text
+                                t_attr = c.get('t')
+                                if t_attr == 's':
+                                    try:
+                                        idx = int(val)
+                                        if 0 <= idx < len(shared_strings):
+                                            val = shared_strings[idx]
+                                    except Exception:
+                                        pass
+                            cells.append(val)
+                    if cells:
+                        rows[row_idx] = cells
+                        
+            lines = []
+            for r_idx in sorted(rows.keys())[:50]:
+                lines.append("\t|\t".join(rows[r_idx]))
+            
+            if not lines:
+                return "Excel 表格无内容或格式较新。"
+            return "\n".join(lines)[:4000]
+    except Exception as e:
+        return f"无法读取 XLSX 内容: {e}"
+
 
 class WorkspaceTableWidget(QTableWidget):
     left_double_clicked = Signal(QModelIndex)
@@ -1528,12 +1634,12 @@ class WorkspaceView(QWidget):
             return
 
         ext = abs_path.suffix.lower()
-        if ext in [".md", ".txt", ".py", ".json", ".csv"]:
+        if ext in PREVIEW_TEXT_EXTENSIONS:
             try:
                 self.preview_text.setPlainText(abs_path.read_text(encoding="utf-8")[:4000])
             except UnicodeDecodeError:
                 self.preview_text.setPlainText(abs_path.read_text(encoding="gbk", errors="ignore")[:4000])
-        elif ext in [".png", ".jpg", ".jpeg"]:
+        elif ext in PREVIEW_IMAGE_EXTENSIONS:
             pixmap = QPixmap(str(abs_path))
             if not pixmap.isNull():
                 self.preview_text.hide()
@@ -1559,7 +1665,14 @@ class WorkspaceView(QWidget):
             except Exception as e:
                 self.preview_text.setPlainText(f"PDF 预览失败: {e}")
         elif ext == ".docx":
-            self.preview_text.setPlainText("DOCX 预览暂以系统打开方式支持。\n点击下方按钮可在默认程序中打开。")
+            text = _read_docx_text(abs_path)
+            self.preview_text.setPlainText(text)
+        elif ext == ".pptx":
+            text = _read_pptx_text(abs_path)
+            self.preview_text.setPlainText(text)
+        elif ext == ".xlsx":
+            text = _read_xlsx_text(abs_path)
+            self.preview_text.setPlainText(text)
         else:
             self.preview_text.setPlainText("暂不支持该格式的内嵌预览，可点击下方按钮在系统中打开。")
 
