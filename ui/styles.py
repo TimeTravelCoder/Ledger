@@ -324,16 +324,16 @@ def get_stylesheet(theme="dark"):
     }}
 
     QPushButton#FilterChip:checked {{
-        background-color: {bg_tertiary};
+        background-color: {accent_color};
         border-color: {accent_color};
-        color: {text_primary};
-        font-weight: 800;
+        color: #FFFFFF;
+        font-weight: bold;
     }}
 
     QPushButton#FilterChip:checked:hover {{
-        background-color: {bg_tertiary};
-        border-color: {accent_color};
-        color: {text_primary};
+        background-color: {border_hover};
+        border-color: {border_hover};
+        color: #FFFFFF;
     }}
 
     QLabel#BatchStatus {{
