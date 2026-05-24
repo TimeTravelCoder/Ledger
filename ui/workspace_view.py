@@ -1750,8 +1750,68 @@ class WorkspaceView(QWidget):
             except Exception as e:
                 self.preview_text.setPlainText(f"PDF 预览失败: {e}")
         elif ext == ".docx":
-            html_content = _read_docx_to_html(abs_path)
-            self.preview_text.setHtml(html_content)
+            pdf_loaded = False
+            
+            if os.name == 'nt':
+                try:
+                    import win32com.client
+                    import pythoncom
+                    
+                    fd, temp_pdf_path = tempfile.mkstemp(suffix=".pdf")
+                    os.close(fd)
+                    try:
+                        os.remove(temp_pdf_path)
+                    except Exception:
+                        pass
+                    
+                    pythoncom.CoInitialize()
+                    word_app = None
+                    doc = None
+                    try:
+                        word_app = win32com.client.DispatchEx("Word.Application")
+                        word_app.Visible = False
+                        word_app.DisplayAlerts = 0
+                        
+                        doc = word_app.Documents.Open(str(abs_path), ReadOnly=True, ConfirmConversions=False)
+                        doc.SaveAs2(temp_pdf_path, FileFormat=17)
+                        
+                        old_doc = self.preview_pdf.document()
+                        if old_doc is not None:
+                            self.preview_pdf.setDocument(None)
+                            old_doc.deleteLater()
+                            
+                        self.preview_pdf_temp_path = temp_pdf_path
+                        self.preview_pdf_doc = QPdfDocument(self)
+                        self.preview_pdf.setDocument(self.preview_pdf_doc)
+                        self.preview_text.hide()
+                        self.preview_pdf_doc.load(temp_pdf_path)
+                        self.preview_pdf.show()
+                        pdf_loaded = True
+                    finally:
+                        if doc is not None:
+                            try:
+                                doc.Close(SaveChanges=0)
+                            except Exception:
+                                pass
+                        if word_app is not None:
+                            try:
+                                word_app.Quit()
+                            except Exception:
+                                pass
+                        pythoncom.CoUninitialize()
+                except Exception as com_err:
+                    print(f"COM Word-to-PDF conversion failed, falling back to HTML: {com_err}")
+                    if not pdf_loaded and 'temp_pdf_path' in locals() and os.path.exists(temp_pdf_path):
+                        try:
+                            os.remove(temp_pdf_path)
+                        except Exception:
+                            pass
+            
+            if not pdf_loaded:
+                html_content = _read_docx_to_html(abs_path)
+                self.preview_text.setHtml(html_content)
+                self.preview_text.show()
+                self.preview_pdf.hide()
         elif ext == ".pptx":
             text = _read_pptx_text(abs_path)
             self.preview_text.setPlainText(text)
