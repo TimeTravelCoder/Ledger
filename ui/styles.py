@@ -71,24 +71,24 @@ def get_stylesheet(theme="dark"):
         color: {text_primary};
         background-color: transparent;
     }}
-    
+
     QMainWindow {{
         background-color: {bg_primary};
     }}
-    
+
     /* Sidebar Styling */
     QFrame#Sidebar {{
         background-color: {bg_secondary};
         border-right: 1px solid {border_color};
     }}
-    
+
     QLabel#SidebarTitle {{
         font-size: 16px;
         font-weight: bold;
         color: {text_primary};
         padding: 10px;
     }}
-    
+
     /* Sidebar Navigation Buttons */
     QPushButton#SidebarBtn {{
         text-align: left;
@@ -100,12 +100,12 @@ def get_stylesheet(theme="dark"):
         margin: 4px 10px;
         icon-size: 18px;
     }}
-    
+
     QPushButton#SidebarBtn:hover {{
         background-color: {bg_tertiary};
         color: {text_primary};
     }}
-    
+
     QPushButton#SidebarBtn:checked {{
         background: {accent_color};
         color: {text_on_accent};
@@ -117,7 +117,7 @@ def get_stylesheet(theme="dark"):
         padding: 12px 10px;
         margin: 5px 12px;
     }}
-    
+
     /* Theme Toggle Button */
     QPushButton#ThemeToggleBtn {{
         background-color: {bg_tertiary};
@@ -142,7 +142,7 @@ def get_stylesheet(theme="dark"):
         background-color: {bg_primary};
         padding: 20px;
     }}
-    
+
     /* Modern Dashboard Card Panel with Glassmorphism */
     QFrame#CardPanel {{
         background-color: {bg_glass};
@@ -226,7 +226,7 @@ def get_stylesheet(theme="dark"):
         border: 1px dashed {border_hover};
         border-radius: 10px;
     }}
-    
+
     QLabel#CardTitle {{
         font-size: 12px;
         font-weight: bold;
@@ -234,7 +234,7 @@ def get_stylesheet(theme="dark"):
         text-transform: uppercase;
         letter-spacing: 1px;
     }}
-    
+
     QLabel#CardValue {{
         font-size: 24px;
         font-weight: bold;
@@ -277,7 +277,7 @@ def get_stylesheet(theme="dark"):
         color: {text_secondary};
         font-size: 11px;
     }}
-    
+
     /* Input Fields (QLineEdit, QTextEdit) */
     QLineEdit, QTextEdit, QLineEdit:read-only, QTextEdit:read-only {{
         background-color: {bg_secondary};
@@ -287,17 +287,17 @@ def get_stylesheet(theme="dark"):
         color: {text_primary};
         selection-background-color: {accent_color};
     }}
-    
+
     QLineEdit:focus, QTextEdit:focus {{
         border: 1px solid {border_hover};
     }}
-    
+
     QLineEdit:disabled, QTextEdit:disabled {{
         background-color: {bg_primary};
         color: {text_disabled};
         border-color: {border_color};
     }}
-    
+
     QLineEdit#ErrorInput {{
         border: 1px solid {error_color};
     }}
@@ -333,7 +333,7 @@ def get_stylesheet(theme="dark"):
         border: 1px solid {accent_color};
         border-radius: 12px;
     }}
-    
+
     QFrame#TagCapsule_primary QLabel {{
         color: {accent_color};
     }}
@@ -343,7 +343,7 @@ def get_stylesheet(theme="dark"):
         border: 1px solid {success_color};
         border-radius: 12px;
     }}
-    
+
     QFrame#TagCapsule_secondary QLabel {{
         color: {success_color};
     }}
@@ -353,7 +353,7 @@ def get_stylesheet(theme="dark"):
         border: 1px solid {warning_color};
         border-radius: 12px;
     }}
-    
+
     QFrame#TagCapsule_status QLabel {{
         color: {warning_color};
     }}
@@ -370,7 +370,7 @@ def get_stylesheet(theme="dark"):
     QPushButton#CapsuleCloseBtn:hover {{
         color: {error_color};
     }}
-    
+
     QLineEdit#TagQuickAddInput {{
         font-size: 12px;
         padding: 6px 10px;
@@ -383,7 +383,7 @@ def get_stylesheet(theme="dark"):
         background-color: {bg_tertiary};
         height: 8px;
     }}
-    
+
     QProgressBar#DiskUsageBar::chunk {{
         background-color: {accent_color};
         border-radius: 4px;
@@ -466,23 +466,23 @@ def get_stylesheet(theme="dark"):
         color: {text_primary};
         font-weight: 600;
     }}
-    
+
     QPushButton:hover {{
         background-color: {bg_tertiary};
         border-color: {accent_color};
     }}
-    
+
     QPushButton:pressed {{
         background: {accent_color};
         color: {text_on_accent};
     }}
-    
+
     QPushButton#PrimaryBtn {{
         background: {accent_color};
         border: none;
         color: {text_on_accent};
     }}
-    
+
     QPushButton#PrimaryBtn:hover {{
         background: {border_hover};
     }}
@@ -530,7 +530,7 @@ def get_stylesheet(theme="dark"):
     QPushButton#SuccessBtn:pressed {{
         background: {success_color};
     }}
-    
+
     QPushButton#DangerBtn {{
         background: {error_color};
         border: none;
@@ -542,13 +542,13 @@ def get_stylesheet(theme="dark"):
     QPushButton#DangerBtn:pressed {{
         background: {error_color};
     }}
-    
+
     /* Checkbox & Radio Buttons */
     QCheckBox {{
         spacing: 8px;
         color: {text_primary};
     }}
-    
+
     QCheckBox::indicator {{
         width: 18px;
         height: 18px;
@@ -556,17 +556,17 @@ def get_stylesheet(theme="dark"):
         border-radius: 4px;
         background-color: {bg_secondary};
     }}
-    
+
     QCheckBox::indicator:hover {{
         border-color: {accent_color};
     }}
-    
+
     QCheckBox::indicator:checked {{
         background-color: {accent_color};
         border-color: {accent_color};
         image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white' width='18px' height='18px'%3E%3Cpath d='M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z'/%3E%3C/svg%3E");
     }}
-    
+
     /* ComboBox (Dropdown) */
     QComboBox {{
         background-color: {bg_secondary};
@@ -576,11 +576,11 @@ def get_stylesheet(theme="dark"):
         color: {text_primary};
         combobox-popup: 0;
     }}
-    
+
     QComboBox:hover {{
         border-color: {accent_color};
     }}
-    
+
     QComboBox::drop-down {{
         subcontrol-origin: padding;
         subcontrol-position: top right;
@@ -589,11 +589,11 @@ def get_stylesheet(theme="dark"):
         border-top-right-radius: 8px;
         border-bottom-right-radius: 8px;
     }}
-    
+
     QComboBox::down-arrow {{
         image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2394A3B8' width='12px' height='12px'%3E%3Cpath d='M7 10l5 5 5-5H7z'/%3E%3C/svg%3E");
     }}
-    
+
     QComboBox QAbstractItemView {{
         background-color: {bg_secondary};
         border: 1px solid {border_color};
@@ -614,7 +614,7 @@ def get_stylesheet(theme="dark"):
         selection-color: #FFFFFF;
         outline: 0;
     }}
-    
+
     QHeaderView::section {{
         background-color: {bg_secondary};
         color: {text_secondary};
@@ -624,12 +624,12 @@ def get_stylesheet(theme="dark"):
         font-weight: bold;
         text-align: left;
     }}
-    
+
     QTableWidget::item {{
         padding: 9px 12px;
         border-bottom: 1px solid {bg_primary};
     }}
-    
+
     QTableWidget::item:hover {{
         background-color: {bg_tertiary};
     }}
@@ -651,16 +651,16 @@ def get_stylesheet(theme="dark"):
         outline: 0;
         padding: 5px;
     }}
-    
+
     QTreeView::item {{
         padding: 6px;
         border-radius: 4px;
     }}
-    
+
     QTreeView::item:hover {{
         background-color: {bg_tertiary};
     }}
-    
+
     QTreeView::item:selected {{
         background-color: {accent_color};
         color: #FFFFFF;
@@ -795,7 +795,7 @@ def get_stylesheet(theme="dark"):
         color: {text_primary};
         border-radius: 10px;
     }}
-    
+
     /* ScrollBar Styling */
     QScrollBar:vertical {{
         border: none;
@@ -803,17 +803,17 @@ def get_stylesheet(theme="dark"):
         width: 10px;
         margin: 0px;
     }}
-    
+
     QScrollBar::handle:vertical {{
         background-color: {border_color};
         min-height: 20px;
         border-radius: 5px;
     }}
-    
+
     QScrollBar::handle:vertical:hover {{
         background-color: {accent_color};
     }}
-    
+
     QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
         border: none;
         background: none;
@@ -825,17 +825,17 @@ def get_stylesheet(theme="dark"):
         height: 10px;
         margin: 0px;
     }}
-    
+
     QScrollBar::handle:horizontal {{
         background-color: {border_color};
         min-width: 20px;
         border-radius: 5px;
     }}
-    
+
     QScrollBar::handle:horizontal:hover {{
         background-color: {accent_color};
     }}
-    
+
     QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {{
         border: none;
         background: none;
@@ -853,23 +853,23 @@ def get_stylesheet(theme="dark"):
         background-color: {accent_color};
         border-radius: 5px;
     }}
-    
+
     /* Dialogs / Message Boxes */
     QDialog {{
         background-color: {bg_primary};
     }}
-    
+
     QMessageBox {{
         background-color: {bg_secondary};
     }}
-    
+
     /* Tab Widget styling if needed */
     QTabWidget::pane {{
         border: 1px solid {border_color};
         border-radius: 8px;
         background-color: {bg_secondary};
     }}
-    
+
     QTabBar::tab {{
         background-color: {bg_primary};
         color: {text_secondary};
@@ -880,11 +880,11 @@ def get_stylesheet(theme="dark"):
         padding: 8px 16px;
         margin-right: 4px;
     }}
-    
+
     QTabBar::tab:hover {{
         background-color: {bg_tertiary};
     }}
-    
+
     QTabBar::tab:selected {{
         background-color: {bg_secondary};
         color: {text_primary};

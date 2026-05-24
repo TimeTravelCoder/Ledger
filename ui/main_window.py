@@ -1,8 +1,8 @@
 import os
 import sys
 from pathlib import Path
-from PySide6.QtWidgets import (QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, 
-                             QPushButton, QStackedWidget, QLabel, QFrame, 
+from PySide6.QtWidgets import (QMainWindow, QWidget, QHBoxLayout, QVBoxLayout,
+                             QPushButton, QStackedWidget, QLabel, QFrame,
                              QMessageBox, QSystemTrayIcon, QStyle)
 from PySide6.QtCore import Qt, QThread, Signal, Slot, QTimer, QSize
 from PySide6.QtGui import QIcon
@@ -44,7 +44,7 @@ class DownloadWatcher(FileSystemEventHandler):
         # Avoid temporary browser download files like .tmp, .crdownload, .part, .download, etc.
         if file_path.suffix.lower() in [".tmp", ".crdownload", ".part", ".download"] or file_path.name.startswith("."):
             return
-            
+
         # Wait until file size stabilizes (i.e. browser is done writing)
         import time
         try:
@@ -71,7 +71,7 @@ class DownloadWatcher(FileSystemEventHandler):
             if now - self.last_triggered[str(file_path)] < 1.2:
                 return
         self.last_triggered[str(file_path)] = now
-        
+
         # Emit signal to main GUI thread
         self.signal.emit(str(file_path))
 
@@ -88,10 +88,10 @@ class WatcherThread(QThread):
         self.observer = Observer()
         self.observer.schedule(event_handler, path=self.path, recursive=False)
         self.observer.start()
-        
+
         # QThread event loop keeps thread alive
         self.exec()
-        
+
         # When thread exits
         if self.observer:
             self.observer.stop()
@@ -113,7 +113,7 @@ class MainWindow(QMainWindow):
         self.sidebar_collapsed = False
         self.init_ui()
         self.setup_downloads_watcher()
-        
+
         # If first run, trigger the welcome popup after rendering
         if self.is_first_run:
             QTimer.singleShot(600, self.show_first_run_welcome)
@@ -122,11 +122,11 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Ledger")
         self.resize(1150, 750)
         self.setMinimumSize(600, 400)  # Allow resizing with reasonable minimum
-        
+
         self.app_icon = self.load_app_icon()
         if not self.app_icon.isNull():
             self.setWindowIcon(self.app_icon)
-        
+
         # Enforce dark or light style sheet based on config
         self.setStyleSheet(get_stylesheet(config.theme))
 
@@ -150,12 +150,12 @@ class MainWindow(QMainWindow):
         # Sidebar Title
         title_container = QHBoxLayout()
         title_container.setContentsMargins(15, 10, 15, 20)
-        
+
         self.sidebar_logo_lbl = QLabel()
         self.sidebar_logo_lbl.setFixedSize(26, 26)
         # Pixmap will be set dynamically in refresh_nav_icons() based on active theme
         title_container.addWidget(self.sidebar_logo_lbl)
-        
+
         self.sidebar_title_lbl = QLabel("Ledger")
         self.sidebar_title_lbl.setObjectName("SidebarTitle")
         title_container.addWidget(self.sidebar_title_lbl, 1)
@@ -182,13 +182,13 @@ class MainWindow(QMainWindow):
         # Theme Switching Toggle at bottom of sidebar
         theme_container = QHBoxLayout()
         theme_container.setContentsMargins(15, 10, 15, 10)
-        
+
         self.btn_theme_toggle = QPushButton()
         self.btn_theme_toggle.setObjectName("ThemeToggleBtn")
         self.update_theme_btn_text()
         self.btn_theme_toggle.clicked.connect(self.toggle_theme)
         theme_container.addWidget(self.btn_theme_toggle, 1)
-        
+
         sidebar_layout.addLayout(theme_container)
 
         main_layout.addWidget(self.sidebar)
@@ -196,7 +196,7 @@ class MainWindow(QMainWindow):
         # 2. Right Content Area (QStackedWidget)
         self.content_stack = QStackedWidget()
         self.content_stack.setObjectName("MainContainer")
-        
+
         # Instantiate subviews
         self.view_dashboard = DashboardView()
         self.view_inbox = InboxView()
@@ -216,14 +216,14 @@ class MainWindow(QMainWindow):
         # 3. Inter-view Signal & Slots connections
         # Let Dashboard trigger switch to Inbox tab
         self.view_dashboard.switch_to_inbox_signal.connect(lambda: self.switch_tab(1))
-        
+
         # Connect refresh triggers to keep views updated in real-time
         self.view_dashboard.refresh_other_views_signal.connect(self.refresh_all_views)
         self.view_inbox.refresh_other_views_signal.connect(self.refresh_all_views)
         self.view_workspace.refresh_other_views_signal.connect(self.refresh_all_views)
         self.view_backup.refresh_other_views_signal.connect(self.refresh_all_views)
         self.view_settings.refresh_other_views_signal.connect(self.refresh_all_views)
-        
+
         # Background download signals
         self.file_downloaded_notifier.connect(self.on_file_downloaded_notification)
 
@@ -264,12 +264,12 @@ class MainWindow(QMainWindow):
         else:
             unselected_color = "#475569"
             logo_color = "#4F46E5"
-            
+
         selected_color = "#FFFFFF"  # Pure white on selected solid backgrounds
-        
+
         # Update logo icon dynamically to match the current theme's accent color
         self.sidebar_logo_lbl.setPixmap(line_icon("logo", color=logo_color, size=26).pixmap(26, 26))
-        
+
         for btn in self.nav_buttons:
             icon_name = btn.property("icon_name")
             if not icon_name:
@@ -283,10 +283,10 @@ class MainWindow(QMainWindow):
         # Sync checked states of sidebar buttons (needed if switched programmatically)
         for i, btn in enumerate(self.nav_buttons):
             btn.setChecked(i == index)
-            
+
         # Dynamically refresh nav icons to swap selected/unselected styles instantly
         self.refresh_nav_icons()
-            
+
         # Special refreshes on tab activation
         if index == 0:
             self.view_dashboard.refresh_data()
@@ -309,10 +309,10 @@ class MainWindow(QMainWindow):
             new_theme = "dark"
         config.theme = new_theme
         config.save()
-        
+
         # Apply style sheet globally
         self.setStyleSheet(get_stylesheet(config.theme))
-        
+
         # Update sub-components if necessary (e.g. refresh UI states)
         self.update_theme_btn_text()
         self.refresh_nav_icons()
@@ -332,7 +332,7 @@ class MainWindow(QMainWindow):
         else:
             self.btn_theme_toggle.setText("切换深色模式")
             theme_icon_color = "#4A6E56"
-            
+
         self.btn_theme_toggle.setIcon(line_icon("theme", color=theme_icon_color, size=16))
         self.btn_theme_toggle.setIconSize(QSize(16, 16))
         theme_text = self.btn_theme_toggle.text()
@@ -387,41 +387,41 @@ class MainWindow(QMainWindow):
     def on_file_downloaded_notification(self, file_path):
         # Show message box or notification
         filename = Path(file_path).name
-        
+
         # Don't show if active workspace directory is inside downloads or something
         inbox_name = config.get_inbox_name()
         reply = QMessageBox.question(self, "检测到新文件下载",
                                      f"系统检测到新下载的文件:\n'{filename}'\n\n"
                                      f"是否立即将其导入 {inbox_name} 收集箱并运行文件规范重命名和标签分类？",
                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
-                                     
+
         if reply == QMessageBox.Yes:
             # Move file to active inbox
             inbox_dir = Path(config.workspace_dir) / inbox_name
             inbox_dir.mkdir(parents=True, exist_ok=True)
-            
+
             dest = inbox_dir / filename
             try:
                 import shutil
                 from file_manager import FileManager
                 FileManager.move_replace(file_path, dest, replace=False)
-                
+
                 self.show_toast(
                     message=f"'{filename}' 已导入收集箱。",
                     title="导入成功",
                     level="success",
                     duration=3200,
                 )
-                
+
                 # Switch tab to Inbox
                 self.switch_tab(1)
-                
+
             except Exception as e:
                 QMessageBox.critical(self, "导入失败", f"无法导入文件:\n{str(e)}")
 
     def setup_tray_icon(self):
         self.tray_icon = QSystemTrayIcon(self)
-        
+
         self.tray_icon.setIcon(line_icon("workspace", "#D1FFFF", 16))
         self.tray_icon.setToolTip("Ledger - 电脑文档规范分类与管理系统")
         self.tray_icon.show()
@@ -485,9 +485,9 @@ class MainWindow(QMainWindow):
         # Clean up background watcher threads on exit
         if self.watcher_thread:
             self.watcher_thread.stop()
-            
+
         # Close SQLite database connection gracefully to prevent locks
         from db import db
         db.close()
-        
+
         event.accept()

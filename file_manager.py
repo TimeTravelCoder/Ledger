@@ -67,17 +67,17 @@ class FileManager:
         """Sanitize and validate that resolved paths never escape the workspace root.
         Rejects absolute paths and parent traversals (..) outside the workspace."""
         ws_root = Path(config.workspace_dir).resolve()
-        
+
         # Check if the path is absolute
         p = Path(rel_path)
         if p.is_absolute():
             resolved = p.resolve()
         else:
             resolved = (ws_root / rel_path).resolve()
-            
+
         if resolved == ws_root or resolved.is_relative_to(ws_root):
             return resolved
-            
+
         raise PermissionError(f"安全边界拦截：路径 '{rel_path}' 尝试越界访问工作空间外部！")
 
     @staticmethod
@@ -118,7 +118,7 @@ class FileManager:
     def init_workspace(custom_ws_dir=None, custom_lang=None):
         """Create standard workspace directory structure."""
         ws_path = custom_ws_dir if custom_ws_dir else config.workspace_dir
-        
+
         # Retrieve folders based on configuration
         if config.use_custom_dirs and config.custom_standard_dirs:
             dirs = config.custom_standard_dirs
@@ -126,7 +126,7 @@ class FileManager:
             lang = custom_lang if custom_lang else config.workspace_lang
             from config import STANDARD_DIRS_CN, STANDARD_DIRS_EN
             dirs = STANDARD_DIRS_CN if lang == "cn" else STANDARD_DIRS_EN
-        
+
         ws_root = Path(ws_path)
         try:
             ws_root.mkdir(parents=True, exist_ok=True)
@@ -148,7 +148,7 @@ class FileManager:
         ws_root = Path(config.workspace_dir)
         proj_folder = config.get_standard_dirs()[3]
         proj_dir = ws_root / proj_folder / project_name
-        
+
         # Guard layer depth check
         depth = FileManager.get_folder_depth(ws_root, proj_dir)
         if depth > 4:
@@ -158,12 +158,12 @@ class FileManager:
             proj_dir.mkdir(parents=True, exist_ok=True)
             for subd in PROJECT_SUBDIRS:
                 (proj_dir / subd).mkdir(exist_ok=True)
-            
+
             readme_path = proj_dir / "README.md"
             if not readme_path.exists():
                 with open(readme_path, "w", encoding="utf-8") as f:
                     f.write(f"# {project_name}\n\n项目创建于: {datetime.datetime.now().strftime('%Y-%m-%d')}\n")
-            
+
             return True, f"项目 '{project_name}' 目录结构创建成功！"
         except Exception as e:
             return False, f"创建项目结构失败: {str(e)}"
@@ -174,10 +174,10 @@ class FileManager:
         try:
             base = Path(base_dir).resolve()
             target = Path(target_path).resolve()
-            
+
             if not target.is_relative_to(base):
                 return 0
-                
+
             # Count parts of relative path
             rel_parts = target.relative_to(base).parts
             return len(rel_parts)
@@ -210,7 +210,7 @@ class FileManager:
             file_path.parent.mkdir(parents=True, exist_ok=True)
             if file_path.exists():
                 return False, f"文件已存在: {relative_path}"
-                
+
             # Handle Office binary formats as 0-byte clean files to prevent corruptions
             ext = file_path.suffix.lower()
             if ext in [".docx", ".xlsx", ".pptx"]:
@@ -219,7 +219,7 @@ class FileManager:
             else:
                 with open(file_path, "w", encoding="utf-8") as f:
                     f.write(content)
-                    
+
             return True, f"文件创建成功: {relative_path}"
         except Exception as e:
             return False, f"创建文件失败: {str(e)}"
@@ -251,7 +251,7 @@ class FileManager:
         desktop = Path(FileManager.get_desktop_path())
         if not desktop.exists():
             return []
-            
+
         file_list = []
         try:
             for entry in os.scandir(desktop):
@@ -267,7 +267,7 @@ class FileManager:
                         })
         except Exception as e:
             print(f"Error scanning desktop: {e}")
-            
+
         return file_list
 
     @staticmethod
@@ -304,11 +304,11 @@ class FileManager:
         """Move non-shortcut files from Desktop to Inbox."""
         desktop_files = FileManager.scan_desktop_files()
         inbox_dir = Path(config.workspace_dir) / config.get_inbox_name()
-        
+
         inbox_dir.mkdir(parents=True, exist_ok=True)
         moved_count = 0
         errors = []
-        
+
         for file_info in desktop_files:
             src = Path(file_info["path"])
             dest = inbox_dir / src.name
@@ -317,7 +317,7 @@ class FileManager:
                 moved_count += 1
             except Exception as e:
                 errors.append(f"无法移动 {src.name}: {str(e)}")
-                
+
         return moved_count, errors
 
     @staticmethod
@@ -326,40 +326,40 @@ class FileManager:
         ws_root = Path(config.workspace_dir)
         if not ws_root.exists():
             return 0
-            
+
         disk_files = set()
         scanned_count = 0
-        
+
         try:
             for root, dirs, files in os.walk(ws_root):
                 # Prune hidden or system directories
                 dirs[:] = [d for d in dirs if not d.startswith(".") and not d.startswith("$")]
-                
+
                 for f in files:
                     # Skip internal config/database files
                     if f.startswith(".") or f in [".docman.db", ".config.json"] or f.startswith("~$"):
                         continue
-                        
+
                     file_abs_path = Path(root) / f
                     rel_path = str(file_abs_path.relative_to(ws_root)).replace("\\", "/")
                     disk_files.add(rel_path)
-                    
+
                     try:
                         stat = file_abs_path.stat()
                         db.sync_file_metadata(rel_path, f, stat.st_size, stat.st_mtime)
                         scanned_count += 1
                     except Exception as e:
                         print(f"Error syncing metadata for {rel_path}: {e}")
-                        
+
             # Clean up db records for files that are no longer on disk
             db_files = [row["filepath"] for row in db.search_files()]
             to_delete = [db_f for db_f in db_files if db_f not in disk_files]
             if to_delete:
                 db.delete_file_records(to_delete)
-                    
+
         except Exception as e:
             print(f"Error scanning workspace: {e}")
-            
+
         return scanned_count
 
     @staticmethod
@@ -371,16 +371,16 @@ class FileManager:
 
         if src.resolve() == dest.resolve():
             return str(dest.relative_to(ws_root)).replace("\\", "/")
-        
+
         # 1. Banned word check
         if FileManager.is_banned_name(new_filename):
             raise ValueError(f"文件名 '{new_filename}' 包含禁用词！(如: {', '.join(BANNED_KEYWORDS)})")
-            
+
         # 2. Depth check
         is_violation, depth = FileManager.check_folder_depth_violation(dest_rel_path)
         if is_violation:
             raise ValueError(f"保存路径的层级深度 ({depth}层) 超过规范最大限制 (4层)！")
-            
+
         # 3. Create parent directories
         dest.parent.mkdir(parents=True, exist_ok=True)
 
@@ -398,55 +398,58 @@ class FileManager:
                     break
                 counter += 1
 
-        # 5. Physical Move
-        shutil.move(str(src), str(dest))
-        
-        # 6. Database Update
-        # Calculate new relative path dynamically based on final dest position
-        new_rel_path = str(dest.relative_to(ws_root)).replace("\\", "/")
-        
-        # Check if source was already in workspace (renaming/moving) or external (importing)
+        # 5. Pre-read source stats inside workspace (if inside and exists) before physical move
         src_is_inside = False
+        src_rel_path = None
+        src_stat = None
         try:
             src_rel = src.relative_to(ws_root)
             src_is_inside = True
             src_rel_path = str(src_rel).replace("\\", "/")
+            if src.exists():
+                src_stat = src.stat()
         except ValueError:
             pass
-            
-        if src_is_inside:
-            if not db.get_file_info(src_rel_path):
-                try:
-                    src_stat = src.stat()
-                    db.sync_file_metadata(src_rel_path, src.name, src_stat.st_size, src_stat.st_mtime)
-                except Exception:
-                    pass
+
+        # 6. Physical Move
+        shutil.move(str(src), str(dest))
+
+        # 7. Database Update
+        # Calculate new relative path dynamically based on final dest position
+        new_rel_path = str(dest.relative_to(ws_root)).replace("\\", "/")
+
+        if src_is_inside and src_rel_path:
+            if not db.get_file_info(src_rel_path) and src_stat is not None:
+                db.sync_file_metadata(src_rel_path, src.name, src_stat.st_size, src_stat.st_mtime)
             db.rename_file_record(src_rel_path, new_rel_path, new_filename)
         else:
             # Sync fresh file metadata
             stat = dest.stat()
             db.sync_file_metadata(new_rel_path, new_filename, stat.st_size, stat.st_mtime)
-            
+
         return new_rel_path
 
     @staticmethod
-    def perform_backup(backup_type):
+    def perform_backup(backup_type, workspace_records=None):
         """Incremental mirroring backup to disk or cloud."""
+        # Ensure database is synchronized with physical disk before backup
+        FileManager.scan_workspace_files()
+
         ws_root = Path(config.workspace_dir)
         if not ws_root.exists():
             return False, "工作空间未创建，无法备份。"
-            
+
         dest_dir = config.backup_disk_dir if backup_type == "disk" else config.backup_cloud_dir
         if not dest_dir:
             return False, f"未配置{'外部硬盘' if backup_type == 'disk' else '云盘'}备份路径！"
-            
+
         dest_path = Path(dest_dir)
-        
+
         # Verify drive root connectivity and enforce loop-backup prevention
         try:
             dest_abs = dest_path.resolve()
             ws_root_abs = ws_root.resolve()
-            
+
             # Enforce Loop Backup Prevention: backup path cannot be equal to or inside the workspace
             if dest_abs == ws_root_abs or dest_abs.is_relative_to(ws_root_abs):
                 return False, "安全拦截：备份目标目录不能设定在工作空间内部，否则会导致循环套娃备份！"
@@ -457,28 +460,29 @@ class FileManager:
                 return False, f"备份存储介质不可用，请确认对应的驱动器或盘符 '{drive_root}' 已正确连接并挂载！"
         except Exception as e:
             return False, f"路径有效性检查失败: {str(e)}"
-            
+
         try:
             dest_path.mkdir(parents=True, exist_ok=True)
         except Exception as e:
             return False, f"无法访问备份目录: {str(e)}"
-            
+
         copied_files_count = 0
         copied_bytes_count = 0
         backed_up_rel_paths = []
-        
-        # Get all records in the db
-        workspace_records = db.search_files()
-        
+
+        # Get all records in the db if not pre-queried
+        if workspace_records is None:
+            workspace_records = db.search_files()
+
         for record in workspace_records:
             rel_path = record["filepath"]
             src_file = ws_root / rel_path
-            
+
             if not src_file.exists():
                 continue
-                
+
             dst_file = dest_path / rel_path
-            
+
             # Check if we need to copy
             need_copy = False
             if not dst_file.exists():
@@ -488,31 +492,31 @@ class FileManager:
                 dst_stat = dst_file.stat()
                 if src_stat.st_size != dst_stat.st_size or abs(src_stat.st_mtime - dst_stat.st_mtime) > 0.1:
                     need_copy = True
-                    
+
             if need_copy:
                 try:
                     dst_file.parent.mkdir(parents=True, exist_ok=True)
                     shutil.copy2(str(src_file), str(dst_file))
-                    
+
                     # Verify integrity via SHA256 checksums
                     src_hash = FileManager.calculate_file_hash(src_file)
                     dst_hash = FileManager.calculate_file_hash(dst_file)
                     if src_hash != dst_hash:
                         raise ValueError(f"文件 {rel_path} 备份完整性校验失败，校验和不一致！")
-                        
+
                     copied_files_count += 1
                     copied_bytes_count += src_file.stat().st_size
                 except Exception as e:
                     print(f"Error copying {rel_path} to backup: {e}")
                     db.add_backup_history(backup_type, copied_files_count, copied_bytes_count, status=f"error: {str(e)}")
                     return False, f"备份中途失败: {str(e)}"
-                    
+
             backed_up_rel_paths.append(rel_path)
-            
+
         # Update SQLite status
         db.mark_as_backed_up(backed_up_rel_paths, backup_type)
         db.add_backup_history(backup_type, copied_files_count, copied_bytes_count, status="success")
-        
+
         size_mb = copied_bytes_count / (1024 * 1024)
         return True, f"备份成功！同步了 {copied_files_count} 个文件 ({size_mb:.2f} MB)。"
 
@@ -532,6 +536,8 @@ class FileManager:
     @staticmethod
     def find_duplicates(mode="filename"):
         """Find duplicate files by filename, size, or hash."""
+        # Ensure database is synchronized with physical disk before duplicate scanning
+        FileManager.scan_workspace_files()
         ws_root = Path(config.workspace_dir)
         records = db.search_files()
         grouped = {}

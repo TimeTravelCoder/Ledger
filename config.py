@@ -37,14 +37,14 @@ def normalize_tags(tags):
     return normalized
 
 STANDARD_DIRS_EN = [
-    "00Inbox", "01Study", "02Research", "03Projects", "04Code", 
-    "05Papers", "06Notes", "07Resources", "08PPT", "09Resume", 
+    "00Inbox", "01Study", "02Research", "03Projects", "04Code",
+    "05Papers", "06Notes", "07Resources", "08PPT", "09Resume",
     "10Archive", "99Temp"
 ]
 
 STANDARD_DIRS_CN = [
-    "00收集箱", "01课程学习", "02课题研究", "03项目管理", "04代码仓库", 
-    "05学术论文", "06知识笔记", "07常用资源", "08演示汇报", "09个人简历", 
+    "00收集箱", "01课程学习", "02课题研究", "03项目管理", "04代码仓库",
+    "05学术论文", "06知识笔记", "07常用资源", "08演示汇报", "09个人简历",
     "10归档区", "99临时缓冲"
 ]
 
@@ -167,11 +167,11 @@ class AppConfig:
             {"name": "图片素材", "keywords": ["image", "photo", "截图"], "extensions": [".png", ".jpg", ".jpeg"], "target_prefix": "07"},
         ]
         self.custom_name_templates = []
-        
+
         # Default workspace setup in the same folder if not set
         default_ws = Path(__file__).parent / "Workspace"
         self.workspace_dir = str(default_ws.resolve())
-        
+
         self.load()
 
     def get_standard_dirs(self):

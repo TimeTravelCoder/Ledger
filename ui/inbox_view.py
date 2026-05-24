@@ -1,9 +1,9 @@
 import datetime
 import os
 from pathlib import Path
-from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QListWidget, 
-                             QListWidgetItem, QLabel, QLineEdit, QComboBox, 
-                             QPushButton, QFrame, QCheckBox, QTextEdit, 
+from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QListWidget,
+                             QListWidgetItem, QLabel, QLineEdit, QComboBox,
+                             QPushButton, QFrame, QCheckBox, QTextEdit,
                              QMessageBox, QStackedWidget, QScrollArea)
 from PySide6.QtCore import Qt, Signal, QSize
 from config import config, normalize_tag, display_tag, NAME_PRESET_BASES
@@ -71,12 +71,12 @@ class InboxView(QWidget):
         if not urls:
             super().dropEvent(event)
             return
-            
+
         import shutil
         active_inbox_name = config.get_inbox_name()
         inbox_path = Path(config.workspace_dir) / active_inbox_name
         inbox_path.mkdir(parents=True, exist_ok=True)
-        
+
         imported_files = []
         for url in urls:
             local_file = Path(url.toLocalFile())
@@ -88,7 +88,7 @@ class InboxView(QWidget):
                         imported_files.append(local_file.name)
                 except Exception as e:
                     print(f"Error importing drag-dropped file: {e}")
-                    
+
         if imported_files:
             show_toast(self, f"成功导入 {len(imported_files)} 个外部文件至收集箱！", title="导入成功", level="success", duration=3200)
             self.scan_inbox()
@@ -139,7 +139,7 @@ class InboxView(QWidget):
 
         # Right Column: Organize Panel
         self.right_stack = QStackedWidget()
-        
+
         # 1. Placeholder View
         self.placeholder_view = QFrame()
         self.placeholder_view.setObjectName("CardPanel")
@@ -156,21 +156,21 @@ class InboxView(QWidget):
         form_outer_layout = QVBoxLayout(self.form_panel)
         form_outer_layout.setContentsMargins(0, 0, 0, 0)
         form_outer_layout.setSpacing(0)
-        
+
         # Add a scroll area inside the form card to prevent layout squeezing
         form_scroll = QScrollArea(self.form_panel)
         form_scroll.setWidgetResizable(True)
         form_scroll.setFrameShape(QFrame.NoFrame)
         form_scroll.setStyleSheet("QScrollArea { background: transparent; }")
-        
+
         form_scroll_content = QWidget()
         form_scroll_content.setObjectName("FormScrollContent")
         form_scroll_content.setStyleSheet("#FormScrollContent { background: transparent; }")
-        
+
         form_layout = QVBoxLayout(form_scroll_content)
         form_layout.setSpacing(12)
         form_layout.setContentsMargins(15, 15, 15, 15)
-        
+
         form_scroll.setWidget(form_scroll_content)
         form_outer_layout.addWidget(form_scroll)
 
@@ -197,7 +197,7 @@ class InboxView(QWidget):
         self.fields_layout = QVBoxLayout(self.fields_container)
         self.fields_layout.setSpacing(8)
         self.fields_layout.setContentsMargins(0, 0, 0, 0)
-        
+
         # Row 1: Date
         self.row_date = QFrame()
         layout_date = QHBoxLayout(self.row_date)
@@ -208,7 +208,7 @@ class InboxView(QWidget):
         layout_date.addWidget(self.lbl_date)
         layout_date.addWidget(self.input_date, 1)
         self.fields_layout.addWidget(self.row_date)
-        
+
         # Row 2: Topic
         self.row_topic = QFrame()
         layout_topic = QHBoxLayout(self.row_topic)
@@ -219,7 +219,7 @@ class InboxView(QWidget):
         layout_topic.addWidget(self.lbl_topic)
         layout_topic.addWidget(self.input_topic, 1)
         self.fields_layout.addWidget(self.row_topic)
-        
+
         # Row 3: Version
         self.row_version = QFrame()
         layout_version = QHBoxLayout(self.row_version)
@@ -230,7 +230,7 @@ class InboxView(QWidget):
         layout_version.addWidget(self.lbl_version)
         layout_version.addWidget(self.input_version, 1)
         self.fields_layout.addWidget(self.row_version)
-        
+
         # Row 4: Status
         self.row_status = QFrame()
         layout_status = QHBoxLayout(self.row_status)
@@ -242,18 +242,18 @@ class InboxView(QWidget):
         layout_status.addWidget(self.lbl_status)
         layout_status.addWidget(self.input_status, 1)
         self.fields_layout.addWidget(self.row_status)
-        
+
         # Row 5: Keep Info Row
         self.row_keep_info = QLabel("保持原有文件名称，只进行物理分类与标签元数据录入。")
         self.row_keep_info.setStyleSheet("color: #94A3B8; font-style: italic; font-size: 11px;")
         self.fields_layout.addWidget(self.row_keep_info)
-        
+
         # Connect stable signals once
         self.input_date.textChanged.connect(self.update_name_preview)
         self.input_topic.textChanged.connect(self.update_name_preview)
         self.input_version.textChanged.connect(self.update_name_preview)
         self.input_status.currentIndexChanged.connect(self.update_name_preview)
-        
+
         self.input_topic.textChanged.connect(self.update_semantic_recommendations)
 
         form_layout.addWidget(self.fields_container)
@@ -263,13 +263,13 @@ class InboxView(QWidget):
         preview_container.setObjectName("RenamePreviewCard")
         preview_layout = QVBoxLayout(preview_container)
         preview_layout.setContentsMargins(10, 10, 10, 10)
-        
+
         preview_layout.addWidget(QLabel("重命名预览 (可直接修改):"))
         self.lbl_name_preview = QLineEdit("name_preview.ext")
         self.lbl_name_preview.setStyleSheet(STYLE_PREVIEW_NORMAL)
         self.lbl_name_preview.textChanged.connect(self.run_live_checks)
         preview_layout.addWidget(self.lbl_name_preview)
-        
+
         # Real-time warnings label
         self.lbl_naming_warning = QLabel("")
         self.lbl_naming_warning.setStyleSheet("color: #EF4444; font-size: 11px; font-weight: bold;")
@@ -326,7 +326,7 @@ class InboxView(QWidget):
         self.tags_container_layout = QHBoxLayout(self.tags_container)
         self.tags_container_layout.setContentsMargins(0, 0, 0, 0)
         form_layout.addWidget(self.tags_container)
-        
+
         self.build_tags_checklist()
 
         # Smart Semantic Recommendations Section
@@ -334,16 +334,16 @@ class InboxView(QWidget):
         self.recomm_layout = QHBoxLayout(self.recomm_container)
         self.recomm_layout.setContentsMargins(0, 4, 0, 4)
         self.recomm_layout.setSpacing(8)
-        
+
         recomm_title = QLabel("智能标签推荐:")
         recomm_title.setStyleSheet("font-size: 11px; font-weight: bold; color: #94A3B8;")
         self.recomm_layout.addWidget(recomm_title)
-        
+
         self.recomm_chips_layout = QHBoxLayout()
         self.recomm_chips_layout.setSpacing(6)
         self.recomm_layout.addLayout(self.recomm_chips_layout)
         self.recomm_layout.addStretch()
-        
+
         form_layout.addWidget(self.recomm_container)
 
         # Description / Notes
@@ -430,9 +430,9 @@ class InboxView(QWidget):
 
     def scan_inbox(self):
         self.file_list_widget.clear()
-        
+
         inbox_dirs = []
-        
+
         if config.use_custom_dirs and config.custom_standard_dirs:
             custom_inbox_name = config.get_inbox_name()
             custom_inbox_path = Path(config.workspace_dir) / custom_inbox_name
@@ -442,22 +442,22 @@ class InboxView(QWidget):
         else:
             inbox_cn = Path(config.workspace_dir) / "00收集箱"
             inbox_en = Path(config.workspace_dir) / "00Inbox"
-            
+
             # Check if both exist to show merge button
             both_exist = inbox_cn.exists() and inbox_en.exists()
             self.btn_merge_inboxes.setVisible(both_exist)
-            
+
             if inbox_cn.exists() and inbox_cn.is_dir():
                 inbox_dirs.append((inbox_cn, "中文"))
             if inbox_en.exists() and inbox_en.is_dir():
                 inbox_dirs.append((inbox_en, "英文"))
-            
+
         # Fallback if none exist
         if not inbox_dirs:
             active_inbox = Path(config.workspace_dir) / config.get_inbox_name()
             active_inbox.mkdir(parents=True, exist_ok=True)
             inbox_dirs.append((active_inbox, "自建" if config.use_custom_dirs else ("中文" if config.workspace_lang == "cn" else "英文")))
-            
+
         has_files = False
         try:
             for inbox_path, label in inbox_dirs:
@@ -473,7 +473,7 @@ class InboxView(QWidget):
                     item.setData(Qt.UserRole, str(inbox_path / f))
                     self.file_list_widget.addItem(item)
                     has_files = True
-            
+
             # Select first item if any
             if has_files and self.file_list_widget.count() > 0:
                 self.file_list_widget.setCurrentRow(0)
@@ -500,10 +500,10 @@ class InboxView(QWidget):
             self.right_stack.setCurrentIndex(0)
             return
         filename = Path(self.selected_file_path).name
-        
+
         self.lbl_curr_name.setText(f"原文件名: {filename}")
         self.right_stack.setCurrentIndex(1)
-        
+
         # Reset fields based on current preset
         self.reset_inputs_for_file(filename)
         self.update_name_preview()
@@ -511,20 +511,20 @@ class InboxView(QWidget):
     def reset_inputs_for_file(self, filename):
         # Default presets
         stem = Path(filename).stem
-        
+
         # 1. Clean spaces/dashes for sanitization helper
         clean_stem = stem.replace(" ", "_").replace("-", "_")
-        
+
         self.input_date.setText(datetime.datetime.now().strftime("%Y-%m-%d"))
         self.input_topic.setText(clean_stem)
         self.input_version.setText("v1")
-        
+
         # Clear tags checkbox
         for cb in self.primary_checkboxes + self.secondary_checkboxes + self.status_checkboxes:
             cb.setChecked(False)
-            
+
         self.input_desc.clear()
-        
+
         # Guess template based on filename
         if "paper" in filename.lower() or "arxiv" in filename.lower():
             self.preset_combo.setCurrentIndex(1)  # Academic paper
@@ -557,7 +557,7 @@ class InboxView(QWidget):
         # Set default text values gracefully without destroying fields
         if show_date:
             self.input_date.setText(self._preset_default_value(key, "date"))
-            
+
         if show_version:
             version_label = "版本:" if key not in ["image"] else "序号:"
             self.lbl_version.setText(version_label)
@@ -597,11 +597,11 @@ class InboxView(QWidget):
     def update_name_preview(self):
         if not self.selected_file_path:
             return
-            
+
         ext = Path(self.selected_file_path).suffix
         preset_idx = self.preset_combo.currentIndex()
         preset = self.preset_defs[preset_idx]
-        
+
         new_stem = self.render_template_name(preset["format"])
 
         new_filename = new_stem + ext
@@ -616,7 +616,7 @@ class InboxView(QWidget):
 
         new_filename = self.lbl_name_preview.text().strip()
         warnings = []
-        
+
         # 1. Banned keywords
         if FileManager.is_banned_name(new_filename):
             warnings.append("违规拦截：文件名中含有'最终版/最新版/新建文档'等禁用词，请修改！")
@@ -630,7 +630,7 @@ class InboxView(QWidget):
         target_dir = self.dir_combo.currentText()
         subf = self.input_subfolder.text().strip().replace("\\", "/")
         dest_rel_path = f"{target_dir}/{subf}/{new_filename}" if subf else f"{target_dir}/{new_filename}"
-        
+
         is_violation, depth = FileManager.check_folder_depth_violation(dest_rel_path)
         if is_violation:
             warnings.append(f"层级警告：当前目录深度为 {depth} 层，已超过规范建议的 ≤4 层！保存后可能会拦截。")
@@ -648,7 +648,7 @@ class InboxView(QWidget):
         new_filename = self.lbl_name_preview.text()
         target_dir = self.dir_combo.currentText()
         subf = self.input_subfolder.text().strip().replace("\\", "/").strip("/")
-        
+
         dest_rel_path = f"{target_dir}/{subf}/{new_filename}" if subf else f"{target_dir}/{new_filename}"
 
         # 1. Verify before move
@@ -673,7 +673,7 @@ class InboxView(QWidget):
 
         # 4. Notify success and refresh lists
         show_toast(self, f"文件已整理归档到 {final_rel_path}。", title="整理完成", level="success", duration=3600)
-        
+
         self.selected_file_path = None
         self.scan_inbox()
     def select_combo_by_prefix(self, combo, prefix):
@@ -685,21 +685,21 @@ class InboxView(QWidget):
     def merge_inboxes(self):
         inbox_cn = Path(config.workspace_dir) / "00收集箱"
         inbox_en = Path(config.workspace_dir) / "00Inbox"
-        
+
         if not (inbox_cn.exists() and inbox_en.exists()):
             return
-            
+
         active_inbox_name = config.get_inbox_name()
         active_dir = Path(config.workspace_dir) / active_inbox_name
         inactive_dir = inbox_en if active_inbox_name == "00收集箱" else inbox_cn
-        
+
         reply = QMessageBox.question(
             self, "确认一键合并收集箱",
             f"系统检测到您的工作空间里有中、英两个收集箱文件夹。\n\n"
             f"是否确认将非激活状态收集箱（{inactive_dir.name}）中的所有待整理文件一键合并迁移至当前激活的收集箱（{active_dir.name}），并删除空的旧文件夹？",
             QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes
         )
-        
+
         if reply == QMessageBox.Yes:
             moved_count = 0
             try:
@@ -711,18 +711,18 @@ class InboxView(QWidget):
                         from file_manager import FileManager
                         FileManager.move_replace(src_file, dest_file, replace=False)
                         moved_count += 1
-                
+
                 # Delete empty inactive dir
                 if not os.listdir(inactive_dir):
                     import shutil
                     shutil.rmtree(inactive_dir)
                 else:
                     os.rmdir(inactive_dir)
-                    
+
                 show_toast(self, f"已合并 {moved_count} 个待整理文件到 {active_dir.name}。", title="合并成功", level="success", duration=3600)
             except Exception as e:
                 QMessageBox.critical(self, "合并失败", f"合并中途发生错误:\n{str(e)}")
-                
+
             self.scan_inbox()
             self.refresh_other_views_signal.emit()
 
@@ -789,30 +789,30 @@ class InboxView(QWidget):
     def update_semantic_recommendations(self):
         if not hasattr(self, "recomm_chips_layout"):
             return
-            
+
         # 1. Clear previous chips
         for i in reversed(range(self.recomm_chips_layout.count())):
             item = self.recomm_chips_layout.itemAt(i)
             if item and item.widget():
                 item.widget().setParent(None)
-                
+
         # 2. Get recommendations
         topic = self.input_topic.text().strip()
         desc = self.input_desc.toPlainText().strip()
-        
+
         # If both are empty, fallback to current filename
         if not topic and not desc and self.selected_file_path:
             topic = Path(self.selected_file_path).stem
-            
+
         try:
             from semantic_analyzer import SemanticAnalyzer
             recommended_tags = SemanticAnalyzer.recommend_tags(topic, desc, top_k=3)
         except Exception as e:
             print(f"Error loading SemanticAnalyzer: {e}")
             recommended_tags = []
-            
+
         theme = config.theme
-        
+
         # 3. Create chips
         for tag in recommended_tags:
             # Check if tag is currently active
@@ -821,11 +821,11 @@ class InboxView(QWidget):
                 if cb.property("tag_value") == tag or cb.text() == tag.lstrip("#"):
                     is_checked = cb.isChecked()
                     break
-                    
+
             btn = QPushButton(tag)
             btn.setObjectName("SemanticChip")
             btn.setProperty("tag_value", tag)
-            
+
             # Premium glowing chip design
             if is_checked:
                 # Active glowing state
@@ -843,7 +843,7 @@ class InboxView(QWidget):
                     btn.setStyleSheet("background-color: rgba(4, 120, 87, 0.08); border: 1px dashed rgba(4, 120, 87, 0.4); color: #059669; font-size: 11px; border-radius: 10px; padding: 2px 8px;")
                 else:
                     btn.setStyleSheet("background-color: rgba(79, 70, 229, 0.06); border: 1px dashed rgba(79, 70, 229, 0.3); color: #4F46E5; font-size: 11px; border-radius: 10px; padding: 2px 8px;")
-                    
+
             btn.setCursor(Qt.PointingHandCursor)
             # Safe binding
             btn.clicked.connect(lambda checked=False, t=tag: self.toggle_tag_checkbox(t))

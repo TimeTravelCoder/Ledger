@@ -57,48 +57,48 @@ class SemanticAnalyzer:
         remark_clean = remark or ""
         combined_text = f"{filename_clean} {remark_clean}".lower()
         combined_terms = cls.extract_terms(combined_text)
-        
+
         # 1. Fetch active tags from the SQLite database to ensure synchronization
         db_tags = []
         try:
             db_tags = [t["name"] for t in db.get_all_tags()]
         except Exception:
             pass
-            
+
         # Default tags if database is empty or inaccessible
         if not db_tags:
             db_tags = ["#财务报表", "#代码项目", "#合同协议", "#设计稿件", "#论文文献", "#个人证件", "#会议纪要", "#学习资料"]
-            
+
         suggestions = []
         for tag in db_tags:
             # Strip hash prefix for analysis
             tag_plain = tag.lstrip("#")
             score = 0.0
-            
+
             # Category 1: Exact tag name substring match (Weight 5.0)
             if tag_plain in combined_text:
                 score += 5.0
-                
+
             # Category 2: Synonym keyword matches (Weight 2.5 per match)
             synonyms = SEMANTIC_SYNONYMS.get(tag_plain, [])
             for syn in synonyms:
                 if syn in combined_text:
                     score += 2.5
-                    
+
             # Category 3: Term-level Jaccard similarity (Weight 1.0)
             tag_terms = cls.extract_terms(tag_plain)
             jaccard = cls.calculate_similarity(combined_terms, tag_terms)
             score += jaccard * 1.5
-            
+
             if score > 0.1:
                 suggestions.append((tag, score))
-                
+
         # Sort by score descending
         suggestions.sort(key=lambda x: x[1], reverse=True)
-        
+
         # Format top K suggestions
         recommended = [tag for tag, _ in suggestions[:top_k]]
-        
+
         # Fallback to standard generic tags if no suggestions score high enough
         if len(recommended) < top_k:
             for tag in db_tags:
@@ -106,5 +106,5 @@ class SemanticAnalyzer:
                     recommended.append(tag)
                 if len(recommended) >= top_k:
                     break
-                    
+
         return recommended[:top_k]

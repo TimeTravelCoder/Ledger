@@ -9,10 +9,10 @@ from difflib import SequenceMatcher
 from html import escape
 from pathlib import Path
 from urllib.parse import quote
-from PySide6.QtWidgets import (QApplication, QWidget, QVBoxLayout, QHBoxLayout, QTreeView, 
-                             QTableWidget, QTableWidgetItem, QHeaderView, 
-                             QLabel, QLineEdit, QPushButton, QFrame, 
-                             QFileSystemModel, QDialog, QCheckBox, QTextEdit, 
+from PySide6.QtWidgets import (QApplication, QWidget, QVBoxLayout, QHBoxLayout, QTreeView,
+                             QTableWidget, QTableWidgetItem, QHeaderView,
+                             QLabel, QLineEdit, QPushButton, QFrame,
+                             QFileSystemModel, QDialog, QCheckBox, QTextEdit,
                              QMessageBox, QComboBox, QGridLayout, QInputDialog,
                              QListWidget, QListWidgetItem, QSplitter, QAbstractItemView,
                              QTabWidget, QSizePolicy, QScrollArea, QMenu)
@@ -46,8 +46,8 @@ IGNORED_TREE_FILES = {".docman.db", ".config.json"}
 TEXT_SIMILARITY_SUFFIXES = {".md", ".txt", ".py", ".json", ".csv", ".log", ".ini", ".yaml", ".yml"}
 
 PREVIEW_TEXT_EXTENSIONS = {
-    ".md", ".txt", ".py", ".json", ".csv", ".html", ".xml", ".css", ".js", ".ts", 
-    ".sh", ".bat", ".ini", ".cfg", ".conf", ".yaml", ".yml", ".sql", ".log", 
+    ".md", ".txt", ".py", ".json", ".csv", ".html", ".xml", ".css", ".js", ".ts",
+    ".sh", ".bat", ".ini", ".cfg", ".conf", ".yaml", ".yml", ".sql", ".log",
     ".java", ".cpp", ".c", ".h", ".cs", ".go", ".rs", ".diff", ".patch", ".gradle",
     ".properties", ".toml", ".gitconfig", ".gitignore"
 }
@@ -61,9 +61,9 @@ def _read_docx_to_html(abs_path):
         with zipfile.ZipFile(abs_path) as z:
             xml_content = z.read('word/document.xml')
             root = ET.fromstring(xml_content)
-            
+
             ns = {'w': 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'}
-            
+
             # Dynamic styles based on theme
             if config.theme == "dark":
                 text_color = "#E2E8F0"
@@ -83,23 +83,23 @@ def _read_docx_to_html(abs_path):
                 tbl_border = "#CBD5E1"
                 td_text = "#0F172A"
                 header_color = "#4F46E5"
-            
+
             html_parts = []
             html_parts.append(f"<div style='font-family: \"Segoe UI\", sans-serif; color: {text_color}; line-height: 1.6;'>")
-            
+
             body = root.find('w:body', ns)
             if body is None:
                 body = root
-                
+
             for child in body:
                 tag_name = child.tag.split('}')[-1]
-                
+
                 if tag_name == 'p':
                     # Parse Paragraph
                     pPr = child.find('w:pPr', ns)
                     pStyle = pPr.find('w:pStyle', ns) if pPr is not None else None
                     style_val = pStyle.get('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}val', '') if pStyle is not None else ''
-                    
+
                     is_heading = False
                     heading_level = 0
                     if 'heading' in style_val.lower():
@@ -109,14 +109,14 @@ def _read_docx_to_html(abs_path):
                         except Exception:
                             is_heading = True
                             heading_level = 1
-                    
+
                     p_html = []
                     for run in child.findall('w:r', ns):
                         rPr = run.find('w:rPr', ns)
                         is_bold = rPr.find('w:b', ns) is not None if rPr is not None else False
                         is_italic = rPr.find('w:i', ns) is not None if rPr is not None else False
                         is_underline = rPr.find('w:u', ns) is not None if rPr is not None else False
-                        
+
                         t = run.find('w:t', ns)
                         if t is not None and t.text:
                             text_content = escape(t.text)
@@ -127,7 +127,7 @@ def _read_docx_to_html(abs_path):
                             if is_underline:
                                 text_content = f"<u>{text_content}</u>"
                             p_html.append(text_content)
-                            
+
                     full_p_text = "".join(p_html)
                     if full_p_text.strip() or full_p_text == "":
                         if is_heading:
@@ -135,7 +135,7 @@ def _read_docx_to_html(abs_path):
                             html_parts.append(f"<h{level} style='color:{header_color}; margin-top: 15px; margin-bottom: 8px;'>{full_p_text}</h{level}>")
                         else:
                             html_parts.append(f"<p style='margin-bottom: 10px;'>{full_p_text}</p>")
-                            
+
                 elif tag_name == 'tbl':
                     html_parts.append(f"<table border='1' style='border-collapse: collapse; width: 100%; border-color: {tbl_border}; margin: 15px 0; background-color: {tbl_bg};'>")
                     for row in child.findall('w:tr', ns):
@@ -153,7 +153,7 @@ def _read_docx_to_html(abs_path):
                             html_parts.append(f"<td style='padding: 8px; border: 1px solid {tbl_border}; color: {td_text};'>{cell_content}</td>")
                         html_parts.append("</tr>")
                     html_parts.append("</table>")
-                    
+
             html_parts.append("</div>")
             return "".join(html_parts)
     except Exception as e:
@@ -164,7 +164,7 @@ def _read_pptx_text(abs_path):
         with zipfile.ZipFile(abs_path) as z:
             slide_files = [f for f in z.namelist() if f.startswith('ppt/slides/slide') and f.endswith('.xml')]
             slide_files.sort(key=lambda x: int(''.join(filter(str.isdigit, x)) or 0))
-            
+
             slide_texts = []
             for i, slide_file in enumerate(slide_files[:10]):
                 xml_content = z.read(slide_file)
@@ -191,10 +191,10 @@ def _read_xlsx_text(abs_path):
                         shared_strings.append(elem.text)
             except KeyError:
                 pass
-            
+
             sheet_xml = z.read('xl/worksheets/sheet1.xml')
             sheet_root = ET.fromstring(sheet_xml)
-            
+
             rows = {}
             for row in sheet_root.iter():
                 if row.tag.endswith('}row'):
@@ -207,7 +207,7 @@ def _read_xlsx_text(abs_path):
                                 if child.tag.endswith('}v'):
                                     val_elem = child
                                     break
-                            
+
                             val = ""
                             if val_elem is not None and val_elem.text:
                                 val = val_elem.text
@@ -222,11 +222,11 @@ def _read_xlsx_text(abs_path):
                             cells.append(val)
                     if cells:
                         rows[row_idx] = cells
-                        
+
             lines = []
             for r_idx in sorted(rows.keys())[:50]:
                 lines.append("\t|\t".join(rows[r_idx]))
-            
+
             if not lines:
                 return "Excel 表格无内容或格式较新。"
             return "\n".join(lines)[:4000]
@@ -373,14 +373,14 @@ class CreateFileDialog(QDialog):
         dir_lbl.setFixedWidth(100)
         dir_layout.addWidget(dir_lbl)
         self.dir_combo = QComboBox()
-        
+
         # Populate all standard directories
         inbox_name = config.get_inbox_name()
         standard_dirs = config.get_standard_dirs()
         for d in standard_dirs:
             if d != inbox_name:
                 self.dir_combo.addItem(d)
-        
+
         # Pre-select based on currently open folder
         if self.current_folder_rel:
             # Find matching index
@@ -414,7 +414,7 @@ class CreateFileDialog(QDialog):
         self.input_filename = QLineEdit()
         self.input_filename.setPlaceholderText("输入文件名")
         name_layout.addWidget(self.input_filename, 1)
-        
+
         # 4. File extension dropdown
         self.ext_combo = QComboBox()
         self.ext_combo.addItems([
@@ -424,7 +424,7 @@ class CreateFileDialog(QDialog):
         ])
         self.ext_combo.currentIndexChanged.connect(self.on_ext_changed)
         name_layout.addWidget(self.ext_combo)
-        
+
         # Hidden custom extension field
         self.input_custom_ext = QLineEdit()
         self.input_custom_ext.setPlaceholderText(".pdf")
@@ -443,7 +443,7 @@ class CreateFileDialog(QDialog):
         # Buttons
         btn_layout = QHBoxLayout()
         btn_layout.addStretch()
-        
+
         self.btn_confirm = QPushButton("确认创建")
         self.btn_confirm.setObjectName("PrimaryBtn")
         self.btn_confirm.setIcon(line_icon("file", "#FFFFFF", 16))
@@ -465,6 +465,23 @@ class CreateFileDialog(QDialog):
         filename = self.input_filename.text().strip()
         if not filename:
             QMessageBox.warning(self, "提示", "文件名不能为空。")
+            return
+
+        # Robust path traversal and absolute path validation
+        if "/" in filename or "\\" in filename or ".." in filename:
+            QMessageBox.warning(self, "非法文件名", "文件名中不能包含路径分隔符 (/, \\) 或目录跳转符 (..)。")
+            return
+
+        # Check for illegal Windows filename characters
+        illegal_chars = ['<', '>', ':', '"', '/', '\\', '|', '?', '*']
+        if any(c in filename for c in illegal_chars):
+            QMessageBox.warning(self, "非法文件名", "文件名中不能包含 Windows 非法字符：< > : \" / \\ | ? *")
+            return
+
+        # Validate subfolder
+        subf_raw = self.input_subfolder.text().strip()
+        if ".." in subf_raw or subf_raw.startswith("/") or subf_raw.startswith("\\") or ":" in subf_raw:
+            QMessageBox.warning(self, "非法子文件夹路径", "子文件夹路径中不能包含目录跳转符 (..)、冒号 (:) 或以路径分隔符开头。")
             return
 
         # Figure out extension
@@ -493,7 +510,7 @@ class CreateFileDialog(QDialog):
         # Target relative path calculation
         target_dir = self.dir_combo.currentText()
         subf = self.input_subfolder.text().strip().replace("\\", "/").strip("/")
-        
+
         dest_rel_path = f"{target_dir}/{subf}/{filename}" if subf else f"{target_dir}/{filename}"
 
         # Check depth violation
@@ -505,7 +522,7 @@ class CreateFileDialog(QDialog):
         # Run creation
         content = self.input_content.toPlainText()
         success, msg = FileManager.create_file(dest_rel_path, content)
-        
+
         if success:
             FileManager.scan_workspace_files()
             show_toast(self, f"文件已创建：{dest_rel_path}", title="创建成功", level="success")
@@ -659,9 +676,21 @@ class CreateFolderDialog(QDialog):
             QMessageBox.warning(self, "提示", "文件夹名称不能为空。")
             return
 
-        # Sanity: no path separators in name itself
-        if "/" in name or "\\" in name:
-            QMessageBox.warning(self, "提示", "文件夹名称中不能包含路径分隔符，请使用“已有子目录路径”字段指定父级路径。")
+        # Sanity: no path separators or traversal in name itself
+        if "/" in name or "\\" in name or ".." in name:
+            QMessageBox.warning(self, "提示", "文件夹名称中不能包含路径分隔符 (/, \\) 或目录跳转符 (..)。请使用“已有子目录路径”字段指定父级路径。")
+            return
+
+        # Check for illegal Windows filename characters
+        illegal_chars = ['<', '>', ':', '"', '/', '\\', '|', '?', '*']
+        if any(c in name for c in illegal_chars):
+            QMessageBox.warning(self, "非法文件夹名称", "文件夹名称中不能包含 Windows 非法字符：< > : \" / \\ | ? *")
+            return
+
+        # Validate subpath
+        subp_raw = self.input_subpath.text().strip()
+        if ".." in subp_raw or subp_raw.startswith("/") or subp_raw.startswith("\\") or ":" in subp_raw:
+            QMessageBox.warning(self, "非法子目录路径", "子目录路径中不能包含目录跳转符 (..)、冒号 (:) 或以路径分隔符开头。")
             return
 
         rel_path = self._build_rel_path()
@@ -686,12 +715,12 @@ class WorkspaceView(QWidget):
         self.duplicate_groups = {}
         self.duplicate_hash_cache = {}
         self.duplicate_similarity_cache = {}
-        
+
         # Debounce timer for search input
         self.search_debounce_timer = QTimer(self)
         self.search_debounce_timer.setSingleShot(True)
         self.search_debounce_timer.timeout.connect(self.run_search)
-        
+
         self.init_ui()
 
     def get_file_type_icon(self, filename):
@@ -887,7 +916,7 @@ class WorkspaceView(QWidget):
         self.tree_container.setObjectName("CardPanel")
         tree_layout = QVBoxLayout(self.tree_container)
         tree_layout.setContentsMargins(10, 8, 10, 8)
-        
+
         tree_title = QLabel("目录结构（建议不超过 4 层）")
         tree_title.setObjectName("CardTitle")
         tree_layout.addWidget(tree_title)
@@ -895,7 +924,7 @@ class WorkspaceView(QWidget):
         # QFileSystemModel to navigate directories
         self.dir_model = WorkspaceDirModel(self)
         self.dir_model.setFilter(QDir.AllDirs | QDir.NoDotAndDotDot) if False else None # Done in setup
-        
+
         self.dir_tree = QTreeView()
         self.dir_tree.setHeaderHidden(True)
         self.dir_tree.setAnimated(True)
@@ -905,7 +934,7 @@ class WorkspaceView(QWidget):
         self.dir_tree.customContextMenuRequested.connect(self.show_tree_context_menu)
         self.dir_tree.clicked.connect(self.on_tree_directory_clicked)
         tree_layout.addWidget(self.dir_tree)
-        
+
         self.main_splitter.addWidget(self.tree_container)
 
         # Center: Files Grid + Batch tools
@@ -1331,18 +1360,18 @@ class WorkspaceView(QWidget):
 
     def setup_models(self):
         ws_path = config.workspace_dir
-        
+
         # File explorer tree setup
         self.dir_model.set_workspace_root(ws_path)
         self.dir_model.setRootPath(ws_path)
         self.dir_model.setFilter(QDir.AllDirs | QDir.NoDotAndDotDot)
-        
+
         # Filter tree columns to show name only
         self.dir_tree.setModel(self.dir_model)
         self.dir_tree.setRootIndex(self.dir_model.index(ws_path))
         self.dir_tree.sortByColumn(0, Qt.AscendingOrder)
         self.dir_tree.expandToDepth(0)
-        
+
         # Hide Size, Type, Date columns from treeview
         for i in range(1, 4):
             self.dir_tree.hideColumn(i)
@@ -1393,11 +1422,11 @@ class WorkspaceView(QWidget):
         self.selected_filter_tags.clear()
         for btn in self.tag_btn_references.values():
             btn.setChecked(False)
-        
+
         # Reset folder selection
         self.set_current_folder("", refresh=False)
         self.dir_tree.clearSelection()
-        
+
         self.run_search()
 
     def set_current_folder(self, rel_path, refresh=True):
@@ -1755,19 +1784,19 @@ class WorkspaceView(QWidget):
                 self.preview_text.setPlainText(f"PDF 预览失败: {e}")
         elif ext == ".docx":
             pdf_loaded = False
-            
+
             if os.name == 'nt':
                 try:
                     import win32com.client
                     import pythoncom
-                    
+
                     fd, temp_pdf_path = tempfile.mkstemp(suffix=".pdf")
                     os.close(fd)
                     try:
                         os.remove(temp_pdf_path)
                     except Exception:
                         pass
-                    
+
                     pythoncom.CoInitialize()
                     word_app = None
                     doc = None
@@ -1775,15 +1804,15 @@ class WorkspaceView(QWidget):
                         word_app = win32com.client.DispatchEx("Word.Application")
                         word_app.Visible = False
                         word_app.DisplayAlerts = 0
-                        
+
                         doc = word_app.Documents.Open(str(abs_path), ReadOnly=True, ConfirmConversions=False)
                         doc.SaveAs2(temp_pdf_path, FileFormat=17)
-                        
+
                         old_doc = self.preview_pdf.document()
                         if old_doc is not None:
                             self.preview_pdf.setDocument(None)
                             old_doc.deleteLater()
-                            
+
                         self.preview_pdf_temp_path = temp_pdf_path
                         self.preview_pdf_doc = QPdfDocument(self)
                         self.preview_pdf.setDocument(self.preview_pdf_doc)
@@ -1810,7 +1839,7 @@ class WorkspaceView(QWidget):
                             os.remove(temp_pdf_path)
                         except Exception:
                             pass
-            
+
             if not pdf_loaded:
                 html_content = _read_docx_to_html(abs_path)
                 self.preview_text.setHtml(html_content)
@@ -1921,7 +1950,7 @@ class WorkspaceView(QWidget):
             fail_preview = "\n".join([f"- {path}: {err}" for path, err in failed[:5]])
             if len(failed) > 5:
                 fail_preview += f"\n... 以及 {len(failed) - 5} 个文件归类失败"
-            QMessageBox.critical(self, "部分文件归类失败", 
+            QMessageBox.critical(self, "部分文件归类失败",
                                  f"已成功归类 {moved} 个文件，但有 {len(failed)} 个文件归类失败：\n{fail_preview}")
         elif moved:
             show_toast(self, f"已成功按规则自动归类 {moved} 个文件。", title="归类完成", level="success")
@@ -2346,7 +2375,7 @@ class WorkspaceView(QWidget):
         self.clear_preview_resources()
         if self.current_preview_rel_path in target_paths:
             self.current_preview_rel_path = ""
-            
+
         self.refresh_tree_view()
         self.run_search()
         self.show_duplicates(activate=False)
@@ -2356,7 +2385,7 @@ class WorkspaceView(QWidget):
             fail_preview = "\n".join([f"- {path}: {err}" for path, err in failed[:5]])
             if len(failed) > 5:
                 fail_preview += f"\n... 以及 {len(failed) - 5} 个文件删除失败"
-            QMessageBox.critical(self, "部分文件删除失败", 
+            QMessageBox.critical(self, "部分文件删除失败",
                                  f"已成功删除 {deleted} 个文件，但有 {len(failed)} 个文件删除失败：\n{fail_preview}")
         else:
             self.set_operation_status(f"已删除 {deleted} 个文件。")
@@ -2378,7 +2407,7 @@ class WorkspaceView(QWidget):
     def on_tree_directory_clicked(self, index: QModelIndex):
         dir_path = self.dir_model.filePath(index)
         ws_root = Path(config.workspace_dir)
-        
+
         if os.path.isdir(dir_path):
             try:
                 rel = Path(dir_path).relative_to(ws_root)
@@ -2388,7 +2417,7 @@ class WorkspaceView(QWidget):
         else:
             # Clicked a file
             self.set_current_folder("", refresh=False)
-            
+
         self.run_search()
 
     def on_search_input_changed(self):
@@ -2396,14 +2425,14 @@ class WorkspaceView(QWidget):
 
     def run_search(self):
         query = self.search_input.text().strip()
-        
+
         idx = self.status_combo.currentIndex()
         status_tag = self.status_combo.itemData(idx) if idx > 0 else None
-        
+
         # Compound search via SQL
         results = db.search_files(
-            query=query, 
-            selected_tags=list(self.selected_filter_tags), 
+            query=query,
+            selected_tags=list(self.selected_filter_tags),
             file_status=status_tag
         )
 
@@ -2421,14 +2450,14 @@ class WorkspaceView(QWidget):
     def populate_table(self, file_records):
         self.files_table.setRowCount(0)
         self.file_empty_label.setVisible(len(file_records) == 0)
-        
+
         for i, r in enumerate(file_records):
             self.files_table.insertRow(i)
-            
+
             # File size readable
             sz = r["file_size"]
             sz_str = format_bytes(sz)
-            
+
             # Backup icons
             disk_ok = "已备份" if r["backup_disk_status"] else "未备份"
             cloud_ok = "已备份" if r["backup_cloud_status"] else "未备份"
@@ -2439,18 +2468,18 @@ class WorkspaceView(QWidget):
                 tags_display = ", ".join(
                     display_tag(tag) for tag in r["tags"].split(",") if tag.strip()
                 )
-            
+
             item_name = QTableWidgetItem(r["filename"])
             item_path = QTableWidgetItem(r["filepath"])
             item_size = QTableWidgetItem(sz_str)
             item_tags = QTableWidgetItem(tags_display)
             item_backup = QTableWidgetItem(backup_str)
             item_backup.setIcon(line_icon("success" if backup_complete else "warning", size=16))
-            
+
             # Store full record path inside name item for double click
             item_name.setData(Qt.UserRole, r["filepath"])
             item_name.setIcon(self.get_file_type_icon(r["filename"]))
-            
+
             item_name.setFlags(item_name.flags() & ~Qt.ItemIsEditable)
             item_path.setFlags(item_path.flags() & ~Qt.ItemIsEditable)
             item_size.setFlags(item_size.flags() & ~Qt.ItemIsEditable)
@@ -2466,14 +2495,14 @@ class WorkspaceView(QWidget):
     def on_table_left_double_clicked(self, index):
         row = index.row()
         rel_path = self.files_table.item(row, 0).data(Qt.UserRole)
-        
+
         if rel_path:
             self.open_rel_path(rel_path)
 
     def on_table_right_double_clicked(self, index):
         row = index.row()
         rel_path = self.files_table.item(row, 0).data(Qt.UserRole)
-        
+
         if rel_path:
             self.open_file_details(rel_path)
 
@@ -2522,7 +2551,7 @@ class FileDetailsDialog(QDialog):
         mtime = datetime.datetime.fromtimestamp(self.info["modified_time"]).strftime("%Y-%m-%d %H:%M:%S")
         meta_layout.addWidget(QLabel("<b>修改时间：</b>"), 3, 0)
         meta_layout.addWidget(QLabel(mtime), 3, 1)
-        
+
         layout.addLayout(meta_layout)
 
         # Tags checklist
@@ -2530,11 +2559,11 @@ class FileDetailsDialog(QDialog):
         tags_scroll = QFrame()
         tags_scroll_layout = QGridLayout(tags_scroll)
         tags_scroll_layout.setContentsMargins(5, 5, 5, 5)
-        
+
         self.checkboxes = []
         all_tags = config.tags["primary"] + config.tags["secondary"] + config.tags["status"]
         current_tags = [t.strip() for t in self.info["tags"].split(",") if t.strip()]
-        
+
         for idx, tag in enumerate(all_tags):
             cb = QCheckBox(display_tag(tag))
             cb.setProperty("tag_value", normalize_tag(tag))
@@ -2542,7 +2571,7 @@ class FileDetailsDialog(QDialog):
                 cb.setChecked(True)
             self.checkboxes.append(cb)
             tags_scroll_layout.addWidget(cb, idx // 3, idx % 3)
-            
+
         layout.addWidget(tags_scroll)
 
         # Description Notes
@@ -2576,7 +2605,7 @@ class FileDetailsDialog(QDialog):
         if not new_name:
             QMessageBox.warning(self, "警告", "文件名不能为空。")
             return
-            
+
         # Check banned keywords
         if FileManager.is_banned_name(new_name):
             QMessageBox.warning(self, "规范拦截", "文件名包含禁用词，请修改。")
@@ -2591,15 +2620,15 @@ class FileDetailsDialog(QDialog):
             if "/" in new_name or "\\" in new_name or ".." in new_name:
                 QMessageBox.warning(self, "警告", "文件名中不能包含路径分隔符、文件夹层级或穿越字符（如 /, \\, ..）。")
                 return
-                
+
             ws_root = Path(config.workspace_dir)
             src_abs = ws_root / self.info["filepath"]
             dest_abs = src_abs.parent / new_name
-            
+
             if dest_abs.exists() and dest_abs.resolve() != src_abs.resolve():
                 QMessageBox.warning(self, "警告", "已存在同名文件，请使用其他名称！")
                 return
-            
+
             try:
                 # Physically rename
                 shutil.move(str(src_abs), str(dest_abs))
@@ -2614,15 +2643,15 @@ class FileDetailsDialog(QDialog):
         # Save metadata
         db.update_file_tags(self.rel_path, selected_tags)
         db.update_file_description(self.rel_path, new_desc)
-        
+
         show_toast(self, "文件属性已保存。", title="保存成功", level="success")
         self.accept()
 
     def delete_file(self):
-        reply = QMessageBox.question(self, "警告 - 物理删除", 
-                                     "此操作将永久从磁盘删除该文件。\n确认要删除吗？", 
+        reply = QMessageBox.question(self, "警告 - 物理删除",
+                                     "此操作将永久从磁盘删除该文件。\n确认要删除吗？",
                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
-        
+
         if reply == QMessageBox.Yes:
             try:
                 FileManager.delete_file(self.rel_path)
@@ -2635,12 +2664,12 @@ class FileDetailsDialog(QDialog):
         if not hasattr(self, "current_preview_rel_path") or not self.current_preview_rel_path:
             QMessageBox.information(self, "提示", "请先在左侧选择一个待预览文件。")
             return
-            
+
         abs_path = self.get_abs_path(self.current_preview_rel_path)
         if not abs_path.exists():
             QMessageBox.warning(self, "警告", "选中的预览文件在磁盘中不存在！")
             return
-            
+
         dialog = PreviewTheaterDialog(str(abs_path), self)
         dialog.exec()
 
@@ -2649,45 +2678,45 @@ class FileDetailsDialog(QDialog):
         archive_dir_name = "10归档区" if "10归档区" in config.get_standard_dirs() else config.get_standard_dirs()[-1]
         archive_dir = Path(config.workspace_dir) / archive_dir_name
         archive_dir.mkdir(parents=True, exist_ok=True)
-        
+
         # Show custom input dialog
         dialog = ZipArchiveDialog(self)
         if dialog.exec() == QDialog.Accepted:
             zip_name = dialog.input_zipname.text().strip()
             password = dialog.input_password.text().strip() if dialog.cb_encrypt.isChecked() else None
-            
+
             if not zip_name.endswith(".zip"):
                 zip_name += ".zip"
-                
+
             dest_zip_path = archive_dir / zip_name
-            
+
             # Warn if zip already exists
             if dest_zip_path.exists():
                 reply = QMessageBox.question(self, "覆盖确认", "归档区已存在同名压缩文件，是否覆盖它？", QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
                 if reply != QMessageBox.Yes:
                     return
-                    
+
             # Gather absolute paths
             abs_paths = [self.get_abs_path(p) for p in rel_paths]
-            
+
             # Start background ZipWorker thread to prevent UI thread blocking
             self.zip_worker = ZipWorker(abs_paths, dest_zip_path, password, self)
             self.zip_worker.finished_signal.connect(self.on_zip_completed)
             self.zip_worker.error_signal.connect(self.on_zip_error)
-            
+
             # Show a beautiful non-modal loading dialog
             self.zip_progress_dialog = QMessageBox(self)
             self.zip_progress_dialog.setWindowTitle("安全保险箱归档中")
             self.zip_progress_dialog.setText("正在打包归档文件并清理数据库，请稍候...")
             self.zip_progress_dialog.setStandardButtons(QMessageBox.NoButton)
-            
+
             self.zip_worker.start()
             self.zip_progress_dialog.show()
 
     def on_zip_completed(self, zip_path_str, files_count):
         if hasattr(self, "zip_progress_dialog"):
             self.zip_progress_dialog.close()
-            
+
         # Register the new zipped archive in database
         try:
             rel_zip = str(Path(zip_path_str).relative_to(Path(config.workspace_dir))).replace("\\", "/")
@@ -2696,9 +2725,9 @@ class FileDetailsDialog(QDialog):
             db.update_file_description(rel_zip, f"安全保险箱打包归档文件。包含 {files_count} 个历史整理文档。")
         except Exception as e:
             print(f"Error registering zip in DB: {e}")
-            
+
         show_toast(self, f"成功归档 {files_count} 个文件并打包存入 {Path(zip_path_str).name}！", title="保险箱归档成功", level="success", duration=3600)
-        
+
         self.clear_preview_resources()
         self.current_preview_rel_path = ""
         self.refresh_tree_view()
@@ -2731,10 +2760,10 @@ class PreviewTheaterDialog(QDialog):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(15, 15, 15, 15)
         layout.setSpacing(10)
-        
+
         theme = config.theme
         is_light = theme in ["light", "zhongguose"]
-        
+
         # Theater Mode is designed to be elegant dark to prevent glare
         self.setStyleSheet("""
             QDialog {
@@ -2759,7 +2788,7 @@ class PreviewTheaterDialog(QDialog):
         self.lbl_title.setStyleSheet("font-size: 16px; font-weight: bold; color: #818CF8;")
         header.addWidget(self.lbl_title)
         header.addStretch()
-        
+
         self.btn_close = QPushButton("退出全屏")
         self.btn_close.setObjectName("DangerBtn")
         self.btn_close.setStyleSheet("background-color: #F43F5E; color: #FFFFFF; font-weight: bold; padding: 6px 12px; border-radius: 6px; border: none;")
@@ -2769,7 +2798,7 @@ class PreviewTheaterDialog(QDialog):
 
         # Content box
         ext = self.abs_path.suffix.lower()
-        
+
         # Text, Markdown, CSV, Log
         if ext in [".txt", ".md", ".py", ".json", ".csv", ".ini", ".log"]:
             txt_edit = QTextEdit()
@@ -2779,7 +2808,7 @@ class PreviewTheaterDialog(QDialog):
             except UnicodeDecodeError:
                 txt_edit.setPlainText(self.abs_path.read_text(encoding="gbk", errors="ignore"))
             layout.addWidget(txt_edit, 1)
-            
+
         # Images
         elif ext in [".png", ".jpg", ".jpeg", ".bmp", ".gif"]:
             lbl_img = QLabel()
@@ -2790,7 +2819,7 @@ class PreviewTheaterDialog(QDialog):
             else:
                 lbl_img.setText("无法加载图片预览。")
             layout.addWidget(lbl_img, 1)
-            
+
         # PDFs
         elif ext == ".pdf":
             try:
@@ -2855,7 +2884,7 @@ class ZipArchiveDialog(QDialog):
         # Bottom buttons
         btn_layout = QHBoxLayout()
         btn_layout.addStretch()
-        
+
         self.btn_confirm = QPushButton("一键归档")
         self.btn_confirm.setObjectName("PrimaryBtn")
         self.btn_confirm.setStyleSheet("background-color: #6366F1; color: #FFFFFF;")
@@ -2886,20 +2915,20 @@ class ZipWorker(QThread):
                 for filepath in self.abs_paths:
                     if filepath.exists() and filepath.is_file():
                         zip_file.write(filepath, arcname=filepath.name)
-            
+
             # Cascade delete source files and database records
             ws_root = Path(config.workspace_dir).resolve()
             for filepath in self.abs_paths:
                 try:
                     if filepath.exists():
                         filepath.unlink()
-                    
+
                     # Update database by deleting the file record
                     rel_path = str(filepath.resolve().relative_to(ws_root)).replace("\\", "/")
                     db.delete_file(rel_path)
                 except Exception as e:
                     print(f"Error cascading clean up: {e}")
-                    
+
             self.finished_signal.emit(str(self.dest_zip_path), len(self.abs_paths))
         except Exception as e:
             self.error_signal.emit(str(e))

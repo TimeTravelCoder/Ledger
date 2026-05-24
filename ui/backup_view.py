@@ -1,9 +1,9 @@
 import os
 import datetime
 from pathlib import Path
-from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, 
-                             QLabel, QLineEdit, QPushButton, QFrame, 
-                             QProgressBar, QTextEdit, QTableWidget, QTableWidgetItem, 
+from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
+                             QLabel, QLineEdit, QPushButton, QFrame,
+                             QProgressBar, QTextEdit, QTableWidget, QTableWidgetItem,
                              QHeaderView, QFileDialog, QMessageBox, QScrollArea)
 from PySide6.QtCore import Qt, Signal, QSize, QThread
 from config import config
@@ -15,13 +15,14 @@ from ui.toast import show_toast
 class BackupWorker(QThread):
     finished_signal = Signal(bool, str)
 
-    def __init__(self, backup_type):
+    def __init__(self, backup_type, workspace_records=None):
         super().__init__()
         self.backup_type = backup_type
+        self.workspace_records = workspace_records
 
     def run(self):
         try:
-            success, msg = FileManager.perform_backup(self.backup_type)
+            success, msg = FileManager.perform_backup(self.backup_type, self.workspace_records)
             self.finished_signal.emit(success, msg)
         except Exception as e:
             self.finished_signal.emit(False, str(e))
@@ -38,21 +39,21 @@ class BackupView(QWidget):
         outer_layout = QVBoxLayout(self)
         outer_layout.setContentsMargins(0, 0, 0, 0)
         outer_layout.setSpacing(0)
-        
+
         # Modern scroll area to handle different window heights beautifully
         scroll = QScrollArea(self)
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QFrame.NoFrame)
         scroll.setStyleSheet("QScrollArea { background: transparent; }")
-        
+
         scroll_content = QWidget()
         scroll_content.setObjectName("ScrollContent")
         scroll_content.setStyleSheet("#ScrollContent { background: transparent; }")
-        
+
         main_layout = QVBoxLayout(scroll_content)
         main_layout.setContentsMargins(24, 24, 24, 24)
         main_layout.setSpacing(15)
-        
+
         scroll.setWidget(scroll_content)
         outer_layout.addWidget(scroll)
 
@@ -201,7 +202,7 @@ class BackupView(QWidget):
                     return
             except Exception:
                 pass
-                
+
             self.input_disk_path.setText(dir_path)
             config.backup_disk_dir = dir_path
             config.save()
@@ -219,7 +220,7 @@ class BackupView(QWidget):
                     return
             except Exception:
                 pass
-                
+
             self.input_cloud_path.setText(dir_path)
             config.backup_cloud_dir = dir_path
             config.save()
@@ -231,7 +232,7 @@ class BackupView(QWidget):
             config.backup_disk_dir = self.input_disk_path.text().strip()
         else:
             config.backup_cloud_dir = self.input_cloud_path.text().strip()
-            
+
         # Enforce Loop Backup Prevention on manual edits
         try:
             ws_root = Path(config.workspace_dir).resolve()
@@ -247,7 +248,7 @@ class BackupView(QWidget):
                     return
         except Exception:
             pass
-        
+
         config.save()
 
         # Disable buttons to prevent double click race conditions
@@ -259,7 +260,9 @@ class BackupView(QWidget):
         self.progress_bar.setValue(10) # 10% on startup
         self.console_output.append(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] 启动增量镜像备份至 '{label}' (后台异步处理中)...")
 
-        self.backup_worker = BackupWorker(backup_type)
+        # Fetch workspace records on the main thread to avoid SQLite cross-thread issues
+        workspace_records = db.search_files()
+        self.backup_worker = BackupWorker(backup_type, workspace_records)
         self.backup_worker.finished_signal.connect(lambda success, msg: self.on_backup_finished(backup_type, success, msg))
         self.backup_worker.start()
 
@@ -286,16 +289,16 @@ class BackupView(QWidget):
     def refresh_history(self):
         history = db.get_backup_history(limit=10)
         self.history_table.setRowCount(0)
-        
+
         for i, h in enumerate(history):
             self.history_table.insertRow(i)
-            
+
             is_disk_backup = h["backup_type"] == "disk"
             b_type = "外部介质" if is_disk_backup else "云盘同步"
-            
+
             sz = h["bytes_copied"]
             sz_str = f"{sz / 1024:.1f} KB" if sz < 1024*1024 else f"{sz / (1024*1024):.1f} MB"
-            
+
             item_time = QTableWidgetItem(h["timestamp"])
             item_type = QTableWidgetItem(b_type)
             item_type.setIcon(line_icon("backup", size=16))
@@ -304,7 +307,7 @@ class BackupView(QWidget):
             is_success = h["status"] == "success"
             item_status = QTableWidgetItem("成功" if is_success else f"失败 ({h['status']})")
             item_status.setIcon(line_icon("success" if is_success else "warning", size=16))
-            
+
             item_time.setFlags(item_time.flags() & ~Qt.ItemIsEditable)
             item_type.setFlags(item_type.flags() & ~Qt.ItemIsEditable)
             item_files.setFlags(item_files.flags() & ~Qt.ItemIsEditable)

@@ -1,8 +1,8 @@
 import os
 import datetime
 from pathlib import Path
-from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, 
-                             QLabel, QPushButton, QTableWidget, QTableWidgetItem, 
+from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
+                             QLabel, QPushButton, QTableWidget, QTableWidgetItem,
                              QHeaderView, QFrame, QMessageBox, QScrollArea, QProgressBar)
 from PySide6.QtCore import Qt, Signal, QSize, QRectF, QPointF, QPoint
 from PySide6.QtGui import QColor, QPainter, QPen, QLinearGradient, QPainterPath
@@ -57,11 +57,11 @@ class TagDistributionChart(QFrame):
             return
         rect = self.rect().adjusted(12, 12, -12, -12)
         row_h = max(20, rect.height() // max(1, len(self.items)))
-        
+
         pos = event.position()
         y = pos.y() - rect.top()
         index = int(y // row_h)
-        
+
         if 0 <= index < len(self.items):
             self.hovered_index = index
             self.tooltip_pos = pos.toPoint()
@@ -80,7 +80,7 @@ class TagDistributionChart(QFrame):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
         rect = self.rect().adjusted(12, 12, -12, -12)
-        
+
         theme = config.theme
         is_light = theme in ["light", "zhongguose"]
         text_muted = QColor("#475569") if is_light else QColor("#85B3CB")
@@ -97,10 +97,10 @@ class TagDistributionChart(QFrame):
             label_rect = QRectF(rect.left(), y, 86, row_h - 6)
             bar_rect = QRectF(rect.left() + 94, y + 5, rect.width() - 142, row_h - 16)
             color = tag_color(tag)
-            
+
             # Calculate theme-adaptive background track color
             track_color = QColor(0, 0, 0, 13) if is_light else QColor(255, 255, 255, 13)
-            
+
             # Theme-aware text lightness adjustments for charts
             if is_light:
                 label_color = color.darker(115)
@@ -108,21 +108,21 @@ class TagDistributionChart(QFrame):
             else:
                 label_color = color.lighter(140)
                 count_color = color.lighter(165)
-                
+
             # Draw label
             painter.setPen(label_color)
             painter.drawText(label_rect, Qt.AlignVCenter | Qt.AlignLeft, name[:10])
-            
+
             # Draw background track
             painter.setPen(Qt.NoPen)
             painter.setBrush(track_color)
             painter.drawRoundedRect(bar_rect, 4, 4)
-            
+
             # Draw active bar
             active = QRectF(bar_rect)
             active_w = max(6, bar_rect.width() * count / max_count)
             active.setWidth(active_w)
-            
+
             # If hovered, draw glowing shadow under active bar
             if index == self.hovered_index:
                 glow = QPainterPath()
@@ -130,7 +130,7 @@ class TagDistributionChart(QFrame):
                 glow_color = QColor(color)
                 glow_color.setAlpha(60)
                 painter.fillPath(glow, glow_color)
-            
+
             # Gradient fill for active bar
             grad = QLinearGradient(active.left(), active.top(), active.right(), active.top())
             color_start = color
@@ -141,10 +141,10 @@ class TagDistributionChart(QFrame):
                 color_end = color_end.darker(110)
             grad.setColorAt(0.0, color_start)
             grad.setColorAt(1.0, color_end)
-            
+
             painter.setBrush(grad)
             painter.drawRoundedRect(active, 4, 4)
-            
+
             # Draw count value
             painter.setPen(count_color)
             painter.drawText(QRectF(bar_rect.right() + 8, y, 42, row_h - 6), Qt.AlignVCenter | Qt.AlignRight, str(count))
@@ -153,37 +153,37 @@ class TagDistributionChart(QFrame):
         if self.hovered_index != -1 and self.hovered_index < len(self.items):
             tag, name, count = self.items[self.hovered_index]
             tooltip_txt = f"标签: {tag}\n文档数量: {count} 个"
-            
+
             # Measure text size
             fm = painter.fontMetrics()
             lines = tooltip_txt.split('\n')
             txt_w = max(fm.horizontalAdvance(line) for line in lines) + 20
             txt_h = len(lines) * fm.height() + 14
-            
+
             # Position tooltip box slightly offset from cursor
             tip_x = self.tooltip_pos.x() + 15
             tip_y = self.tooltip_pos.y() - txt_h - 10
-            
+
             # Prevent going off bounds
             if tip_x + txt_w > self.width():
                 tip_x = self.tooltip_pos.x() - txt_w - 15
             if tip_y < 0:
                 tip_y = self.tooltip_pos.y() + 15
-                
+
             tip_rect = QRectF(tip_x, tip_y, txt_w, txt_h)
-            
+
             # Draw background (translucent dark acrylic / light frost)
             painter.setPen(QPen(QColor(255, 255, 255, 50) if not is_light else QColor(0, 0, 0, 30), 1))
             bg_color = QColor(30, 41, 59, 230) if not is_light else QColor(255, 255, 255, 240)
             painter.setBrush(bg_color)
             painter.drawRoundedRect(tip_rect, 8, 8)
-            
+
             # Draw glowing line tag accent color on the left of tooltip
             accent_bar = QRectF(tip_x + 2, tip_y + 6, 3, txt_h - 12)
             painter.setPen(Qt.NoPen)
             painter.setBrush(tag_color(tag))
             painter.drawRoundedRect(accent_bar, 1.5, 1.5)
-            
+
             # Draw text
             painter.setPen(QColor("#F1F5F9") if not is_light else QColor("#0F172A"))
             text_rect = QRectF(tip_x + 10, tip_y + 7, txt_w - 12, txt_h - 14)
@@ -210,7 +210,7 @@ class WeeklyTrendChart(QFrame):
         rect = self.rect().adjusted(24, 12, -24, -24)
         n = len(self.items)
         segment_w = rect.width() / float(max(1, n - 1))
-        
+
         pos = event.position()
         closest_index = -1
         min_dist = 9999.0
@@ -220,7 +220,7 @@ class WeeklyTrendChart(QFrame):
             if dist < min_dist:
                 min_dist = dist
                 closest_index = i
-                
+
         if closest_index != -1 and min_dist < segment_w * 0.6:
             self.hovered_index = closest_index
             self.tooltip_pos = pos.toPoint()
@@ -238,13 +238,13 @@ class WeeklyTrendChart(QFrame):
         super().paintEvent(event)
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
-        
+
         # Margins: bottom needs some space for text labels (24px)
         rect = self.rect().adjusted(24, 12, -24, -24)
-        
+
         theme = config.theme
         is_light = theme in ["light", "zhongguose"]
-        
+
         # Define high-contrast adaptive color tokens
         if is_light:
             axis_color = QColor("#94A3B8")       # Slate light axis
@@ -263,36 +263,36 @@ class WeeklyTrendChart(QFrame):
             return
 
         max_count = max(count for _, count in self.items) or 1
-        
+
         # Draw bottom axis line
         painter.setPen(QPen(axis_color, 1))
         painter.drawLine(rect.left(), rect.bottom(), rect.right(), rect.bottom())
-        
+
         # Top safe margin of 25px
         usable_h = rect.height() - 25
-        
+
         # Calculate spacing
         n = len(self.items)
         segment_w = rect.width() / float(max(1, n - 1))
-        
+
         # Compute points
         points = []
         for i, (label, count) in enumerate(self.items):
             x = rect.left() + i * segment_w
             y = rect.bottom() - (usable_h * count / max_count)
             points.append(QPointF(x, y))
-            
+
         # Draw horizontal gridlines for premium look
         grid_pen = QPen()
         grid_pen.setColor(QColor(0, 0, 0, 12) if is_light else QColor(255, 255, 255, 12))
         grid_pen.setStyle(Qt.DashLine)
         grid_pen.setWidth(1)
         painter.setPen(grid_pen)
-        
+
         for g in range(1, 4):
             gy = rect.bottom() - (usable_h * (g / 4.0))
             painter.drawLine(rect.left(), gy, rect.right(), gy)
-            
+
         # Draw the spline area gradient (only if we have more than 1 point)
         if len(points) > 1:
             # Reconstruct spline tangents for smooth Catmull-Rom-like Bezier path
@@ -301,22 +301,22 @@ class WeeklyTrendChart(QFrame):
                 prev_pt = points[i-1] if i > 0 else points[0]
                 next_pt = points[i+1] if i < n-1 else points[n-1]
                 tangents.append(QPointF((next_pt.x() - prev_pt.x()) / 6.0, (next_pt.y() - prev_pt.y()) / 6.0))
-                
+
             # Area path for vertical gradient fill
             area_path = QPainterPath()
             area_path.moveTo(points[0].x(), rect.bottom())
             area_path.lineTo(points[0])
-            
+
             for i in range(n - 1):
                 p1 = points[i]
                 p2 = points[i+1]
                 c1 = p1 + tangents[i]
                 c2 = p2 - tangents[i+1]
                 area_path.cubicTo(c1, c2, p2)
-                
+
             area_path.lineTo(points[-1].x(), rect.bottom())
             area_path.closeSubpath()
-            
+
             # Fill gradient
             grad = QLinearGradient(0, rect.top() + 25, 0, rect.bottom())
             color_start = QColor(line_color)
@@ -325,11 +325,11 @@ class WeeklyTrendChart(QFrame):
             color_end.setAlpha(0)
             grad.setColorAt(0.0, color_start)
             grad.setColorAt(1.0, color_end)
-            
+
             painter.setBrush(grad)
             painter.setPen(Qt.NoPen)
             painter.drawPath(area_path)
-            
+
             # Spline line path
             line_path = QPainterPath()
             line_path.moveTo(points[0])
@@ -339,7 +339,7 @@ class WeeklyTrendChart(QFrame):
                 c1 = p1 + tangents[i]
                 c2 = p2 - tangents[i+1]
                 line_path.cubicTo(c1, c2, p2)
-                
+
             painter.setPen(QPen(line_color, 2.5, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
             painter.setBrush(Qt.NoBrush)
             painter.drawPath(line_path)
@@ -348,7 +348,7 @@ class WeeklyTrendChart(QFrame):
             pt = points[0]
             painter.setPen(QPen(line_color, 2.5, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
             painter.drawLine(rect.left(), pt.y(), rect.right(), pt.y())
-            
+
         # Draw high-tech vertical alignment line on hovered index
         if self.hovered_index != -1 and self.hovered_index < len(points):
             cursor_x = points[self.hovered_index].x()
@@ -359,12 +359,12 @@ class WeeklyTrendChart(QFrame):
         # Draw labels and nodes
         for i, (label, count) in enumerate(self.items):
             pt = points[i]
-            
+
             # Bottom date label
             painter.setPen(text_muted)
             painter.setFont(painter.font()) # Reset/maintain font
             painter.drawText(QRectF(pt.x() - 30, rect.bottom() + 4, 60, 18), Qt.AlignCenter, label)
-            
+
             # Value label cleanly above the point
             painter.setPen(text_value)
             # Make the value text bold for contrast
@@ -374,14 +374,14 @@ class WeeklyTrendChart(QFrame):
             painter.drawText(QRectF(pt.x() - 20, pt.y() - 20, 40, 16), Qt.AlignCenter, str(count))
             f.setBold(False)
             painter.setFont(f)
-            
+
             # Glowing node (bigger on hover)
             glow_color = QColor(line_color)
             glow_color.setAlpha(80 if i == self.hovered_index else 40)
             painter.setBrush(glow_color)
             painter.setPen(Qt.NoPen)
             painter.drawEllipse(pt, 10 if i == self.hovered_index else 7, 10 if i == self.hovered_index else 7)
-            
+
             # Inner dot
             painter.setBrush(QColor("#FFFFFF") if is_light else QColor("#1E293B"))
             painter.setPen(QPen(line_color, 1.5))
@@ -391,34 +391,34 @@ class WeeklyTrendChart(QFrame):
         if self.hovered_index != -1 and self.hovered_index < len(self.items):
             label, count = self.items[self.hovered_index]
             tooltip_txt = f"日期: {label}\n整理量: {count} 个"
-            
+
             # Measure text size
             fm = painter.fontMetrics()
             lines = tooltip_txt.split('\n')
             txt_w = max(fm.horizontalAdvance(line) for line in lines) + 20
             txt_h = len(lines) * fm.height() + 14
-            
+
             tip_x = self.tooltip_pos.x() + 15
             tip_y = self.tooltip_pos.y() - txt_h - 10
-            
+
             if tip_x + txt_w > self.width():
                 tip_x = self.tooltip_pos.x() - txt_w - 15
             if tip_y < 0:
                 tip_y = self.tooltip_pos.y() + 15
-                
+
             tip_rect = QRectF(tip_x, tip_y, txt_w, txt_h)
-            
+
             painter.setPen(QPen(QColor(255, 255, 255, 50) if not is_light else QColor(0, 0, 0, 30), 1))
             bg_color = QColor(30, 41, 59, 230) if not is_light else QColor(255, 255, 255, 240)
             painter.setBrush(bg_color)
             painter.drawRoundedRect(tip_rect, 8, 8)
-            
+
             # Accent bar
             accent_bar = QRectF(tip_x + 2, tip_y + 6, 3, txt_h - 12)
             painter.setPen(Qt.NoPen)
             painter.setBrush(line_color)
             painter.drawRoundedRect(accent_bar, 1.5, 1.5)
-            
+
             # Text
             painter.setPen(QColor("#F1F5F9") if not is_light else QColor("#0F172A"))
             text_rect = QRectF(tip_x + 10, tip_y + 7, txt_w - 12, txt_h - 14)
@@ -438,21 +438,21 @@ class DashboardView(QWidget):
         outer_layout = QVBoxLayout(self)
         outer_layout.setContentsMargins(0, 0, 0, 0)
         outer_layout.setSpacing(0)
-        
+
         # Modern scroll area to handle different window heights beautifully
         scroll = QScrollArea(self)
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QFrame.NoFrame)
         scroll.setStyleSheet("QScrollArea { background: transparent; }")
-        
+
         scroll_content = QWidget()
         scroll_content.setObjectName("ScrollContent")
         scroll_content.setStyleSheet("#ScrollContent { background: transparent; }")
-        
+
         main_layout = QVBoxLayout(scroll_content)
         main_layout.setContentsMargins(24, 24, 24, 24)
         main_layout.setSpacing(20)
-        
+
         scroll.setWidget(scroll_content)
         outer_layout.addWidget(scroll)
 
@@ -461,14 +461,14 @@ class DashboardView(QWidget):
         self.title_label = QLabel("控制面板 / Dashboard")
         self.title_label.setStyleSheet("font-size: 20px; font-weight: bold;")
         header_layout.addWidget(self.title_label)
-        
+
         self.refresh_btn = QPushButton("刷新数据")
         self.refresh_btn.setObjectName("PrimaryBtn")
         self.refresh_btn.setIcon(line_icon("refresh", "#FFFFFF", 16))
         self.refresh_btn.setIconSize(QSize(16, 16))
         self.refresh_btn.clicked.connect(self.on_refresh_clicked)
         header_layout.addWidget(self.refresh_btn, 0, Qt.AlignRight)
-        
+
         main_layout.addLayout(header_layout)
 
         # 2. Stats Grid
@@ -543,7 +543,7 @@ class DashboardView(QWidget):
         self.clean_desktop_btn.setIconSize(QSize(16, 16))
         self.clean_desktop_btn.clicked.connect(self.clean_desktop)
         desktop_btn_layout.addWidget(self.clean_desktop_btn)
-        
+
         self.go_to_inbox_btn = QPushButton("前往收集箱")
         self.go_to_inbox_btn.setIcon(line_icon("move", size=16))
         self.go_to_inbox_btn.setIconSize(QSize(16, 16))
@@ -639,7 +639,7 @@ class DashboardView(QWidget):
         self.tag_progress.setValue(0)
         self.tag_progress.setTextVisible(False) # Hide overlapping text
         self.tag_progress.setFixedHeight(6)
-        
+
         tag_indicator_layout.addLayout(tag_header_layout)
         tag_indicator_layout.addWidget(self.tag_progress)
 
@@ -661,7 +661,7 @@ class DashboardView(QWidget):
         self.recent_progress.setValue(0)
         self.recent_progress.setTextVisible(False) # Hide overlapping text
         self.recent_progress.setFixedHeight(6)
-        
+
         recent_indicator_layout.addLayout(recent_header_layout)
         recent_indicator_layout.addWidget(self.recent_progress)
 
@@ -688,11 +688,11 @@ class DashboardView(QWidget):
         card = QFrame()
         card.setObjectName("CardPanel")
         card.setMinimumHeight(100)
-        
+
         layout = QVBoxLayout(card)
         layout.setSpacing(4)
         layout.setContentsMargins(15, 12, 15, 12)
-        
+
         title_row = QHBoxLayout()
         title_row.setContentsMargins(0, 0, 0, 0)
         title_row.setSpacing(8)
@@ -705,20 +705,21 @@ class DashboardView(QWidget):
         title_lbl.setObjectName("CardTitle")
         title_row.addWidget(icon_lbl)
         title_row.addWidget(title_lbl, 1)
-        
+
         val_lbl = QLabel(default_val)
         val_lbl.setObjectName("CardValue")
-        
+
         desc_lbl = QLabel(description)
         desc_lbl.setStyleSheet("color: #94A3B8; font-size: 11px;")
         desc_lbl.setWordWrap(True)
-        
+
         layout.addLayout(title_row)
         layout.addWidget(val_lbl)
         layout.addWidget(desc_lbl)
-        
+
         # Save reference to modify values later
         card.value_label = val_lbl
+        card.desc_label = desc_lbl
         return card
 
     def create_chart_card(self, title, chart_widget):
@@ -750,7 +751,7 @@ class DashboardView(QWidget):
         inbox_name = config.get_inbox_name()
         inbox_files = db.search_files(query=inbox_name + "/")
         inbox_count = len(inbox_files)
-        
+
         # If both inboxes exist, combine their counts
         other_inbox = "00Inbox" if inbox_name == "00收集箱" else "00收集箱"
         other_path = Path(config.workspace_dir) / other_inbox
@@ -858,13 +859,13 @@ class DashboardView(QWidget):
         # 4. Check 3-2-1 Backup health
         has_disk = bool(config.backup_disk_dir)
         has_cloud = bool(config.backup_cloud_dir)
-        
+
         score = 33
         if has_disk: score += 33
         if has_cloud: score += 34
-        
+
         self.backup_score_lbl.setText(f"备份健康度: {score}/100")
-        
+
         if score == 100:
             self.backup_score_lbl.setStyleSheet("color: #10B981; font-size: 16px; font-weight: bold;")
         elif score >= 66:
@@ -908,24 +909,24 @@ class DashboardView(QWidget):
     def populate_recent_table(self, all_files):
         # Sort files by modified time descending
         sorted_files = sorted(all_files, key=lambda x: x["modified_time"], reverse=True)[:5]
-        
+
         self.recent_table.setRowCount(0)
         for i, f in enumerate(sorted_files):
             self.recent_table.insertRow(i)
-            
+
             # File size readable
             sz = f["file_size"]
             sz_str = f"{sz / 1024:.1f} KB" if sz < 1024*1024 else f"{sz / (1024*1024):.1f} MB"
-            
+
             # Date readable
             mtime = datetime.datetime.fromtimestamp(f["modified_time"]).strftime("%Y-%m-%d %H:%M:%S")
-            
+
             item_name = QTableWidgetItem(f["filename"])
             item_name.setIcon(file_type_icon(f["filename"]))
             item_path = QTableWidgetItem(f["filepath"])
             item_size = QTableWidgetItem(sz_str)
             item_mtime = QTableWidgetItem(mtime)
-            
+
             # Read-only
             item_name.setFlags(item_name.flags() & ~Qt.ItemIsEditable)
             item_path.setFlags(item_path.flags() & ~Qt.ItemIsEditable)
@@ -962,10 +963,10 @@ class DashboardView(QWidget):
             )
             return
 
-        reply = QMessageBox.question(self, "确认清理", 
+        reply = QMessageBox.question(self, "确认清理",
                                      f"是否确认将桌面上所有的普通文件移动到 {config.get_inbox_name()} 收集箱进行统一整理？\n(桌面快捷方式 .lnk 文件将被忽略)",
                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
-        
+
         if reply == QMessageBox.Yes:
             moved, errors = FileManager.clean_desktop_to_inbox()
             if errors:
@@ -975,14 +976,14 @@ class DashboardView(QWidget):
                 QMessageBox.warning(self, "清理完成 (部分失败)", f"已成功移动 {moved} 个文件，但部分文件移动失败:\n{error_msg}")
             else:
                 show_toast(self, f"桌面清理完成，已移动 {moved} 个文件。", title="清理完成", level="success", duration=3600)
-            
+
             self.refresh_data()
             self.refresh_other_views_signal.emit()
 
     def on_refresh_clicked(self):
         self.refresh_data()
         self.refresh_other_views_signal.emit()
-        
+
         # Get count and size for message feedback
         all_files = db.search_files()
         total_count = len(all_files)
@@ -991,7 +992,7 @@ class DashboardView(QWidget):
             size_str = f"{total_bytes / (1024*1024*1024):.2f} GB"
         else:
             size_str = f"{total_bytes / (1024*1024):.2f} MB"
-            
+
         QMessageBox.information(
             self, "全量同步成功",
             f"主控制面板与本地磁盘已全量同步自检完成！\n\n"
