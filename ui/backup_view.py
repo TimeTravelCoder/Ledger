@@ -10,6 +10,7 @@ from config import config
 from db import db
 from file_manager import FileManager
 from ui.icon_utils import decorate_table, line_icon
+from ui.toast import show_toast
 
 class BackupView(QWidget):
     refresh_other_views_signal = Signal()
@@ -209,7 +210,7 @@ class BackupView(QWidget):
 
         if success:
             self.console_output.append(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] 备份完成！{msg}")
-            QMessageBox.information(self, "备份成功", f"{label}增量备份已顺利运行完成！\n{msg}")
+            show_toast(self, f"{label}增量备份已完成。", title="备份成功", level="success", duration=3600)
         else:
             self.console_output.append(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] 备份失败！原因: {msg}")
             QMessageBox.critical(self, "备份失败", f"备份未成功运行！\n原因: {msg}")

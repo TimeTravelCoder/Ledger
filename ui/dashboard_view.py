@@ -10,9 +10,32 @@ from config import config
 from db import db
 from file_manager import FileManager
 from ui.icon_utils import decorate_table, file_type_icon, line_icon
+from ui.toast import show_toast
 
 def display_name(tag):
     return tag[1:] if str(tag).startswith("#") else str(tag)
+
+
+TAG_COLOR_PALETTE = [
+    "#4A6FA6",
+    "#1BA784",
+    "#F59E0B",
+    "#EF4444",
+    "#8B5CF6",
+    "#0EA5E9",
+    "#14B8A6",
+    "#EC4899",
+    "#22C55E",
+    "#F97316",
+]
+
+
+def tag_color(tag):
+    value = str(tag or "").strip().lstrip("#")
+    if not value:
+        return QColor("#85B3CB")
+    index = sum(ord(ch) for ch in value.lower()) % len(TAG_COLOR_PALETTE)
+    return QColor(TAG_COLOR_PALETTE[index])
 
 
 class TagDistributionChart(QFrame):
@@ -22,7 +45,7 @@ class TagDistributionChart(QFrame):
         self.setMinimumHeight(170)
 
     def set_data(self, items):
-        self.items = [(display_name(tag), count) for tag, count in items[:6]]
+        self.items = [(tag, display_name(tag), count) for tag, count in items[:6]]
         self.update()
 
     def paintEvent(self, event):
@@ -35,22 +58,29 @@ class TagDistributionChart(QFrame):
             painter.drawText(rect, Qt.AlignCenter, "暂无标签数据")
             return
 
-        max_count = max(count for _, count in self.items) or 1
+        max_count = max(count for _, _, count in self.items) or 1
         row_h = max(20, rect.height() // max(1, len(self.items)))
-        for index, (name, count) in enumerate(self.items):
+        for index, (tag, name, count) in enumerate(self.items):
             y = rect.top() + index * row_h + 3
             label_rect = QRectF(rect.left(), y, 86, row_h - 6)
             bar_rect = QRectF(rect.left() + 94, y + 4, rect.width() - 142, row_h - 14)
-            painter.setPen(QColor("#AAD9F2"))
+            color = tag_color(tag)
+            muted = QColor(color)
+            muted.setAlpha(72)
+            label_color = QColor(color)
+            label_color = label_color.lighter(140)
+            count_color = QColor(color)
+            count_color = count_color.lighter(165)
+            painter.setPen(label_color)
             painter.drawText(label_rect, Qt.AlignVCenter | Qt.AlignLeft, name[:10])
             painter.setPen(Qt.NoPen)
-            painter.setBrush(QColor("#2E5A6F"))
+            painter.setBrush(muted)
             painter.drawRoundedRect(bar_rect, 6, 6)
             active = QRectF(bar_rect)
             active.setWidth(max(6, bar_rect.width() * count / max_count))
-            painter.setBrush(QColor("#85B3CB"))
+            painter.setBrush(color)
             painter.drawRoundedRect(active, 6, 6)
-            painter.setPen(QColor("#D1FFFF"))
+            painter.setPen(count_color)
             painter.drawText(QRectF(bar_rect.right() + 8, y, 42, row_h - 6), Qt.AlignVCenter | Qt.AlignRight, str(count))
 
 
@@ -550,7 +580,7 @@ class DashboardView(QWidget):
                     error_msg += f"\n及其他 {len(errors) - 5} 个文件..."
                 QMessageBox.warning(self, "清理完成 (部分失败)", f"已成功移动 {moved} 个文件，但部分文件移动失败:\n{error_msg}")
             else:
-                QMessageBox.information(self, "清理完成", f"桌面清理成功！已成功移动 {moved} 个文件到收集空间。")
+                show_toast(self, f"桌面清理完成，已移动 {moved} 个文件。", title="清理完成", level="success", duration=3600)
             
             self.refresh_data()
             self.refresh_other_views_signal.emit()
@@ -590,12 +620,32 @@ class DashboardView(QWidget):
             row_layout = QHBoxLayout(row)
             row_layout.setContentsMargins(0, 0, 0, 0)
             row_layout.setSpacing(8)
+            color = tag_color(tag)
+            soft = QColor(color)
+            soft.setAlpha(52)
             name = QLabel(display_name(tag))
             name.setFixedWidth(90)
+            name.setStyleSheet(f"color: {color.name()}; font-weight: 700;")
             bar = QProgressBar()
             bar.setRange(0, total)
             bar.setValue(count)
             bar.setFormat(str(count))
+            bar.setStyleSheet(
+                f"""
+                QProgressBar {{
+                    border: 1px solid {color.name()};
+                    border-radius: 6px;
+                    text-align: center;
+                    background: {soft.name(QColor.HexArgb)};
+                    color: {color.lighter(165).name()};
+                    height: 16px;
+                }}
+                QProgressBar::chunk {{
+                    background-color: {color.name()};
+                    border-radius: 5px;
+                }}
+                """
+            )
             row_layout.addWidget(name)
             row_layout.addWidget(bar, 1)
             self.bar_container_layout.addWidget(row)

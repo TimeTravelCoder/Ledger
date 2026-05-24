@@ -7,6 +7,7 @@ from PySide6.QtWidgets import QAbstractItemView, QListWidgetItem
 
 _FILE_ICON_CACHE = {}
 _LINE_ICON_CACHE = {}
+_WORKSPACE_FOLDER_ICON_CACHE = {}
 
 
 _TYPE_META = {
@@ -205,6 +206,47 @@ def line_icon(name, color="#AAD9F2", size=24):
     painter.end()
     icon = QIcon(pixmap)
     _LINE_ICON_CACHE[cache_key] = icon
+    return icon
+
+
+def workspace_folder_icon(color="#4A6FA6", warning=False, size=20):
+    cache_key = (color, warning, size)
+    if cache_key in _WORKSPACE_FOLDER_ICON_CACHE:
+        return _WORKSPACE_FOLDER_ICON_CACHE[cache_key]
+
+    pixmap = QPixmap(size, size)
+    pixmap.fill(Qt.transparent)
+    painter = QPainter(pixmap)
+    painter.setRenderHint(QPainter.Antialiasing)
+    scale = size / 20
+
+    def x(value):
+        return value * scale
+
+    base_color = QColor(color)
+    fill_color = QColor(color)
+    fill_color.setAlpha(70)
+    painter.setPen(QPen(base_color, max(1.2, 1.6 * scale), Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
+    painter.setBrush(fill_color)
+    painter.drawRoundedRect(QRectF(x(2), x(6), x(16), x(11)), x(2.4), x(2.4))
+    painter.drawRoundedRect(QRectF(x(3), x(4), x(7), x(4.8)), x(1.8), x(1.8))
+
+    accent = QColor(color)
+    accent.setAlpha(120)
+    painter.fillRect(QRectF(x(4), x(9), x(12), x(1.8)), accent)
+
+    if warning:
+        warning_color = QColor("#F59E0B")
+        painter.setPen(Qt.NoPen)
+        painter.setBrush(warning_color)
+        painter.drawEllipse(QRectF(x(12.3), x(11.2), x(5), x(5)))
+        painter.setPen(QPen(QColor("#FFFFFF"), max(1.0, 1.2 * scale), Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
+        painter.drawLine(x(14.8), x(12.7), x(14.8), x(14.8))
+        painter.drawPoint(x(14.8), x(16))
+
+    painter.end()
+    icon = QIcon(pixmap)
+    _WORKSPACE_FOLDER_ICON_CACHE[cache_key] = icon
     return icon
 
 

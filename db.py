@@ -3,6 +3,47 @@ import datetime
 from pathlib import Path
 from config import config
 
+def get_pinyin_char(char):
+    if not '\u4e00' <= char <= '\u9fa5':
+        return char.lower()
+    
+    try:
+        gb_bytes = char.encode('gb2312')
+        if len(gb_bytes) == 2:
+            code = gb_bytes[0] * 256 + gb_bytes[1]
+            if 45217 <= code <= 45252: return 'a'
+            if 45253 <= code <= 45760: return 'b'
+            if 45761 <= code <= 46317: return 'c'
+            if 46318 <= code <= 46825: return 'd'
+            if 46826 <= code <= 47009: return 'e'
+            if 47010 <= code <= 47296: return 'f'
+            if 47297 <= code <= 47613: return 'g'
+            if 47614 <= code <= 48118: return 'h'
+            if 48119 <= code <= 49061: return 'j'
+            if 49062 <= code <= 49323: return 'k'
+            if 49324 <= code <= 49895: return 'l'
+            if 49896 <= code <= 50370: return 'm'
+            if 50371 <= code <= 50613: return 'n'
+            if 50614 <= code <= 50621: return 'o'
+            if 50622 <= code <= 50905: return 'p'
+            if 50906 <= code <= 51386: return 'q'
+            if 51387 <= code <= 51445: return 'r'
+            if 51446 <= code <= 52217: return 's'
+            if 52218 <= code <= 52697: return 't'
+            if 52698 <= code <= 52979: return 'w'
+            if 52980 <= code <= 53688: return 'x'
+            if 53689 <= code <= 54480: return 'y'
+            if 54481 <= code <= 55289: return 'z'
+    except Exception:
+        pass
+    return char.lower()
+
+def get_pinyin_initials(text):
+    if not text:
+        return ""
+    return "".join(get_pinyin_char(c) for c in text)
+
+
 class DatabaseManager:
     def __init__(self):
         self._conn = None
@@ -134,33 +175,116 @@ class DatabaseManager:
         return dict(row) if row else None
 
     def search_files(self, query=None, selected_tags=None, file_status=None):
-        """Advanced composite search by name/tags/status."""
+        """Advanced composite search by name/tags/status with relevance ranking."""
         conn = self.get_conn()
         cursor = conn.cursor()
         
-        sql = "SELECT * FROM files WHERE 1=1"
-        params = []
-        
-        if query:
-            sql += " AND (filename LIKE ? OR filepath LIKE ? OR description LIKE ?)"
-            q = f"%{query}%"
-            params.extend([q, q, q])
-            
-        if selected_tags:
-            # We want to match all selected tags
-            for tag in selected_tags:
-                sql += " AND tags LIKE ?"
-                params.append(f"%{tag}%")
-
-        if file_status:
-            # e.g., matching a status tag like #TODO, #Doing, #Done
-            sql += " AND tags LIKE ?"
-            params.append(f"%{file_status}%")
-
-        sql += " ORDER BY filepath ASC"
-        cursor.execute(sql, params)
+        # Fetch all records to do advanced multi-keyword and pinyin matching in Python
+        cursor.execute("SELECT * FROM files")
         rows = cursor.fetchall()
-        return [dict(row) for row in rows]
+        records = [dict(row) for row in rows]
+        
+        # 1. Precise Tag Filtering (exact match, no substring clashes)
+        if selected_tags:
+            normalized_selected = {t.strip().lower().lstrip("#") for t in selected_tags if t.strip()}
+            filtered = []
+            for r in records:
+                r_tags = r.get("tags") or ""
+                file_tags = {t.strip().lower().lstrip("#") for t in r_tags.split(",") if t.strip()}
+                if normalized_selected.issubset(file_tags):
+                    filtered.append(r)
+            records = filtered
+            
+        # 2. Precise Status Filtering (exact match, no substring clashes)
+        if file_status:
+            normalized_status = file_status.strip().lower().lstrip("#")
+            filtered = []
+            for r in records:
+                r_tags = r.get("tags") or ""
+                file_tags = {t.strip().lower().lstrip("#") for t in r_tags.split(",") if t.strip()}
+                if normalized_status in file_tags:
+                    filtered.append(r)
+            records = filtered
+            
+        # 3. Multi-keyword and Pinyin text search
+        if query:
+            keywords = query.lower().split()
+            if not keywords:
+                # If query was just spaces, return sorted by filepath
+                records.sort(key=lambda x: x["filepath"])
+                return records
+                
+            matched_records = []
+            for r in records:
+                filename = (r.get("filename") or "").lower()
+                filepath = (r.get("filepath") or "").lower()
+                description = (r.get("description") or "").lower()
+                r_tags = (r.get("tags") or "").lower()
+                
+                filename_initials = get_pinyin_initials(filename)
+                
+                # Check if all keywords match this record
+                record_matches_all = True
+                total_relevance = 0
+                
+                for kw in keywords:
+                    kw_matches = False
+                    kw_relevance = 0
+                    
+                    # Match filename (case-insensitive substring)
+                    if kw in filename:
+                        kw_matches = True
+                        if filename == kw:
+                            kw_relevance = max(kw_relevance, 100)
+                        elif filename.startswith(kw):
+                            kw_relevance = max(kw_relevance, 80)
+                        else:
+                            kw_relevance = max(kw_relevance, 50)
+                            
+                    # Match filename (pinyin initials)
+                    if filename_initials and kw in filename_initials:
+                        kw_matches = True
+                        if filename_initials == kw:
+                            kw_relevance = max(kw_relevance, 45)
+                        elif filename_initials.startswith(kw):
+                            kw_relevance = max(kw_relevance, 42)
+                        else:
+                            kw_relevance = max(kw_relevance, 40)
+                            
+                    # Match filepath
+                    if kw in filepath:
+                        kw_matches = True
+                        kw_relevance = max(kw_relevance, 30)
+                        
+                    # Match description
+                    if kw in description:
+                        kw_matches = True
+                        kw_relevance = max(kw_relevance, 20)
+                        
+                    # Match tags
+                    if kw in r_tags:
+                        kw_matches = True
+                        kw_relevance = max(kw_relevance, 15)
+                        
+                    if not kw_matches:
+                        record_matches_all = False
+                        break
+                    else:
+                        total_relevance += kw_relevance
+                        
+                if record_matches_all:
+                    r["relevance_score"] = total_relevance
+                    matched_records.append(r)
+                    
+            # Sort by relevance score descending, then by filepath ascending
+            matched_records.sort(key=lambda x: (-x.get("relevance_score", 0), x["filepath"]))
+            return matched_records
+            
+        else:
+            # If no text query, sort purely by filepath alphabetically
+            records.sort(key=lambda x: x["filepath"])
+            return records
+
 
     def get_recent_files(self, days=7):
         """Return files modified within the recent N days."""

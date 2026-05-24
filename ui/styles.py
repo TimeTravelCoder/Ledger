@@ -141,13 +141,32 @@ def get_stylesheet(theme="dark"):
     QFrame#ToolbarPanel {{
         background-color: {bg_secondary};
         border: 1px solid {border_color};
-        border-radius: 12px;
+        border-radius: 14px;
     }}
 
     QFrame#SearchBox {{
-        background-color: {bg_primary};
-        border: 1px solid {border_color};
-        border-radius: 9px;
+        background-color: {bg_secondary};
+        border: 1px solid {border_hover};
+        border-radius: 12px;
+    }}
+
+    QFrame#SearchBox:hover {{
+        border-color: {accent_color};
+    }}
+
+    QFrame#ToolbarFilterCluster {{
+        background-color: transparent;
+        border: none;
+    }}
+
+    QFrame#ToolbarActionCluster {{
+        background-color: transparent;
+        border: none;
+    }}
+
+    QFrame#TagRail {{
+        background-color: transparent;
+        border: none;
     }}
 
     QFrame#BatchToolbar {{
@@ -159,6 +178,17 @@ def get_stylesheet(theme="dark"):
     QFrame#BatchToolbar[active="true"] {{
         background-color: {bg_secondary};
         border: 1px solid {accent_color};
+    }}
+
+    QFrame#BatchToolbarGroup {{
+        background-color: {bg_secondary};
+        border: 1px solid {border_color};
+        border-radius: 10px;
+    }}
+
+    QFrame#BatchToolbar[active="true"] QFrame#BatchToolbarGroup {{
+        background-color: {bg_primary};
+        border-color: {border_hover};
     }}
 
     QFrame#InsightStrip {{
@@ -261,7 +291,9 @@ def get_stylesheet(theme="dark"):
     QLineEdit#ToolbarSearchInput {{
         background-color: transparent;
         border: none;
-        padding: 5px 2px;
+        padding: 6px 2px;
+        font-size: 13px;
+        font-weight: 600;
     }}
 
     QLabel#MutedText {{
@@ -273,6 +305,35 @@ def get_stylesheet(theme="dark"):
         color: {text_disabled};
         font-size: 12px;
         font-weight: 600;
+    }}
+
+    QPushButton#FilterChip {{
+        background-color: {bg_secondary};
+        border: 1px solid {border_color};
+        border-radius: 14px;
+        padding: 4px 11px;
+        color: {text_secondary};
+        font-size: 11px;
+        font-weight: 700;
+    }}
+
+    QPushButton#FilterChip:hover {{
+        background-color: {bg_tertiary};
+        border-color: {border_hover};
+        color: {text_primary};
+    }}
+
+    QPushButton#FilterChip:checked {{
+        background-color: {bg_tertiary};
+        border-color: {accent_color};
+        color: {text_primary};
+        font-weight: 800;
+    }}
+
+    QPushButton#FilterChip:checked:hover {{
+        background-color: {bg_tertiary};
+        border-color: {accent_color};
+        color: {text_primary};
     }}
 
     QLabel#BatchStatus {{
@@ -339,10 +400,10 @@ def get_stylesheet(theme="dark"):
     }}
 
     QPushButton#ToolbarBtn {{
-        background-color: transparent;
+        background-color: {bg_secondary};
         border: 1px solid {border_color};
-        border-radius: 8px;
-        padding: 6px 12px;
+        border-radius: 10px;
+        padding: 6px 11px;
         color: {text_primary};
         font-weight: 700;
     }}
@@ -360,7 +421,7 @@ def get_stylesheet(theme="dark"):
     QPushButton#ToolbarPrimaryBtn {{
         background-color: {accent_color};
         border: none;
-        border-radius: 8px;
+        border-radius: 10px;
         padding: 6px 12px;
         color: #FFFFFF;
         font-weight: 700;
@@ -554,6 +615,85 @@ def get_stylesheet(theme="dark"):
         background-color: {accent_color};
         border-color: {accent_color};
         color: #FFFFFF;
+    }}
+
+    QMenu {{
+        background-color: {bg_secondary};
+        border: 1px solid {border_color};
+        border-radius: 10px;
+        padding: 8px;
+        color: {text_primary};
+    }}
+
+    QMenu::item {{
+        padding: 8px 14px 8px 12px;
+        border-radius: 7px;
+        margin: 1px 0;
+    }}
+
+    QMenu::item:selected {{
+        background-color: {bg_tertiary};
+        color: {text_primary};
+    }}
+
+    QMenu::separator {{
+        height: 1px;
+        background: {border_color};
+        margin: 6px 10px;
+    }}
+
+    QFrame#ToastCard {{
+        background-color: {bg_secondary};
+        border: 1px solid {border_color};
+        border-radius: 14px;
+    }}
+
+    QFrame#ToastCard[level="success"] {{
+        border-color: {success_color};
+    }}
+
+    QFrame#ToastCard[level="warning"] {{
+        border-color: {warning_color};
+    }}
+
+    QFrame#ToastCard[level="error"] {{
+        border-color: {error_color};
+    }}
+
+    QLabel#ToastIcon {{
+        background-color: {bg_tertiary};
+        border: 1px solid {border_color};
+        border-radius: 15px;
+        padding: 5px;
+    }}
+
+    QLabel#ToastTitle {{
+        color: {text_primary};
+        font-size: 13px;
+        font-weight: 800;
+    }}
+
+    QLabel#ToastMessage {{
+        color: {text_secondary};
+        font-size: 12px;
+        line-height: 1.35em;
+    }}
+
+    QPushButton#ToastCloseBtn {{
+        background: transparent;
+        border: none;
+        color: {text_disabled};
+        min-width: 24px;
+        max-width: 24px;
+        padding: 2px;
+        font-size: 12px;
+        font-weight: 700;
+    }}
+
+    QPushButton#ToastCloseBtn:hover {{
+        background-color: {bg_tertiary};
+        color: {text_primary};
+        border-radius: 10px;
     }}
     
     /* ScrollBar Styling */

@@ -448,17 +448,20 @@ class FileManager:
             if not abs_path.exists():
                 continue
 
+            record_data = dict(record)
+
             if mode == "filename":
-                key = record["filename"].lower()
+                key = record_data["filename"].lower()
             elif mode == "size":
-                key = record["file_size"]
+                key = record_data["file_size"]
             else:
                 try:
                     key = FileManager.calculate_file_hash(abs_path)
+                    record_data["_duplicate_hash"] = key
                 except Exception:
                     continue
 
-            grouped.setdefault(key, []).append(record)
+            grouped.setdefault(key, []).append(record_data)
 
         return {k: v for k, v in grouped.items() if len(v) > 1}
 

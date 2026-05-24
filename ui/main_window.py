@@ -9,6 +9,7 @@ from PySide6.QtGui import QIcon
 from config import config
 from ui.icon_utils import line_icon
 from ui.styles import get_stylesheet
+from ui.toast import ToastManager
 
 # Import views
 from ui.dashboard_view import DashboardView
@@ -109,6 +110,7 @@ class MainWindow(QMainWindow):
         main_layout = QHBoxLayout(central_widget)
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(0)
+        self.toast_manager = ToastManager(self)
 
         # 1. Left Sidebar
         self.sidebar = QFrame()
@@ -232,6 +234,7 @@ class MainWindow(QMainWindow):
         elif index == 1:
             self.view_inbox.scan_inbox()
         elif index == 2:
+            self.view_workspace.apply_content_responsive()
             self.view_workspace.run_search()
         elif index == 3:
             self.view_backup.refresh_history()
@@ -252,6 +255,10 @@ class MainWindow(QMainWindow):
         # Update sub-components if necessary (e.g. refresh UI states)
         self.update_theme_btn_text()
         self.refresh_all_views()
+
+    def show_toast(self, message, title="", level="info", duration=3200):
+        if hasattr(self, "toast_manager"):
+            self.toast_manager.show_toast(message=message, title=title, level=level, duration=duration)
 
     def update_theme_btn_text(self):
         if config.theme == "dark":
@@ -331,12 +338,11 @@ class MainWindow(QMainWindow):
                 from file_manager import FileManager
                 FileManager.move_replace(file_path, dest)
                 
-                # Toast notification
-                self.tray_icon.showMessage(
-                    "文件导入成功",
-                    f"已成功将 '{filename}' 导入收集箱！",
-                    QSystemTrayIcon.Information,
-                    3000
+                self.show_toast(
+                    message=f"'{filename}' 已导入收集箱。",
+                    title="导入成功",
+                    level="success",
+                    duration=3200,
                 )
                 
                 # Switch tab to Inbox
@@ -355,6 +361,8 @@ class MainWindow(QMainWindow):
     def resizeEvent(self, event):
         super().resizeEvent(event)
         self.apply_responsive_layout()
+        if hasattr(self, "view_workspace"):
+            self.view_workspace.apply_content_responsive()
 
     def apply_responsive_layout(self):
         width = self.width()

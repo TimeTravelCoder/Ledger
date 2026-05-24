@@ -8,6 +8,7 @@ from PySide6.QtCore import Qt, Signal, QSize
 from config import config, DEFAULT_TAGS, normalize_tags, display_tag, NAME_PRESET_BASES
 from file_manager import FileManager
 from ui.icon_utils import line_icon
+from ui.toast import show_toast
 
 class SettingsView(QWidget):
     refresh_other_views_signal = Signal()
@@ -381,7 +382,7 @@ class SettingsView(QWidget):
         from db import db
         db.close() # Connection will reopen automatically at the new path
         
-        QMessageBox.information(self, "应用成功", "新路径参数已成功生效并加载！")
+        show_toast(self, "新路径参数已生效。", title="应用成功", level="success")
         self.refresh_other_views_signal.emit()
 
     def run_init_workspace(self):
@@ -394,7 +395,7 @@ class SettingsView(QWidget):
         # 2. Run initialization
         success, msg = FileManager.init_workspace()
         if success:
-            QMessageBox.information(self, "成功", f"标准目录结构初始化成功！\n共创建 12 个规范分类文件夹。\n根路径: {config.workspace_dir}")
+            show_toast(self, "标准目录结构已初始化。", title="初始化成功", level="success", duration=3600)
         else:
             QMessageBox.critical(self, "错误", msg)
             
@@ -416,7 +417,7 @@ class SettingsView(QWidget):
         config.tags["status"] = parse_tags_input(st_str)
         
         config.save()
-        QMessageBox.information(self, "成功", "自定义标签字典保存成功！所有界面已同步刷新。")
+        show_toast(self, "自定义标签字典已保存。", title="保存成功", level="success")
         self.refresh_other_views_signal.emit()
 
     def reset_tags_to_default(self):
@@ -432,7 +433,7 @@ class SettingsView(QWidget):
             self.input_s_tags.setText(",".join(display_tag(tag) for tag in config.tags["secondary"]))
             self.input_st_tags.setText(",".join(display_tag(tag) for tag in config.tags["status"]))
             
-            QMessageBox.information(self, "成功", "标签字典已重置为规范默认设置！")
+            show_toast(self, "标签字典已重置为默认设置。", title="重置成功", level="success")
             self.refresh_other_views_signal.emit()
 
     def browse_wizard_path(self):
@@ -493,10 +494,7 @@ class SettingsView(QWidget):
             # 5. Sync scan
             FileManager.scan_workspace_files()
             
-            QMessageBox.information(
-                self, "生成成功",
-                f"新工作空间已成功生成并自动切换！\n当前工作空间：\n{target_path}"
-            )
+            show_toast(self, f"新工作空间已切换到 {target_path}。", title="生成成功", level="success", duration=4200)
             
             self.input_wiz_path.clear()
             self.refresh_other_views_signal.emit()
@@ -567,7 +565,7 @@ class SettingsView(QWidget):
             })
         config.auto_rules = rules
         config.save()
-        QMessageBox.information(self, "成功", "规则归类配置已保存。")
+        show_toast(self, "规则归类配置已保存。", title="保存成功", level="success")
         self.refresh_other_views_signal.emit()
 
     def populate_name_presets(self):
@@ -618,7 +616,7 @@ class SettingsView(QWidget):
     def save_name_presets(self):
         config.custom_name_templates = [p for p in self.name_presets if not p.get("base")]
         config.save()
-        QMessageBox.information(self, "成功", "命名模板已保存。")
+        show_toast(self, "命名模板已保存。", title="保存成功", level="success")
         self.refresh_other_views_signal.emit()
 
     def save_auto_rules(self):
@@ -636,7 +634,7 @@ class SettingsView(QWidget):
             })
         config.auto_rules = rules
         config.save()
-        QMessageBox.information(self, "成功", "规则归类配置已保存。")
+        show_toast(self, "规则归类配置已保存。", title="保存成功", level="success")
         self.refresh_other_views_signal.emit()
 
     def save_custom_dirs(self):
@@ -652,5 +650,5 @@ class SettingsView(QWidget):
             
         config.custom_standard_dirs = parts
         config.save()
-        QMessageBox.information(self, "成功", "自建分类模板保存成功！可在上方“一键初始化/修复标准目录结构”或“新建工作空间向导”中直接套用。")
+        show_toast(self, "自建分类模板已保存。", title="保存成功", level="success", duration=3600)
         self.refresh_other_views_signal.emit()

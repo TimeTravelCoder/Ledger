@@ -10,6 +10,7 @@ from config import config, normalize_tag, display_tag, NAME_PRESET_BASES
 from db import db
 from file_manager import FileManager
 from ui.icon_utils import file_type_icon, line_icon, make_empty_item
+from ui.toast import show_toast
 
 STYLE_PREVIEW_NORMAL = """
     QLineEdit {
@@ -554,7 +555,7 @@ class InboxView(QWidget):
         db.update_file_description(final_rel_path, self.input_desc.toPlainText().strip())
 
         # 4. Notify success and refresh lists
-        QMessageBox.information(self, "整理完成", f"文件已成功整理归档！\n目标路径: {final_rel_path}")
+        show_toast(self, f"文件已整理归档到 {final_rel_path}。", title="整理完成", level="success", duration=3600)
         
         self.selected_file_path = None
         self.scan_inbox()
@@ -602,7 +603,7 @@ class InboxView(QWidget):
                 else:
                     os.rmdir(inactive_dir)
                     
-                QMessageBox.information(self, "合并成功", f"已成功将 {moved_count} 个待整理文件合并移动到 '{active_dir.name}' 中，并清空删除了旧收集箱！")
+                show_toast(self, f"已合并 {moved_count} 个待整理文件到 {active_dir.name}。", title="合并成功", level="success", duration=3600)
             except Exception as e:
                 QMessageBox.critical(self, "合并失败", f"合并中途发生错误:\n{str(e)}")
                 
