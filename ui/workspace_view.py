@@ -2537,7 +2537,7 @@ class WorkspaceView(QWidget):
         dialog = ZipArchiveDialog(self)
         if dialog.exec() == QDialog.Accepted:
             zip_name = dialog.input_zipname.text().strip()
-            password = dialog.input_password.text().strip() if dialog.cb_encrypt.isChecked() else None
+            password = None
 
             if not zip_name.endswith(".zip"):
                 zip_name += ".zip"
@@ -2846,7 +2846,7 @@ class ZipArchiveDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("安全保险箱一键打包归档")
-        self.resize(380, 200)
+        self.resize(380, 130)
         self.init_ui()
 
     def init_ui(self):
@@ -2861,25 +2861,6 @@ class ZipArchiveDialog(QDialog):
         self.input_zipname.setText(f"Ledger_Archive_{today_str}.zip")
         layout.addWidget(self.lbl_zipname)
         layout.addWidget(self.input_zipname)
-
-        # Encryption row
-        self.cb_encrypt = QCheckBox("启用安全保险密码保护 (后续开发中...)")
-        self.cb_encrypt.setEnabled(False)
-        layout.addWidget(self.cb_encrypt)
-
-        self.row_password = QFrame()
-        pwd_layout = QHBoxLayout(self.row_password)
-        pwd_layout.setContentsMargins(0, 0, 0, 0)
-        self.lbl_password = QLabel("设置密码:")
-        self.lbl_password.setFixedWidth(65)
-        self.input_password = QLineEdit()
-        self.input_password.setEchoMode(QLineEdit.Password)
-        pwd_layout.addWidget(self.lbl_password)
-        pwd_layout.addWidget(self.input_password)
-        self.row_password.setVisible(False)
-        layout.addWidget(self.row_password)
-
-        self.cb_encrypt.stateChanged.connect(lambda state: self.row_password.setVisible(state == Qt.Checked))
 
         # Bottom buttons
         btn_layout = QHBoxLayout()
