@@ -9,6 +9,7 @@
 [![PySide6](https://img.shields.io/badge/UI-PySide6-41CD52?logo=qt)](https://doc.qt.io/qtforpython/)
 [![Theme](https://img.shields.io/badge/Themes-Cyber%20%7C%20Jade%20%7C%20Slate-darkviolet)](https://github.com/TimeTravelCoder/Ledger)
 [![Platform](https://img.shields.io/badge/Platform-Windows-0078D6?logo=windows)](https://github.com/TimeTravelCoder/Ledger)
+[![Release](https://img.shields.io/badge/Release-v1.2-6366F1)](https://github.com/TimeTravelCoder/Ledger/releases/tag/v1.2)
 
 > ✨ **Ledger Max** 是专为个人学习、科研工作者和高端内容创作者打造的本地文档整理与分类利器。它将美学格调融入“收集箱 → 智能重命名 → 归档 → 标签检索 → 3-2-1安全备份”的完整文档流。
 
@@ -31,6 +32,7 @@
 ## ⚙️ 旗舰生产力扩展 (Flagship Features)
 
 - 📂 **拖拽直达 · 一键投递**：直接拖拽外部文件至“收集箱”区域，零步骤直接录入并唤起归类表单。
+- 📡 **多文件夹实时监听**：最多同时监听 3 个常用投递目录（Downloads、桌面、微信接收目录等），新文件落地后自动弹出智能整理提醒。
 - 🏷️ **智能语义标签推荐**：打字输入文件名或备注时，AI 语义分析毫秒级推荐 Top-3 匹配标签，点击一键确认。
 - 🎭 **沉浸式剧场阅读器**：纯文本、Markdown 与大图预览支持大屏暗场全屏阅读模式，提供沉浸式检视体验。
 - 🔒 **安全保险箱归档**：多选文件一键安全打包为 ZIP 归档，并在打包完成后自动安全删除原磁盘文件与脏数据。
@@ -48,6 +50,8 @@
 ---
 
 ## 💻 快速运行与构建
+
+> 当前发布版本：**v1.2**。Windows 用户可直接在 [GitHub Releases](https://github.com/TimeTravelCoder/Ledger/releases/tag/v1.2) 下载 `Ledger-v1.2-windows-x64.zip` 或 `Ledger-Setup-v1.2-windows-x64.exe`。
 
 ### 1. 运行环境
 
@@ -73,6 +77,12 @@ python -m PyInstaller --noconfirm --onefile --windowed --name Ledger --icon app_
 # 2. 编译专业的 Windows 安装向导 (Inno Setup 6+)
 & "C:\Users\Ming\AppData\Local\Programs\Inno Setup 6\iscc.exe" installer.iss
 ```
+
+构建完成后，`dist/` 目录会包含：
+
+- `Ledger.exe`：免安装独立可执行文件
+- `Ledger-v1.2-windows-x64.zip`：绿色便携版压缩包
+- `Ledger-Setup-v1.2-windows-x64.exe`：Windows 安装向导
 
 ---
 
@@ -111,7 +121,7 @@ Ledger/
 │   ├── inbox_view.py       # 拖拽投递式智能收集箱
 │   ├── workspace_view.py   # 文件树浏览器、剧场预览、批量事务
 │   ├── backup_view.py      # 备份配置与健康状态
-│   ├── settings_view.py    # 主题切换与字典模板定义
+│   ├── settings_view.py    # 主题切换、路径配置与多目录监听设置
 │   ├── styles.py           # 三套旗舰版主题 QSS 样式表
 │   ├── toast.py            # 微交互轻提示气泡
 │   └── icon_utils.py       # 智能文件格式渲染工具
