@@ -1,8 +1,16 @@
 import os
 import json
+import sys
 from pathlib import Path
 
-CONFIG_FILE = Path(__file__).parent / ".config.json"
+# Under PyInstaller, Path(__file__).parent evaluates to temporary directory
+# sys.frozen identifies execution from compiled executable, sys.executable points to EXE path
+if getattr(sys, "frozen", False):
+    BASE_DIR = Path(sys.executable).parent
+else:
+    BASE_DIR = Path(__file__).parent
+
+CONFIG_FILE = BASE_DIR / ".config.json"
 
 DEFAULT_TAGS = {
     "primary": ["#人工智能", "#量子科技", "#高等数学", "#操作系统", "#计算机网络", "#专业英语", "#课程学习", "#课题研究"],
@@ -169,7 +177,7 @@ class AppConfig:
         self.custom_name_templates = []
 
         # Default workspace setup in the same folder if not set
-        default_ws = Path(__file__).parent / "Workspace"
+        default_ws = BASE_DIR / "Workspace"
         self.workspace_dir = str(default_ws.resolve())
 
         self.load()

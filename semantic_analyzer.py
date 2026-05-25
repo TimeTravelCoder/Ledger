@@ -58,14 +58,17 @@ class SemanticAnalyzer:
         combined_text = f"{filename_clean} {remark_clean}".lower()
         combined_terms = cls.extract_terms(combined_text)
 
-        # 1. Fetch active tags from the SQLite database to ensure synchronization
+        # 1. Fetch active tags from config to ensure synchronization with user's customized tags
         db_tags = []
         try:
-            db_tags = [t["name"] for t in db.get_all_tags()]
+            from config import config
+            for cat in ["primary", "secondary", "status"]:
+                if cat in config.tags:
+                    db_tags.extend(config.tags[cat])
         except Exception:
             pass
 
-        # Default tags if database is empty or inaccessible
+        # Default tags if config tags load failed
         if not db_tags:
             db_tags = ["#财务报表", "#代码项目", "#合同协议", "#设计稿件", "#论文文献", "#个人证件", "#会议纪要", "#学习资料"]
 

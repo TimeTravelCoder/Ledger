@@ -2539,6 +2539,13 @@ class WorkspaceView(QWidget):
             zip_name = dialog.input_zipname.text().strip()
             password = None
 
+            # Purify input ZIP filename to prevent directory traversal or absolute path injection
+            zip_name = os.path.basename(zip_name)
+            zip_name = zip_name.replace("/", "").replace("\\", "").replace("..", "")
+            if not zip_name or zip_name in [".zip", ""]:
+                today_str = datetime.datetime.now().strftime("%Y%m%d_%H%M")
+                zip_name = f"Ledger_Archive_{today_str}.zip"
+
             if not zip_name.endswith(".zip"):
                 zip_name += ".zip"
 
@@ -2574,7 +2581,10 @@ class WorkspaceView(QWidget):
         # Register the new zipped archive in database
         try:
             rel_zip = str(Path(zip_path_str).relative_to(Path(config.workspace_dir))).replace("\\", "/")
-            db.register_file(rel_zip, Path(zip_path_str).name)
+            zip_path = Path(zip_path_str)
+            stat = zip_path.stat()
+            # Register metadata in db
+            db.sync_file_metadata(rel_zip, zip_path.name, stat.st_size, stat.st_mtime)
             db.update_file_tags(rel_zip, ["#物理备份", "#归档区"])
             db.update_file_description(rel_zip, f"安全保险箱打包归档文件。包含 {files_count} 个历史整理文档。")
         except Exception as e:
@@ -2892,10 +2902,16 @@ class ZipWorker(QThread):
 
     def run(self):
         try:
+            ws_root = Path(config.workspace_dir).resolve()
             with zipfile.ZipFile(self.dest_zip_path, 'w', zipfile.ZIP_DEFLATED) as zip_file:
                 for filepath in self.abs_paths:
                     if filepath.exists() and filepath.is_file():
-                        zip_file.write(filepath, arcname=filepath.name)
+                        # Preserve workspace relative directory structure to prevent name collisions
+                        try:
+                            rel_arc = str(filepath.resolve().relative_to(ws_root)).replace("\\", "/")
+                        except Exception:
+                            rel_arc = filepath.name
+                        zip_file.write(filepath, arcname=rel_arc)
 
             # Cascade delete source files and database records
             ws_root = Path(config.workspace_dir).resolve()

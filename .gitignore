@@ -1,4 +1,37 @@
-﻿*.pyc
+# ==========================================
+# Ledger Max 旗舰版 Git Ignore 规则
+# ==========================================
+
+# 1. PyInstaller 编译与打包生成产物
+*.spec
+build/
+dist/
+dist_open/
+dist_setup/
+
+# 2. Python 缓存与临时文件
 __pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.coverage
+htmlcov/
+
+# 3. 操作系统及编辑器文件
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+
+# 4. 本地运行时数据与配置 (强烈建议隔离)
 .config.json
 Workspace/
+ledger.db
+*.db
+*.log

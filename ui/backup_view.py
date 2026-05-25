@@ -260,9 +260,8 @@ class BackupView(QWidget):
         self.progress_bar.setValue(10) # 10% on startup
         self.console_output.append(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] 启动增量镜像备份至 '{label}' (后台异步处理中)...")
 
-        # Fetch workspace records on the main thread to avoid SQLite cross-thread issues
-        workspace_records = db.search_files()
-        self.backup_worker = BackupWorker(backup_type, workspace_records)
+        # Pass None to force BackupWorker thread to query dynamically after scan_workspace_files completes
+        self.backup_worker = BackupWorker(backup_type, None)
         self.backup_worker.finished_signal.connect(lambda success, msg: self.on_backup_finished(backup_type, success, msg))
         self.backup_worker.start()
 

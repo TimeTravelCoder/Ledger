@@ -207,18 +207,18 @@ class FileManager:
         Returns (success: bool, message: str)."""
         try:
             file_path = FileManager.safe_workspace_path(relative_path)
+            
+            # Prevent 0-byte Office binary creations which MS Office/WPS flags as corrupt
+            ext = file_path.suffix.lower()
+            if ext in [".docx", ".xlsx", ".pptx"]:
+                return False, "Office 复合二进制格式 (docx/xlsx/pptx) 暂不支持直接新建。请在资源管理器中正常创建后，拖入收集箱进行智能归档！"
+
             file_path.parent.mkdir(parents=True, exist_ok=True)
             if file_path.exists():
                 return False, f"文件已存在: {relative_path}"
 
-            # Handle Office binary formats as 0-byte clean files to prevent corruptions
-            ext = file_path.suffix.lower()
-            if ext in [".docx", ".xlsx", ".pptx"]:
-                with open(file_path, "wb") as f:
-                    pass
-            else:
-                with open(file_path, "w", encoding="utf-8") as f:
-                    f.write(content)
+            with open(file_path, "w", encoding="utf-8") as f:
+                f.write(content)
 
             return True, f"文件创建成功: {relative_path}"
         except Exception as e:
