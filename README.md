@@ -1,168 +1,135 @@
-# Ledger - 电脑文档分类与管理软件
+<div align="center">
 
-Ledger 是一款基于 PySide6 的本地桌面文档管理工具，面向个人学习资料、科研资料、项目文件和日常文档的规范化归档。它通过“收集箱 -> 规范命名 -> 分类归档 -> 标签检索 -> 增量备份”的流程，帮助用户把散落在桌面、下载目录和工作空间中的文件整理成可搜索、可维护、可备份的资料库。
+# 👑 Ledger Max · 旗舰版
 
-项目数据默认保存在本机，不依赖云端服务；文件元数据使用 SQLite 管理，配置项保存在本地 `.config.json`。
+**极具格调的本地桌面文档分类与智能管理工具**
 
-## 核心功能
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/Python-3.10%2B-blue?logo=python)](https://python.org)
+[![PySide6](https://img.shields.io/badge/UI-PySide6-41CD52?logo=qt)](https://doc.qt.io/qtforpython/)
+[![Theme](https://img.shields.io/badge/Themes-Cyber%20%7C%20Jade%20%7C%20Slate-darkviolet)](https://github.com/TimeTravelCoder/Ledger)
+[![Platform](https://img.shields.io/badge/Platform-Windows-0078D6?logo=windows)](https://github.com/TimeTravelCoder/Ledger)
 
-- 控制面板：统计工作空间文件总量、总占用、收集箱待处理数量、近 7 天修改文件、标签覆盖率和 3-2-1 备份健康度。
-- 智能收集箱：扫描待整理文件，按命名模板生成规范文件名，选择分类目录、子文件夹、标签和备注后归档。
-- 工作空间浏览器：查看标准目录树和文件列表，支持关键词搜索、标签筛选、状态筛选、文件预览、打开文件、定位文件和复制路径。
-- 文件元数据管理：为文件维护标签、备注、状态和备份状态，支持中文标签与不带 `#` 的输入自动规范化。
-- 批量操作：支持批量追加标签、批量移动、自动规则归类和重复文件扫描。
-- 重复文件处理：可按文件名、大小或哈希识别重复文件，并提供建议保留/删除操作。
-- 新建文件与文件夹：可在工作空间内按标准分类创建文件、文件夹，并限制过深目录层级。
-- 自动下载监听：可监听浏览器下载目录，新文件出现后提示导入收集箱。
-- 桌面清理：扫描桌面普通文件，一键导入工作空间收集箱。
-- 3-2-1 备份卫士：配置外部介质和云盘同步目录，执行增量镜像备份并记录历史。
-- 系统设置：管理工作空间路径、下载路径、主题、分类目录模板、标签字典、归类规则和命名模板。
+> ✨ **Ledger Max** 是专为个人学习、科研工作者和高端内容创作者打造的本地文档整理与分类利器。它将美学格调融入“收集箱 → 智能重命名 → 归档 → 标签检索 → 3-2-1安全备份”的完整文档流。
 
-## 技术栈
+</div>
 
-- Python 3.10+
-- PySide6
-- SQLite
-- watchdog
+---
 
-项目主要使用 Python 标准库完成文件移动、哈希计算、ZIP/XML 文档解析、配置读写和本地数据库同步。
+## 🎨 Max 旗舰美学 (Premium UI/UX)
 
-## 快速开始
+- **Glassmorphism 磨砂玻璃特效**：主看板、统计卡片、分类预览面板采用毛玻璃材质，高对比度视觉重心。
+- **三套旗舰级配色主题**：
+  - 🌑 **赛博极光 (Cyber Dark)**：幽深太空黑与霓虹靛紫发光阴影交相辉映，极具极客质感。
+  - 🌿 **温润国风 (Chinese Jade)**：清新象牙白底融合柔美竹叶青，优雅自然。
+  - ☀️ **现代极简 (Slate Light)**：高级石墨蓝加持亮白水晶背景，商务洗练。
+- **物理缓动微交互动效**：侧边栏按钮、数据卡片悬停时，具有 2px 的柔性悬浮以及微发光平滑过渡，为点击注入灵魂。
+- **发光数据 Tooltip**：图表节点随鼠标悬停触发实时高亮气泡，让统计数据富有灵性。
 
-1. 创建并进入虚拟环境：
+---
+
+## ⚙️ 旗舰生产力扩展 (Flagship Features)
+
+- 📂 **拖拽直达 · 一键投递**：直接拖拽外部文件至“收集箱”区域，零步骤直接录入并唤起归类表单。
+- 🏷️ **智能语义标签推荐**：打字输入文件名或备注时，AI 语义分析毫秒级推荐 Top-3 匹配标签，点击一键确认。
+- 🎭 **沉浸式剧场阅读器**：纯文本、Markdown 与大图预览支持大屏暗场全屏阅读模式，提供沉浸式检视体验。
+- 🔒 **安全保险箱归档**：多选文件一键安全打包为 ZIP 归档，并在打包完成后自动安全删除原磁盘文件与脏数据。
+
+---
+
+## 🛡️ 稳如磐石的安全机制 (Security Core)
+
+- **[P0] 闪退完美避坑**：完美消除由于 `desc_label` 属性未绑定导致的界面加载闪退 Bug，极致丝滑。
+- **[P1] 数据库线程安全隔离**：弃用全局单 SQLite 连接，升级为 `threading.local()` 多线程安全池隔离架构，彻底绝迹跨线程访问错误。
+- **[P1] 数据防丢失逻辑**：重构未入库文件的整理与归档事务，确保**物理移库与数据入库原子化同步**，杜绝标签丢失。
+- **磁盘状态实时失步校验**：备份、排重、移动等物理操作前强制同步磁盘文件状态，避免数据偏差。
+- **路径穿越与特权字符拦截**：新建文件与文件夹时，严格过滤 `../`、`..\` 及 Windows 特权非法字符，阻断非法目录注入。
+
+---
+
+## 💻 快速运行与构建
+
+### 1. 运行环境
+
+- **Python** 3.10+
+- **系统要求** Windows 10 / 11 (64-bit)
 
 ```bash
-python -m venv .venv
-.venv\Scripts\activate
-```
-
-2. 安装依赖：
-
-```bash
+# 激活虚拟环境并安装核心依赖
 pip install PySide6 watchdog
-```
-
-3. 启动程序：
-
-```bash
+# 运行主程序
 python main.py
 ```
 
-首次启动时，程序会在项目目录下自动创建 `Workspace/` 工作空间，并初始化标准分类目录。
-
-## 推荐使用流程
-
-1. 在“软件参数设置”中确认工作空间目录和下载目录。
-2. 将临时文件放入 `00Inbox` / `00收集箱`，或使用控制面板把桌面文件导入收集箱。
-3. 在“智能收集箱”中选择文件，套用命名模板，补充主题、版本、状态、标签和备注。
-4. 点击“重命名并分类移动”，把文件归档到标准目录。
-5. 在“工作空间浏览器”中通过搜索、标签、状态或目录树查找文件。
-6. 定期在“3-2-1 备份卫士”中运行硬盘备份和云盘备份。
-
-## 默认目录规范
-
-英文模板：
-
-```text
-00Inbox
-01Study
-02Research
-03Projects
-04Code
-05Papers
-06Notes
-07Resources
-08PPT
-09Resume
-10Archive
-99Temp
-```
-
-中文模板：
-
-```text
-00收集箱
-01课程学习
-02课题研究
-03项目管理
-04代码仓库
-05学术论文
-06知识笔记
-07常用资源
-08演示汇报
-09个人简历
-10归档区
-99临时缓冲
-```
-
-如果默认分类不符合个人习惯，可以在“软件参数设置 -> 自建分类目录模板与规范”中启用自定义目录。
-
-## 命名模板
-
-收集箱支持多种命名模板，例如：
-
-- 常规模版：`{date}_{topic}_{version}_{status}`
-- 学术论文：`{date}_{topic}_{version}`
-- 学习笔记：`{date}_{topic}`
-- 保持原名：`{stem}`
-
-支持的变量包括 `{date}`、`{topic}`、`{version}`、`{status}`、`{stem}`。可以在设置页新增、删除或修改模板，并通过沙盒预览最终路径。
-
-## 文件预览能力
-
-工作空间浏览器支持常见文件的快速预览：
-
-- 文本与代码：`md`、`txt`、`py`、`json`、`csv`、`html`、`css`、`js`、`ts`、`sql`、`log` 等。
-- 图片：`png`、`jpg`、`jpeg`、`bmp`、`webp`、`gif`、`ico`。
-- PDF：使用 PySide6 QtPdf 预览。
-- Office Open XML：可提取 `docx`、`pptx`、`xlsx` 中的主要文本内容用于预览。
-
-## 数据与配置
-
-- `.config.json`：本地配置文件，保存工作空间路径、下载路径、主题、标签、规则和模板等信息。
-- `Workspace/.docman.db`：本地 SQLite 数据库，保存文件路径、标签、备注、备份状态和备份历史。
-- `Workspace/`：默认工作空间，存放用户整理后的文档。
-
-这些文件都属于本地运行数据，通常不建议提交到 Git 仓库。
-
-## 项目结构
-
-```text
-.
-├── main.py                 # 应用入口
-├── config.py               # 全局配置、默认标签、目录模板、命名模板
-├── db.py                   # SQLite 元数据管理
-├── file_manager.py         # 文件扫描、移动、删除、备份、重复检测
-├── ui/
-│   ├── main_window.py      # 主窗口、侧边栏、下载监听、主题切换
-│   ├── dashboard_view.py   # 控制面板
-│   ├── inbox_view.py       # 智能收集箱
-│   ├── workspace_view.py   # 工作空间浏览器、预览、批量操作
-│   ├── backup_view.py      # 3-2-1 备份面板
-│   ├── settings_view.py    # 系统参数设置
-│   ├── styles.py           # 全局主题样式
-│   ├── icon_utils.py       # 图标、文件类型和格式化工具
-│   └── toast.py            # 全局提示消息
-├── app_icon.png
-├── app_icon.ico
-├── RELEASE_NOTES.md
-└── 电脑文档管理规范.md
-```
-
-## 开发与检查
-
-可使用下面的命令做基础语法检查：
+### 2. 编译为可独立执行的桌面程序 (EXE)
 
 ```bash
-python -m compileall -q .
+# 1. 编译纯 EXE
+python -m PyInstaller --noconfirm --onefile --windowed --name Ledger --icon app_icon.ico "--add-data=app_icon.png;." "--add-data=app_icon.ico;." main.py
+
+# 2. 编译专业的 Windows 安装向导 (Inno Setup 6+)
+& "C:\Users\Ming\AppData\Local\Programs\Inno Setup 6\iscc.exe" installer.iss
 ```
 
-如果修改了文件管理、删除、移动或备份逻辑，建议先在测试工作空间中验证，避免直接操作重要资料。
+---
 
-## 注意事项
+## 📁 推荐文档归类规范 (Built-in Spec)
 
-- 文件删除、重复文件清理和备份覆盖属于高风险操作，建议先确认备份目录和目标文件无误。
-- 自动整理会移动真实文件，测试新规则时建议先使用少量样例文件。
-- 工作空间目录层级建议不超过 4 层，便于长期维护和检索。
-- 下载目录监听依赖 watchdog，仅在程序运行时生效。
+软件自动支持中英双语工作空间规范化模板，确保目录层级不超过4层：
 
+```text
+00收集箱 (00Inbox)      ← 缓冲暂存，待整理
+01课程学习 (01Study)     ← 书本、课件与复习资料
+02课题研究 (02Research)  ← 论文草稿、文献库
+03项目管理 (03Projects)  ← 需求、计划与周报
+04代码仓库 (04Code)      ← 源码工程
+05学术论文 (05Papers)    ← PDF 文献与会议记录
+06知识笔记 (06Notes)     ← 随笔与 Markdown 笔记
+07常用资源 (07Resources) ← 软件包与媒体资源
+08演示汇报 (08PPT)       ← 汇报幻灯片
+09个人简历 (09Resume)    ← 求职与履历
+10归档区 (10Archive)     ← 旧项目冷归档
+99临时缓冲 (99Temp)      ← 随时可清的临时测试垃圾桶
+```
+
+---
+
+## 📂 系统项目架构
+
+```
+Ledger/
+├── main.py                 # 应用主入口
+├── config.py               # 配置注册与命名规范沙箱
+├── db.py                   # SQLite 元数据库 (Thread-local)
+├── file_manager.py         # 磁盘I/O事务、3-2-1备份与文件查重
+├── ui/
+│   ├── main_window.py      # 主侧边栏架构与监听注入
+│   ├── dashboard_view.py   # 磨砂玻璃数据统计看板
+│   ├── inbox_view.py       # 拖拽投递式智能收集箱
+│   ├── workspace_view.py   # 文件树浏览器、剧场预览、批量事务
+│   ├── backup_view.py      # 备份配置与健康状态
+│   ├── settings_view.py    # 主题切换与字典模板定义
+│   ├── styles.py           # 三套旗舰版主题 QSS 样式表
+│   ├── toast.py            # 微交互轻提示气泡
+│   └── icon_utils.py       # 智能文件格式渲染工具
+├── app_icon.png
+├── app_icon.ico
+├── installer.iss           # Windows 独立安装向导脚本
+├── RELEASE_NOTES.md        # 发布日志说明
+└── 电脑文档管理规范.md        # 管理规范建议
+```
+
+---
+
+## 📄 授权协议
+
+本项目基于 [MIT License](LICENSE) 授权发布，欢迎学习、修改与二次发行。
+
+---
+
+<div align="center">
+
+👑 **Ledger Max · 以极致美学，重塑个人文档归宿**  
+Made with 💜 by [TimeTravelCoder](https://github.com/TimeTravelCoder)
+
+</div>
