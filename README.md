@@ -84,6 +84,16 @@ python -m PyInstaller --noconfirm --onefile --windowed --name Ledger --icon app_
 - `Ledger-v1.2.1-windows-x64.zip`：绿色便携版压缩包
 - `Ledger-Setup-v1.2.1-windows-x64.exe`：Windows 安装向导
 
+### 3. GitHub Actions 自动构建与发布
+
+`Max` 分支已配置 `Build Windows Release` 工作流，可自动生成 Windows 便携版 zip 与安装器。
+
+- 推送 `Max` 分支：自动构建并上传 Actions artifact，用于验证。
+- 手动运行 workflow：在 GitHub Actions 页面选择 `Build Windows Release` 后运行。
+- 推送 `v*` 标签：自动创建或更新 GitHub Release，并上传 `Ledger-v<version>-windows-x64.zip` 与 `Ledger-Setup-v<version>-windows-x64.exe`。
+
+详细使用方式见 [`WINDOWS_RELEASE_WORKFLOW.md`](WINDOWS_RELEASE_WORKFLOW.md)。
+
 ---
 
 ## 📁 推荐文档归类规范 (Built-in Spec)
@@ -127,6 +137,8 @@ Ledger/
 │   └── icon_utils.py       # 智能文件格式渲染工具
 ├── app_icon.png
 ├── app_icon.ico
+├── .github/workflows/build-windows-release.yml  # Windows 自动构建与 Release 发布工作流
+├── WINDOWS_RELEASE_WORKFLOW.md # Windows workflow 使用说明
 ├── installer.iss           # Windows 独立安装向导脚本
 ├── RELEASE_NOTES.md        # 发布日志说明
 └── 电脑文档管理规范.md        # 管理规范建议
