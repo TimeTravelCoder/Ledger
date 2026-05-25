@@ -1,0 +1,174 @@
+name: Build Windows Release
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - Max
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build Windows EXE and Installer
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python dependencies
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-build.txt
+
+      - name: Resolve package version
+        shell: pwsh
+        run: |
+          if ($env:GITHUB_REF_TYPE -eq "tag") {
+            $version = $env:GITHUB_REF_NAME -replace "^v", ""
+          } else {
+            $version = "dev-$($env:GITHUB_SHA.Substring(0, 7))"
+          }
+
+          if ($version -match "^\d+(\.\d+){0,3}$") {
+            $innoVersion = $version
+          } else {
+            $innoVersion = "0.0.0"
+          }
+
+          "VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "INNO_APP_VERSION=$innoVersion" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "ZIP_BASENAME=Ledger-v$version-windows-x64" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "SETUP_BASENAME=Ledger-Setup-v$version-windows-x64" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Static syntax check
+        shell: pwsh
+        run: |
+          python -m py_compile main.py config.py file_manager.py db.py ui\workspace_view.py ui\main_window.py
+
+      - name: Build portable EXE
+        shell: pwsh
+        run: |
+          python -m PyInstaller `
+            --noconfirm `
+            --clean `
+            --onefile `
+            --windowed `
+            --name Ledger `
+            --icon app_icon.ico `
+            --add-data "app_icon.png;." `
+            --add-data "app_icon.ico;." `
+            main.py
+
+      - name: Verify EXE
+        shell: pwsh
+        run: |
+          $exe = "dist\Ledger.exe"
+          if (!(Test-Path $exe)) {
+            throw "Ledger.exe was not generated."
+          }
+          $size = (Get-Item $exe).Length
+          if ($size -lt 10MB) {
+            throw "Ledger.exe is unexpectedly small: $size bytes."
+          }
+          Write-Host "Ledger.exe size: $([Math]::Round($size / 1MB, 2)) MB"
+
+      - name: Package portable ZIP
+        shell: pwsh
+        run: |
+          $packageDir = Join-Path "dist" $env:ZIP_BASENAME
+          New-Item -ItemType Directory -Force -Path $packageDir | Out-Null
+
+          Copy-Item -LiteralPath "dist\Ledger.exe" -Destination $packageDir
+          Copy-Item -LiteralPath "README.md" -Destination $packageDir
+          Copy-Item -LiteralPath "RELEASE_NOTES.md" -Destination $packageDir
+
+          $extraDocs = Get-ChildItem -File -Filter "*.md" | Where-Object { $_.Name -notin @("README.md", "RELEASE_NOTES.md") }
+          foreach ($doc in $extraDocs) {
+            Copy-Item -LiteralPath $doc.FullName -Destination $packageDir
+          }
+
+          Compress-Archive -Path "$packageDir\*" -DestinationPath "dist\$env:ZIP_BASENAME.zip" -Force
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: |
+          choco install innosetup --no-progress -y
+
+      - name: Build Windows installer
+        shell: pwsh
+        run: |
+          @'
+          from pathlib import Path
+          import os
+          import re
+
+          data = Path("installer.iss").read_bytes()
+          data = re.sub(
+              rb'#define MyAppVersion "[^"]+"',
+              f'#define MyAppVersion "{os.environ["INNO_APP_VERSION"]}"'.encode("ascii"),
+              data,
+          )
+          data = re.sub(
+              rb'OutputBaseFilename=Ledger-Setup-v[^\r\n]+',
+              f'OutputBaseFilename={os.environ["SETUP_BASENAME"]}'.encode("ascii"),
+              data,
+          )
+          Path("installer.generated.iss").write_bytes(data)
+          '@ | python -
+
+          $generatedIss = Join-Path (Get-Location) "installer.generated.iss"
+
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (!(Test-Path $iscc)) {
+            $iscc = "${env:ProgramFiles}\Inno Setup 6\ISCC.exe"
+          }
+          if (!(Test-Path $iscc)) {
+            throw "ISCC.exe was not found after installing Inno Setup."
+          }
+
+          & $iscc $generatedIss
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
+
+          $setup = "dist\$env:SETUP_BASENAME.exe"
+          if (!(Test-Path $setup)) {
+            throw "Installer was not generated: $setup"
+          }
+
+      - name: Upload workflow artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Ledger-windows-${{ env.VERSION }}
+          path: |
+            dist/Ledger.exe
+            dist/${{ env.ZIP_BASENAME }}.zip
+            dist/${{ env.SETUP_BASENAME }}.exe
+
+      - name: Attach assets to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view $env:GITHUB_REF_NAME *> $null
+          if ($LASTEXITCODE -ne 0) {
+            gh release create $env:GITHUB_REF_NAME --title "Ledger $env:GITHUB_REF_NAME" --generate-notes
+          }
+
+          gh release upload $env:GITHUB_REF_NAME `
+            "dist/$env:ZIP_BASENAME.zip" `
+            "dist/$env:SETUP_BASENAME.exe" `
+            --clobber
