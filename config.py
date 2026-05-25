@@ -26,8 +26,14 @@ else:
 if is_writable(candidate_dir):
     BASE_DIR = candidate_dir
 else:
-    # Safe writable fallback folder in user home directory (e.g. C:\Users\Ming\Ledger)
-    BASE_DIR = Path.home() / "Ledger"
+    # Standard Windows Application pattern uses %APPDATA% (AppData/Roaming) for installed configuration
+    appdata = os.environ.get("APPDATA")
+    if appdata:
+        BASE_DIR = Path(appdata) / "Ledger"
+    else:
+        # Fallback for non-Windows or if APPDATA env is missing
+        BASE_DIR = Path.home() / "Ledger"
+        
     try:
         BASE_DIR.mkdir(parents=True, exist_ok=True)
     except Exception:
