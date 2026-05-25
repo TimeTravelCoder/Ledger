@@ -1,160 +1,186 @@
-<div align="center">
+# Ledger Max
 
-# 👑 Ledger Max · 旗舰版
+本分支：`Max`
 
-**极具格调的本地桌面文档分类与智能管理工具**
+Ledger Max 是当前项目的 Windows 旗舰发布分支，面向个人学习、科研资料、项目文档和日常文件的本地化整理。它以“收集箱 -> 智能命名 -> 分类归档 -> 标签检索 -> 3-2-1 备份”为主流程，重点提供完整桌面端体验、稳定的 Windows 打包发布流程和旗舰 UI。
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Python](https://img.shields.io/badge/Python-3.10%2B-blue?logo=python)](https://python.org)
-[![PySide6](https://img.shields.io/badge/UI-PySide6-41CD52?logo=qt)](https://doc.qt.io/qtforpython/)
-[![Theme](https://img.shields.io/badge/Themes-Cyber%20%7C%20Jade%20%7C%20Slate-darkviolet)](https://github.com/TimeTravelCoder/Ledger)
-[![Platform](https://img.shields.io/badge/Platform-Windows-0078D6?logo=windows)](https://github.com/TimeTravelCoder/Ledger)
-[![Release](https://img.shields.io/badge/Release-v1.2.1-6366F1)](https://github.com/TimeTravelCoder/Ledger/releases/tag/v1.2.1)
+## 分支定位
 
-> ✨ **Ledger Max** 是专为个人学习、科研工作者和高端内容创作者打造的本地文档整理与分类利器。它将美学格调融入“收集箱 → 智能重命名 → 归档 → 标签检索 → 3-2-1安全备份”的完整文档流。
+`Max` 是 Windows 用户的主力分支。
 
-</div>
+- 面向 Windows 10 / 11 64-bit。
+- 保留 Max 旗舰界面、三套主题、多目录监听、语义标签推荐、剧场预览和安全 ZIP 归档。
+- 配置了 Windows GitHub Actions 自动构建 workflow。
+- 正式 Windows Release 建议从该分支打 `v*` 标签发布。
 
----
+如果需要 macOS DMG，请使用 `Max_Mac` 分支。`Max` 分支不承担 macOS DMG 构建职责。
 
-## 🎨 Max 旗舰美学 (Premium UI/UX)
+## 分支关系
 
-- **Glassmorphism 磨砂玻璃特效**：主看板、统计卡片、分类预览面板采用毛玻璃材质，高对比度视觉重心。
-- **三套旗舰级配色主题**：
-  - 🌑 **赛博极光 (Cyber Dark)**：幽深太空黑与霓虹靛紫发光阴影交相辉映，极具极客质感。
-  - 🌿 **温润国风 (Chinese Jade)**：清新象牙白底融合柔美竹叶青，优雅自然。
-  - ☀️ **现代极简 (Slate Light)**：高级石墨蓝加持亮白水晶背景，商务洗练。
-- **物理缓动微交互动效**：侧边栏按钮、数据卡片悬停时，具有 2px 的柔性悬浮以及微发光平滑过渡，为点击注入灵魂。
-- **发光数据 Tooltip**：图表节点随鼠标悬停触发实时高亮气泡，让统计数据富有灵性。
+| 分支 | 定位 | 适合场景 |
+|---|---|---|
+| `master` | 基础开源版 | 学习、轻量使用、最小功能集 |
+| `Plus` | 增强工作区版 | 重点验证文件删除、重复文件和批量工具 |
+| `pro` | 安全事务版 | 验证事务、安全边界、备份和性能修复 |
+| `Max` | Windows 旗舰发布版 | Windows 正式打包、安装器、Release 发布 |
+| `Max_Mac` | macOS DMG 分支 | macOS `.app` / `.dmg` 自动构建 |
 
----
+## 核心功能
 
-## ⚙️ 旗舰生产力扩展 (Flagship Features)
+- 控制面板：统计文件数量、收集箱待处理项、标签覆盖率、最近修改和备份健康度。
+- 智能收集箱：拖拽文件、一键投递、命名模板、标签与备注录入。
+- 多目录监听：最多监听 3 个常用投递目录，例如 Downloads、桌面和聊天文件目录。
+- 工作空间浏览器：目录树、搜索、标签筛选、状态筛选、路径复制、文件定位和详情编辑。
+- 文件预览：支持文本、Markdown、代码、图片、PDF、Office Open XML 文档文本提取。
+- 智能标签推荐：根据文件名和备注推荐常用标签。
+- 批量操作：批量移动、批量追加标签、重复文件扫描、自动规则归类。
+- 安全 ZIP 归档：多选文件打包为 ZIP，并在校验成功后清理源文件。
+- 3-2-1 备份：记录硬盘和云盘备份位置，执行增量镜像备份。
+- 旗舰主题：Cyber Dark、Chinese Jade、Slate Light。
 
-- 📂 **拖拽直达 · 一键投递**：直接拖拽外部文件至“收集箱”区域，零步骤直接录入并唤起归类表单。
-- 📡 **多文件夹实时监听**：最多同时监听 3 个常用投递目录（Downloads、桌面、微信接收目录等），新文件落地后自动弹出智能整理提醒。
-- 🏷️ **智能语义标签推荐**：打字输入文件名或备注时，AI 语义分析毫秒级推荐 Top-3 匹配标签，点击一键确认。
-- 🎭 **沉浸式剧场阅读器**：纯文本、Markdown 与大图预览支持大屏暗场全屏阅读模式，提供沉浸式检视体验。
-- 🔒 **安全保险箱归档**：多选文件一键安全打包为 ZIP 归档，并在打包完成后自动安全删除原磁盘文件与脏数据。
+## 快速运行
 
----
+环境要求：
 
-## 🛡️ 稳如磐石的安全机制 (Security Core)
+- Python 3.10+
+- Windows 10 / 11 64-bit
 
-- **[P0] 闪退完美避坑**：完美消除由于 `desc_label` 属性未绑定导致的界面加载闪退 Bug，极致丝滑。
-- **[P1] 数据库线程安全隔离**：弃用全局单 SQLite 连接，升级为 `threading.local()` 多线程安全池隔离架构，彻底绝迹跨线程访问错误。
-- **[P1] 数据防丢失逻辑**：重构未入库文件的整理与归档事务，确保**物理移库与数据入库原子化同步**，杜绝标签丢失。
-- **磁盘状态实时失步校验**：备份、排重、移动等物理操作前强制同步磁盘文件状态，避免数据偏差。
-- **路径穿越与特权字符拦截**：新建文件与文件夹时，严格过滤 `../`、`..\` 及 Windows 特权非法字符，阻断非法目录注入。
+安装依赖：
 
----
-
-## 💻 快速运行与构建
-
-> 当前发布版本：**v1.2.1**。Windows 用户可直接在 [GitHub Releases](https://github.com/TimeTravelCoder/Ledger/releases/tag/v1.2.1) 下载 `Ledger-v1.2.1-windows-x64.zip` 或 `Ledger-Setup-v1.2.1-windows-x64.exe`。
-
-### 1. 运行环境
-
-- **Python** 3.10+
-- **系统要求** Windows 10 / 11 (64-bit)
-
-```bash
-# 安装系统运行核心依赖
+```powershell
 pip install -r requirements.txt
-# 运行主程序
+```
+
+启动程序：
+
+```powershell
 python main.py
 ```
 
-### 2. 编译为可独立执行的桌面程序 (EXE)
+首次启动会创建默认工作空间，并初始化标准目录模板。
 
-```bash
-# 安装打包构建依赖
+## 本地 Windows 打包
+
+安装构建依赖：
+
+```powershell
 pip install -r requirements-build.txt
+```
 
-# 1. 编译纯 EXE
+构建单文件 EXE：
+
+```powershell
 python -m PyInstaller --noconfirm --onefile --windowed --name Ledger --icon app_icon.ico "--add-data=app_icon.png;." "--add-data=app_icon.ico;." main.py
+```
 
-# 2. 编译专业的 Windows 安装向导 (Inno Setup 6+)
+构建 Inno Setup 安装器：
+
+```powershell
 & "C:\Users\Ming\AppData\Local\Programs\Inno Setup 6\iscc.exe" installer.iss
 ```
 
-构建完成后，`dist/` 目录会包含：
-
-- `Ledger.exe`：免安装独立可执行文件
-- `Ledger-v1.2.1-windows-x64.zip`：绿色便携版压缩包
-- `Ledger-Setup-v1.2.1-windows-x64.exe`：Windows 安装向导
-
-### 3. GitHub Actions 自动构建与发布
-
-`Max` 分支已配置 `Build Windows Release` 工作流，可自动生成 Windows 便携版 zip 与安装器。
-
-- 推送 `Max` 分支：自动构建并上传 Actions artifact，用于验证。
-- 手动运行 workflow：在 GitHub Actions 页面选择 `Build Windows Release` 后运行。
-- 推送 `v*` 标签：自动创建或更新 GitHub Release，并上传 `Ledger-v<version>-windows-x64.zip` 与 `Ledger-Setup-v<version>-windows-x64.exe`。
-
-详细使用方式见 [`WINDOWS_RELEASE_WORKFLOW.md`](WINDOWS_RELEASE_WORKFLOW.md)。
-
----
-
-## 📁 推荐文档归类规范 (Built-in Spec)
-
-软件自动支持中英双语工作空间规范化模板，确保目录层级不超过4层：
+构建产物：
 
 ```text
-00收集箱 (00Inbox)      ← 缓冲暂存，待整理
-01课程学习 (01Study)     ← 书本、课件与复习资料
-02课题研究 (02Research)  ← 论文草稿、文献库
-03项目管理 (03Projects)  ← 需求、计划与周报
-04代码仓库 (04Code)      ← 源码工程
-05学术论文 (05Papers)    ← PDF 文献与会议记录
-06知识笔记 (06Notes)     ← 随笔与 Markdown 笔记
-07常用资源 (07Resources) ← 软件包与媒体资源
-08演示汇报 (08PPT)       ← 汇报幻灯片
-09个人简历 (09Resume)    ← 求职与履历
-10归档区 (10Archive)     ← 旧项目冷归档
-99临时缓冲 (99Temp)      ← 随时可清的临时测试垃圾桶
+dist/Ledger.exe
+dist/Ledger-v<version>-windows-x64.zip
+dist/Ledger-Setup-v<version>-windows-x64.exe
 ```
 
----
+## Windows 自动构建与发布
 
-## 📂 系统项目架构
+`Max` 分支包含 Windows 专用 workflow：
 
+```text
+.github/workflows/build-windows-release.yml
 ```
+
+触发方式：
+
+- 推送 `Max` 分支：构建 Windows EXE、zip 和安装器，并上传 Actions artifact。
+- 手动运行 `Build Windows Release`：用于不发版的打包验证。
+- 推送 `v*` 标签：自动创建或更新 GitHub Release，并上传 Windows zip 和安装器。
+
+正式发布示例：
+
+```powershell
+git switch Max
+git pull
+git tag v1.2.3
+git push origin v1.2.3
+```
+
+详细说明见：
+
+```text
+WINDOWS_RELEASE_WORKFLOW.md
+```
+
+## 默认目录规范
+
+```text
+00Inbox / 00收集箱
+01Study / 01课程学习
+02Research / 02课题研究
+03Projects / 03项目管理
+04Code / 04代码仓库
+05Papers / 05学术论文
+06Notes / 06知识笔记
+07Resources / 07常用资源
+08PPT / 08演示汇报
+09Resume / 09个人简历
+10Archive / 10归档区
+99Temp / 99临时缓冲
+```
+
+可以在设置页启用自定义目录模板。
+
+## 数据与配置
+
+- `.config.json`：本地配置文件。
+- `Workspace/`：默认工作空间。
+- `Workspace/.docman.db`：SQLite 元数据数据库。
+
+这些都是本地运行数据，不建议提交到 Git。
+
+## 项目结构
+
+```text
 Ledger/
-├── main.py                 # 应用主入口
-├── config.py               # 配置注册与命名规范沙箱
-├── db.py                   # SQLite 元数据库 (Thread-local)
-├── file_manager.py         # 磁盘I/O事务、3-2-1备份与文件查重
+├── .github/workflows/build-windows-release.yml
+├── main.py
+├── config.py
+├── db.py
+├── file_manager.py
+├── semantic_analyzer.py
 ├── ui/
-│   ├── main_window.py      # 主侧边栏架构与监听注入
-│   ├── dashboard_view.py   # 磨砂玻璃数据统计看板
-│   ├── inbox_view.py       # 拖拽投递式智能收集箱
-│   ├── workspace_view.py   # 文件树浏览器、剧场预览、批量事务
-│   ├── backup_view.py      # 备份配置与健康状态
-│   ├── settings_view.py    # 主题切换、路径配置与多目录监听设置
-│   ├── styles.py           # 三套旗舰版主题 QSS 样式表
-│   ├── toast.py            # 微交互轻提示气泡
-│   └── icon_utils.py       # 智能文件格式渲染工具
+│   ├── main_window.py
+│   ├── dashboard_view.py
+│   ├── inbox_view.py
+│   ├── workspace_view.py
+│   ├── backup_view.py
+│   ├── settings_view.py
+│   ├── styles.py
+│   ├── icon_utils.py
+│   └── toast.py
 ├── app_icon.png
 ├── app_icon.ico
-├── .github/workflows/build-windows-release.yml  # Windows 自动构建与 Release 发布工作流
-├── WINDOWS_RELEASE_WORKFLOW.md # Windows workflow 使用说明
-├── installer.iss           # Windows 独立安装向导脚本
-├── RELEASE_NOTES.md        # 发布日志说明
-└── 电脑文档管理规范.md        # 管理规范建议
+├── installer.iss
+├── requirements.txt
+├── requirements-build.txt
+├── RELEASE_NOTES.md
+├── WINDOWS_RELEASE_WORKFLOW.md
+└── 电脑文档管理规范.md
 ```
 
----
+## 开发检查
 
-## 📄 授权协议
+```powershell
+python -m py_compile main.py config.py file_manager.py db.py ui\workspace_view.py ui\main_window.py
+```
 
-本项目基于 [MIT License](LICENSE) 授权发布，欢迎学习、修改与二次发行。
+如果修改移动、删除、备份或 ZIP 归档逻辑，建议先用测试工作空间验证，避免直接操作重要资料。
 
----
+## License
 
-<div align="center">
-
-👑 **Ledger Max · 以极致美学，重塑个人文档归宿**  
-Made with 💜 by [TimeTravelCoder](https://github.com/TimeTravelCoder)
-
-</div>
+本项目基于 MIT License 发布。
