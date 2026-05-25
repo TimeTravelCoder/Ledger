@@ -2921,19 +2921,66 @@ class ZipWorker(QThread):
     def run(self):
         try:
             ws_root = Path(config.workspace_dir).resolve()
-            with zipfile.ZipFile(self.dest_zip_path, 'w', zipfile.ZIP_DEFLATED) as zip_file:
-                for filepath in self.abs_paths:
-                    if filepath.exists() and filepath.is_file():
+            dest_resolved = self.dest_zip_path.resolve()
+            source_paths = []
+            seen_sources = set()
+            for filepath in self.abs_paths:
+                filepath = Path(filepath)
+                filepath_abs = filepath if filepath.is_absolute() else Path.cwd() / filepath
+                try:
+                    resolved = filepath_abs.resolve()
+                except Exception:
+                    continue
+                if resolved == dest_resolved:
+                    continue
+                if not filepath_abs.exists() or not filepath_abs.is_file():
+                    continue
+                source_key = os.path.normcase(str(resolved))
+                if source_key in seen_sources:
+                    continue
+                seen_sources.add(source_key)
+                source_paths.append(filepath_abs)
+
+            if not source_paths:
+                raise ValueError("归档列表中没有可打包的有效文件，或仅包含目标 ZIP 文件本身。")
+
+            self.dest_zip_path.parent.mkdir(parents=True, exist_ok=True)
+            temp_zip_path = None
+            try:
+                temp_file = tempfile.NamedTemporaryFile(
+                    prefix=f".{self.dest_zip_path.stem}-",
+                    suffix=".zip.tmp",
+                    dir=str(self.dest_zip_path.parent),
+                    delete=False,
+                )
+                temp_zip_path = Path(temp_file.name)
+                temp_file.close()
+
+                with zipfile.ZipFile(temp_zip_path, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+                    for filepath in source_paths:
                         # Preserve workspace relative directory structure to prevent name collisions
                         try:
-                            rel_arc = str(filepath.resolve().relative_to(ws_root)).replace("\\", "/")
+                            rel_arc = str(filepath.relative_to(ws_root)).replace("\\", "/")
                         except Exception:
                             rel_arc = filepath.name
                         zip_file.write(filepath, arcname=rel_arc)
 
+                with zipfile.ZipFile(temp_zip_path, 'r') as verify_zip:
+                    bad_entry = verify_zip.testzip()
+                if bad_entry:
+                    raise ValueError(f"归档完整性校验失败，损坏条目：{bad_entry}")
+
+                os.replace(temp_zip_path, self.dest_zip_path)
+                temp_zip_path = None
+            finally:
+                if temp_zip_path and temp_zip_path.exists():
+                    try:
+                        temp_zip_path.unlink()
+                    except Exception:
+                        pass
+
             # Cascade delete source files and database records
-            ws_root = Path(config.workspace_dir).resolve()
-            for filepath in self.abs_paths:
+            for filepath in source_paths:
                 try:
                     if filepath.exists():
                         filepath.unlink()
@@ -2944,6 +2991,6 @@ class ZipWorker(QThread):
                 except Exception as e:
                     print(f"Error cascading clean up: {e}")
 
-            self.finished_signal.emit(str(self.dest_zip_path), len(self.abs_paths))
+            self.finished_signal.emit(str(self.dest_zip_path), len(source_paths))
         except Exception as e:
             self.error_signal.emit(str(e))

@@ -9,7 +9,7 @@
 [![PySide6](https://img.shields.io/badge/UI-PySide6-41CD52?logo=qt)](https://doc.qt.io/qtforpython/)
 [![Theme](https://img.shields.io/badge/Themes-Cyber%20%7C%20Jade%20%7C%20Slate-darkviolet)](https://github.com/TimeTravelCoder/Ledger)
 [![Platform](https://img.shields.io/badge/Platform-Windows-0078D6?logo=windows)](https://github.com/TimeTravelCoder/Ledger)
-[![Release](https://img.shields.io/badge/Release-v1.2-6366F1)](https://github.com/TimeTravelCoder/Ledger/releases/tag/v1.2)
+[![Release](https://img.shields.io/badge/Release-v1.2.1-6366F1)](https://github.com/TimeTravelCoder/Ledger/releases/tag/v1.2.1)
 
 > ✨ **Ledger Max** 是专为个人学习、科研工作者和高端内容创作者打造的本地文档整理与分类利器。它将美学格调融入“收集箱 → 智能重命名 → 归档 → 标签检索 → 3-2-1安全备份”的完整文档流。
 
@@ -51,7 +51,7 @@
 
 ## 💻 快速运行与构建
 
-> 当前发布版本：**v1.2**。Windows 用户可直接在 [GitHub Releases](https://github.com/TimeTravelCoder/Ledger/releases/tag/v1.2) 下载 `Ledger-v1.2-windows-x64.zip` 或 `Ledger-Setup-v1.2-windows-x64.exe`。
+> 当前发布版本：**v1.2.1**。Windows 用户可直接在 [GitHub Releases](https://github.com/TimeTravelCoder/Ledger/releases/tag/v1.2.1) 下载 `Ledger-v1.2.1-windows-x64.zip` 或 `Ledger-Setup-v1.2.1-windows-x64.exe`。
 
 ### 1. 运行环境
 
@@ -81,8 +81,8 @@ python -m PyInstaller --noconfirm --onefile --windowed --name Ledger --icon app_
 构建完成后，`dist/` 目录会包含：
 
 - `Ledger.exe`：免安装独立可执行文件
-- `Ledger-v1.2-windows-x64.zip`：绿色便携版压缩包
-- `Ledger-Setup-v1.2-windows-x64.exe`：Windows 安装向导
+- `Ledger-v1.2.1-windows-x64.zip`：绿色便携版压缩包
+- `Ledger-Setup-v1.2.1-windows-x64.exe`：Windows 安装向导
 
 ---
 
