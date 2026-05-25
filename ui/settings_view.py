@@ -261,17 +261,34 @@ class SettingsView(QWidget):
         dir_card = QFrame()
         dir_card.setObjectName("CardPanel")
         dir_layout = QVBoxLayout(dir_card)
-        dir_layout.setContentsMargins(18, 18, 18, 18)
+        dir_layout.setContentsMargins(20, 20, 20, 20)
         dir_layout.setSpacing(15)
 
+        # High-fidelity Title and Subtitle with integrated theme pill capsule
+        header_layout = QHBoxLayout()
+        title_vbox = QVBoxLayout()
         dir_title = QLabel("路径参数配置")
         dir_title.setObjectName("SettingsCardTitle")
-        dir_layout.addWidget(dir_title)
+        title_vbox.addWidget(dir_title)
+
+        dir_subtitle = QLabel("配置您的文档整理主目录并激活智能 Downloads 下载监控。")
+        dir_subtitle.setStyleSheet("color: #94A3B8; font-size: 11px;")
+        title_vbox.addWidget(dir_subtitle)
+        header_layout.addLayout(title_vbox, 1)
+
+        self.theme_badge = QLabel()
+        self.theme_badge.setAlignment(Qt.AlignCenter)
+        header_layout.addWidget(self.theme_badge)
+        dir_layout.addLayout(header_layout)
 
         grid = QGridLayout()
         grid.setSpacing(10)
+        grid.setContentsMargins(0, 5, 0, 5)
+
+        # Row 0: Workspace Path
         grid.addWidget(QLabel("主工作空间目录 (Workspace):"), 0, 0)
         self.input_ws_path = QLineEdit(config.workspace_dir)
+        self.input_ws_path.setPlaceholderText("选择或输入标准文档工作空间存放根路径...")
         grid.addWidget(self.input_ws_path, 0, 1)
         self.btn_browse_ws = QPushButton("浏览...")
         self.btn_browse_ws.setIcon(line_icon("folder", size=16))
@@ -279,14 +296,25 @@ class SettingsView(QWidget):
         self.btn_browse_ws.clicked.connect(self.browse_workspace)
         grid.addWidget(self.btn_browse_ws, 0, 2)
 
-        grid.addWidget(QLabel("浏览器下载目录 (Downloads):"), 1, 0)
+        # Row 1: Workspace Status
+        self.lbl_ws_status = QLabel()
+        grid.addWidget(self.lbl_ws_status, 1, 1)
+
+        # Row 2: Downloads Path
+        grid.addWidget(QLabel("浏览器下载目录 (Downloads):"), 2, 0)
         self.input_dl_path = QLineEdit(config.downloads_dir)
-        grid.addWidget(self.input_dl_path, 1, 1)
+        self.input_dl_path.setPlaceholderText("选择浏览器默认下载路径，用于自动监听导入功能...")
+        grid.addWidget(self.input_dl_path, 2, 1)
         self.btn_browse_dl = QPushButton("浏览...")
         self.btn_browse_dl.setIcon(line_icon("folder", size=16))
         self.btn_browse_dl.setIconSize(QSize(16, 16))
         self.btn_browse_dl.clicked.connect(self.browse_downloads)
-        grid.addWidget(self.btn_browse_dl, 1, 2)
+        grid.addWidget(self.btn_browse_dl, 2, 2)
+
+        # Row 3: Downloads Status
+        self.lbl_dl_status = QLabel()
+        grid.addWidget(self.lbl_dl_status, 3, 1)
+
         dir_layout.addLayout(grid)
 
         self.cb_monitor_dl = QCheckBox("自动监控 Downloads 文件夹的变化 (弹出智能整理提醒)")
@@ -294,24 +322,38 @@ class SettingsView(QWidget):
         self.cb_monitor_dl.stateChanged.connect(self.save_monitored)
         dir_layout.addWidget(self.cb_monitor_dl)
 
-        self.theme_hint = QLabel(f"当前主题: {config.theme}")
-        self.theme_hint.setObjectName("MutedText")
-        dir_layout.addWidget(self.theme_hint)
+        # Connect text changes to dynamic path validation
+        self.input_ws_path.textChanged.connect(self.validate_paths_realtime)
+        self.input_dl_path.textChanged.connect(self.validate_paths_realtime)
 
+        # Bottom buttons with correct visual weight swap
         init_layout = QHBoxLayout()
+        init_layout.setSpacing(12)
+
+        # 1. Maintenance Action: Weakened to secondary outlined style to prevent accidental catalog overwrite
         self.btn_init_ws = QPushButton("一键初始化/修复标准目录结构")
-        self.btn_init_ws.setObjectName("PrimaryBtn")
-        self.btn_init_ws.setIcon(line_icon("success", "#FFFFFF", 16))
+        self.btn_init_ws.setObjectName("SecondaryBtn")
+        self.btn_init_ws.setIcon(line_icon("success", size=16))
         self.btn_init_ws.setIconSize(QSize(16, 16))
         self.btn_init_ws.clicked.connect(self.run_init_workspace)
         init_layout.addWidget(self.btn_init_ws)
 
+        init_layout.addStretch()
+
+        # 2. Main Action: Swapped to Primary Indigo background to emphasize save priority
         self.btn_save_paths = QPushButton("应用路径并重新加载")
-        self.btn_save_paths.setIcon(line_icon("refresh", size=16))
+        self.btn_save_paths.setObjectName("PrimaryBtn")
+        self.btn_save_paths.setStyleSheet("background-color: #6366F1; color: #FFFFFF;")
+        self.btn_save_paths.setIcon(line_icon("refresh", "#FFFFFF", size=16))
         self.btn_save_paths.setIconSize(QSize(16, 16))
         self.btn_save_paths.clicked.connect(self.save_paths)
         init_layout.addWidget(self.btn_save_paths)
         dir_layout.addLayout(init_layout)
+
+        # Render theme badge
+        self.update_theme_badge()
+        # Initialize validation status
+        self.validate_paths_realtime()
 
         layout_paths.addWidget(dir_card)
 
@@ -852,6 +894,73 @@ class SettingsView(QWidget):
 
         self.lbl_file_count.setText(f"文件总量: {file_count} 个规范文件")
         self.lbl_ws_size.setText(f"总占用空间: {format_bytes(total_size)}")
+        # Dynamically refresh path verification status in real time
+        self.validate_paths_realtime()
+
+    def validate_paths_realtime(self):
+        ws = self.input_ws_path.text().strip()
+        dl = self.input_dl_path.text().strip()
+
+        # Validate Workspace
+        if not ws:
+            self.lbl_ws_status.setText("✕ 路径不能为空")
+            self.lbl_ws_status.setStyleSheet("color: #F43F5E; font-size: 11px; font-weight: 500;")
+        elif os.path.exists(ws):
+            self.lbl_ws_status.setText("✓ 路径存在且可读写")
+            self.lbl_ws_status.setStyleSheet("color: #10B981; font-size: 11px; font-weight: 500;")
+        else:
+            self.lbl_ws_status.setText("⚠ 路径目前在磁盘中不存在 (应用后将自动创建)")
+            self.lbl_ws_status.setStyleSheet("color: #F59E0B; font-size: 11px; font-weight: 500;")
+
+        # Validate Downloads
+        if not dl:
+            self.lbl_dl_status.setText("✕ 路径不能为空")
+            self.lbl_dl_status.setStyleSheet("color: #F43F5E; font-size: 11px; font-weight: 500;")
+        elif os.path.exists(dl):
+            self.lbl_dl_status.setText("✓ 路径存在且可监听")
+            self.lbl_dl_status.setStyleSheet("color: #10B981; font-size: 11px; font-weight: 500;")
+        else:
+            self.lbl_dl_status.setText("✕ 路径在磁盘中不存在")
+            self.lbl_dl_status.setStyleSheet("color: #F43F5E; font-size: 11px; font-weight: 500;")
+
+    def update_theme_badge(self):
+        theme_names = {
+            "dark": "🌙 赛博极光 (Cyber Dark)",
+            "zhongguose": "🌿 温润国风 (Chinese Jade)",
+            "light": "☀️ 现代极简 (Slate Light)"
+        }
+        theme_str = theme_names.get(config.theme, f"主题: {config.theme}")
+        self.theme_badge.setText(theme_str)
+        if config.theme == "zhongguose":
+            self.theme_badge.setStyleSheet("""
+                background-color: rgba(4, 120, 87, 0.08);
+                color: #047857;
+                border: 1px solid rgba(4, 120, 87, 0.2);
+                border-radius: 12px;
+                padding: 4px 12px;
+                font-size: 11px;
+                font-weight: 600;
+            """)
+        elif config.theme == "light":
+            self.theme_badge.setStyleSheet("""
+                background-color: rgba(79, 70, 229, 0.06);
+                color: #4F46E5;
+                border: 1px solid rgba(79, 70, 229, 0.15);
+                border-radius: 12px;
+                padding: 4px 12px;
+                font-size: 11px;
+                font-weight: 600;
+            """)
+        else: # dark
+            self.theme_badge.setStyleSheet("""
+                background-color: rgba(99, 102, 241, 0.08);
+                color: #6366F1;
+                border: 1px solid rgba(99, 102, 241, 0.2);
+                border-radius: 12px;
+                padding: 4px 12px;
+                font-size: 11px;
+                font-weight: 600;
+            """)
 
     def populate_rule_list(self):
         while self.rule_scroll_layout.count():
