@@ -97,9 +97,9 @@ pip install -r requirements-build.txt
 
 mkdir -p build/icon.iconset
 for size in 16 32 128 256 512; do
-  sips -z "$size" "$size" app_icon.png --out "build/icon.iconset/icon_${size}x${size}.png"
+  sips -s format png -z "$size" "$size" app_icon.png --out "build/icon.iconset/icon_${size}x${size}.png"
   double_size=$((size * 2))
-  sips -z "$double_size" "$double_size" app_icon.png --out "build/icon.iconset/icon_${size}x${size}@2x.png"
+  sips -s format png -z "$double_size" "$double_size" app_icon.png --out "build/icon.iconset/icon_${size}x${size}@2x.png"
 done
 iconutil -c icns build/icon.iconset -o app_icon.icns
 
