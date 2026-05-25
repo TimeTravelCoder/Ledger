@@ -3,6 +3,7 @@ import datetime
 import subprocess
 import shutil
 import tempfile
+import sys
 import zipfile
 import xml.etree.ElementTree as ET
 from difflib import SequenceMatcher
@@ -1478,6 +1479,11 @@ class WorkspaceView(QWidget):
                     subprocess.Popen(["explorer", "/select,", str(abs_path)])
                 else:
                     subprocess.Popen(["explorer", str(abs_path)])
+            elif sys.platform == "darwin":
+                if abs_path.is_file():
+                    subprocess.Popen(["open", "-R", str(abs_path)])
+                else:
+                    subprocess.Popen(["open", str(abs_path)])
             else:
                 target = abs_path if abs_path.is_dir() else abs_path.parent
                 QDesktopServices.openUrl(QUrl.fromLocalFile(str(target)))

@@ -1,0 +1,98 @@
+name: Build macOS DMG
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build Ledger.app and DMG
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-build.txt
+
+      - name: Resolve package version
+        shell: bash
+        run: |
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          else
+            VERSION="dev-${GITHUB_SHA::7}"
+          fi
+          echo "VERSION=${VERSION}" >> "${GITHUB_ENV}"
+
+      - name: Generate macOS icon
+        shell: bash
+        run: |
+          mkdir -p build/icon.iconset
+          for size in 16 32 128 256 512; do
+            sips -z "${size}" "${size}" app_icon.png --out "build/icon.iconset/icon_${size}x${size}.png"
+            double_size=$((size * 2))
+            sips -z "${double_size}" "${double_size}" app_icon.png --out "build/icon.iconset/icon_${size}x${size}@2x.png"
+          done
+          iconutil -c icns build/icon.iconset -o app_icon.icns
+
+      - name: Build Ledger.app
+        run: |
+          python -m PyInstaller \
+            --noconfirm \
+            --clean \
+            --windowed \
+            --name Ledger \
+            --icon app_icon.icns \
+            --add-data "app_icon.png:." \
+            --add-data "app_icon.ico:." \
+            main.py
+
+      - name: Smoke test app bundle
+        run: |
+          test -d dist/Ledger.app
+          test -x dist/Ledger.app/Contents/MacOS/Ledger
+          /usr/libexec/PlistBuddy -c "Print :CFBundleName" dist/Ledger.app/Contents/Info.plist
+
+      - name: Package ZIP and DMG
+        shell: bash
+        run: |
+          ditto -c -k --sequesterRsrc --keepParent dist/Ledger.app "dist/Ledger-v${VERSION}-macos.zip"
+          hdiutil create \
+            -volname "Ledger" \
+            -srcfolder dist/Ledger.app \
+            -ov \
+            -format UDZO \
+            "dist/Ledger-v${VERSION}-macos.dmg"
+
+      - name: Upload workflow artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Ledger-macos-${{ env.VERSION }}
+          path: |
+            dist/Ledger-v${{ env.VERSION }}-macos.dmg
+            dist/Ledger-v${{ env.VERSION }}-macos.zip
+
+      - name: Attach assets to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "${GITHUB_REF_NAME}" \
+            "dist/Ledger-v${VERSION}-macos.dmg" \
+            "dist/Ledger-v${VERSION}-macos.zip" \
+            --clobber

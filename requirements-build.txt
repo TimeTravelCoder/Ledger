@@ -1,5 +1,5 @@
 # Ledger - 电脑文档规范分类与管理系统打包构建依赖
 # 使用方法: pip install -r requirements-build.txt
 
-# 用于将 python 源码打包为单文件可执行 EXE 程序
+# 用于将 python 源码打包为桌面可执行程序（Windows EXE / macOS app）
 pyinstaller>=6.0.0

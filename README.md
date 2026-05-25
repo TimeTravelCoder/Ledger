@@ -9,6 +9,7 @@
 [![PySide6](https://img.shields.io/badge/UI-PySide6-41CD52?logo=qt)](https://doc.qt.io/qtforpython/)
 [![Theme](https://img.shields.io/badge/Themes-Cyber%20%7C%20Jade%20%7C%20Slate-darkviolet)](https://github.com/TimeTravelCoder/Ledger)
 [![Platform](https://img.shields.io/badge/Platform-Windows-0078D6?logo=windows)](https://github.com/TimeTravelCoder/Ledger)
+[![macOS](https://img.shields.io/badge/macOS-DMG-000000?logo=apple)](https://github.com/TimeTravelCoder/Ledger/actions)
 [![Release](https://img.shields.io/badge/Release-v1.2.1-6366F1)](https://github.com/TimeTravelCoder/Ledger/releases/tag/v1.2.1)
 
 > ✨ **Ledger Max** 是专为个人学习、科研工作者和高端内容创作者打造的本地文档整理与分类利器。它将美学格调融入“收集箱 → 智能重命名 → 归档 → 标签检索 → 3-2-1安全备份”的完整文档流。
@@ -51,12 +52,12 @@
 
 ## 💻 快速运行与构建
 
-> 当前发布版本：**v1.2.1**。Windows 用户可直接在 [GitHub Releases](https://github.com/TimeTravelCoder/Ledger/releases/tag/v1.2.1) 下载 `Ledger-v1.2.1-windows-x64.zip` 或 `Ledger-Setup-v1.2.1-windows-x64.exe`。
+> 当前发布版本：**v1.2.1**。Windows 用户可直接在 [GitHub Releases](https://github.com/TimeTravelCoder/Ledger/releases/tag/v1.2.1) 下载 `Ledger-v1.2.1-windows-x64.zip` 或 `Ledger-Setup-v1.2.1-windows-x64.exe`。macOS 版本通过 GitHub Actions 的 `Build macOS DMG` 工作流在 macOS runner 上构建；推送 `v*` 标签时会自动把 `.dmg` 挂载到对应 Release。
 
 ### 1. 运行环境
 
 - **Python** 3.10+
-- **系统要求** Windows 10 / 11 (64-bit)
+- **系统要求** Windows 10 / 11 (64-bit)；macOS 12+
 
 ```bash
 # 安装系统运行核心依赖
@@ -65,7 +66,7 @@ pip install -r requirements.txt
 python main.py
 ```
 
-### 2. 编译为可独立执行的桌面程序 (EXE)
+### 2. 编译为可独立执行的桌面程序 (Windows EXE)
 
 ```bash
 # 安装打包构建依赖
@@ -83,6 +84,28 @@ python -m PyInstaller --noconfirm --onefile --windowed --name Ledger --icon app_
 - `Ledger.exe`：免安装独立可执行文件
 - `Ledger-v1.2.1-windows-x64.zip`：绿色便携版压缩包
 - `Ledger-Setup-v1.2.1-windows-x64.exe`：Windows 安装向导
+
+### 3. 编译 macOS `.app` 与 `.dmg`
+
+推荐使用仓库内置的 GitHub Actions 工作流：进入 GitHub 仓库的 **Actions** 页面，手动运行 `Build macOS DMG`，或推送 `v*` 标签自动构建并上传到对应 Release。
+
+如需在 macOS 本机手动构建：
+
+```bash
+pip install -r requirements.txt
+pip install -r requirements-build.txt
+
+mkdir -p build/icon.iconset
+for size in 16 32 128 256 512; do
+  sips -z "$size" "$size" app_icon.png --out "build/icon.iconset/icon_${size}x${size}.png"
+  double_size=$((size * 2))
+  sips -z "$double_size" "$double_size" app_icon.png --out "build/icon.iconset/icon_${size}x${size}@2x.png"
+done
+iconutil -c icns build/icon.iconset -o app_icon.icns
+
+python -m PyInstaller --noconfirm --clean --windowed --name Ledger --icon app_icon.icns --add-data "app_icon.png:." --add-data "app_icon.ico:." main.py
+hdiutil create -volname "Ledger" -srcfolder dist/Ledger.app -ov -format UDZO dist/Ledger-v1.2.1-macos.dmg
+```
 
 ---
 
@@ -111,6 +134,7 @@ python -m PyInstaller --noconfirm --onefile --windowed --name Ledger --icon app_
 
 ```
 Ledger/
+├── .github/workflows/build-macos-dmg.yml  # macOS app / DMG 自动构建工作流
 ├── main.py                 # 应用主入口
 ├── config.py               # 配置注册与命名规范沙箱
 ├── db.py                   # SQLite 元数据库 (Thread-local)

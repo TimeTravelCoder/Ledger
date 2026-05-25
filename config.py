@@ -15,9 +15,22 @@ def is_writable(path: Path) -> bool:
     except Exception:
         return False
 
-# Under PyInstaller, Path(__file__).parent evaluates to temporary directory
-# sys.frozen identifies execution from compiled executable, sys.executable points to EXE path
-if getattr(sys, "frozen", False):
+def get_user_data_dir() -> Path:
+    """Return the platform-appropriate writable app data directory."""
+    if sys.platform == "darwin":
+        return Path.home() / "Library" / "Application Support" / "Ledger"
+    appdata = os.environ.get("APPDATA")
+    if appdata:
+        return Path(appdata) / "Ledger"
+    return Path.home() / "Ledger"
+
+
+# Under PyInstaller, Path(__file__).parent evaluates to temporary directory.
+# macOS app bundles should keep mutable app data outside Ledger.app.
+is_frozen = getattr(sys, "frozen", False)
+if is_frozen and sys.platform == "darwin":
+    candidate_dir = get_user_data_dir()
+elif is_frozen:
     candidate_dir = Path(sys.executable).parent
 else:
     candidate_dir = Path(__file__).parent
@@ -26,14 +39,7 @@ else:
 if is_writable(candidate_dir):
     BASE_DIR = candidate_dir
 else:
-    # Standard Windows Application pattern uses %APPDATA% (AppData/Roaming) for installed configuration
-    appdata = os.environ.get("APPDATA")
-    if appdata:
-        BASE_DIR = Path(appdata) / "Ledger"
-    else:
-        # Fallback for non-Windows or if APPDATA env is missing
-        BASE_DIR = Path.home() / "Ledger"
-        
+    BASE_DIR = get_user_data_dir()
     try:
         BASE_DIR.mkdir(parents=True, exist_ok=True)
     except Exception:
