@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - Max
+      - Plus_Rust
     tags:
       - "v*"
 
