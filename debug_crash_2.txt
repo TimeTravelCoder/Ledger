@@ -1,0 +1,5 @@
+App started
+MainWindow shown
+Toggling theme
+Toggle complete
+App exec finished

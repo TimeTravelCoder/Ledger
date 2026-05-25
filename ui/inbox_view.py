@@ -741,7 +741,7 @@ class InboxView(QWidget):
         for i in reversed(range(self.tags_container_layout.count())):
             item = self.tags_container_layout.itemAt(i)
             if item and item.widget():
-                item.widget().setParent(None)
+                item.widget().deleteLater()
 
         # 2. Re-create columns
         # Primary Tags
@@ -794,7 +794,7 @@ class InboxView(QWidget):
         for i in reversed(range(self.recomm_chips_layout.count())):
             item = self.recomm_chips_layout.itemAt(i)
             if item and item.widget():
-                item.widget().setParent(None)
+                item.widget().deleteLater()
 
         # 2. Get recommendations
         topic = self.input_topic.text().strip()

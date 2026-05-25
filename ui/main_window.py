@@ -253,7 +253,7 @@ class MainWindow(QMainWindow):
         self.setup_tray_icon()
 
         # Apply physical hover animations to navigation & theme-switching buttons
-        apply_hover_physics(self.nav_buttons + [self.btn_theme_toggle], lift_distance=3, shadow_blur=14)
+        apply_hover_physics(self.nav_buttons, lift_distance=3, shadow_blur=14)
 
     def load_app_icon(self):
         root = Path(__file__).parent.parent

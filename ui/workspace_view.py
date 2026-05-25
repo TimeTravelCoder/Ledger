@@ -1393,8 +1393,8 @@ class WorkspaceView(QWidget):
         # Remove all widgets and spacers from tag_flow completely
         while self.tag_flow.count():
             item = self.tag_flow.takeAt(0)
-            if item.widget():
-                item.widget().setParent(None)
+            if item and item.widget():
+                item.widget().deleteLater()
         self.tag_btn_references.clear()
         self.selected_filter_tags = set()
 

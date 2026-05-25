@@ -608,9 +608,12 @@ class DashboardView(QWidget):
         recent_layout.addWidget(self.recent_table)
 
         # Keep dummy/hidden member variables for 100% backend compatibility
-        self.tags_summary = QLabel()
-        self.bar_title = QLabel()
-        self.bar_container = QFrame()
+        self.tags_summary = QLabel(self)
+        self.tags_summary.hide()
+        self.bar_title = QLabel(self)
+        self.bar_title.hide()
+        self.bar_container = QFrame(self)
+        self.bar_container.hide()
         self.bar_container_layout = QVBoxLayout(self.bar_container)
 
         # Create a container frame for premium indicators

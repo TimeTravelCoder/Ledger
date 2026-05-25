@@ -116,21 +116,6 @@ class VisualTagPool(QWidget):
         self.main_layout.setContentsMargins(0, 0, 0, 0)
         self.main_layout.setSpacing(8)
 
-        # Scroll area for capsules to prevent vertical UI bloat
-        self.scroll = QScrollArea()
-        self.scroll.setWidgetResizable(True)
-        self.scroll.setFrameShape(QFrame.NoFrame)
-        self.scroll.setMinimumHeight(70)
-        self.scroll.setMaximumHeight(160)
-        self.scroll.setStyleSheet("QScrollArea { background: transparent; }")
-
-        self.capsule_widget = QWidget()
-        self.capsule_widget.setObjectName("CapsuleWidgetContainer")
-        self.capsule_widget.setStyleSheet("#CapsuleWidgetContainer { background: transparent; }")
-        self.capsule_layout = FlowLayout(self.capsule_widget, margin=0, hspacing=6, vspacing=6)
-        self.scroll.setWidget(self.capsule_widget)
-        self.main_layout.addWidget(self.scroll)
-
         # Inline input for quick-adding new tags
         self.input_layout = QHBoxLayout()
         self.input_layout.setSpacing(8)
@@ -148,6 +133,21 @@ class VisualTagPool(QWidget):
         self.input_layout.addWidget(self.btn_add)
 
         self.main_layout.addLayout(self.input_layout)
+
+        # Scroll area for capsules to prevent vertical UI bloat
+        self.scroll = QScrollArea()
+        self.scroll.setWidgetResizable(True)
+        self.scroll.setFrameShape(QFrame.NoFrame)
+        self.scroll.setMinimumHeight(70)
+        self.scroll.setMaximumHeight(160)
+        self.scroll.setStyleSheet("QScrollArea { background: transparent; }")
+
+        self.capsule_widget = QWidget()
+        self.capsule_widget.setObjectName("CapsuleWidgetContainer")
+        self.capsule_widget.setStyleSheet("#CapsuleWidgetContainer { background: transparent; }")
+        self.capsule_layout = FlowLayout(self.capsule_widget, margin=0, hspacing=6, vspacing=6)
+        self.scroll.setWidget(self.capsule_widget)
+        self.main_layout.addWidget(self.scroll)
 
     def set_tags(self, tags):
         self.tags = list(tags)
@@ -453,8 +453,8 @@ class SettingsView(QWidget):
         wizard_card = QFrame()
         wizard_card.setObjectName("CardPanel")
         wizard_layout = QVBoxLayout(wizard_card)
-        wizard_layout.setContentsMargins(18, 18, 18, 18)
-        wizard_layout.setSpacing(15)
+        wizard_layout.setContentsMargins(20, 20, 20, 20)
+        wizard_layout.setSpacing(12)
 
         wizard_title = QLabel("新建工作空间向导")
         wizard_title.setObjectName("SettingsCardTitle")
@@ -497,8 +497,8 @@ class SettingsView(QWidget):
         custom_card = QFrame()
         custom_card.setObjectName("CardPanel")
         custom_layout = QVBoxLayout(custom_card)
-        custom_layout.setContentsMargins(18, 18, 18, 18)
-        custom_layout.setSpacing(15)
+        custom_layout.setContentsMargins(20, 20, 20, 20)
+        custom_layout.setSpacing(12)
 
         custom_title = QLabel("自建分类目录模板与规范")
         custom_title.setObjectName("SettingsCardTitle")
@@ -528,6 +528,8 @@ class SettingsView(QWidget):
         self.btn_save_custom_dirs.clicked.connect(self.save_custom_dirs)
         custom_layout.addWidget(self.btn_save_custom_dirs)
         wiz_inner.addWidget(custom_card)
+        
+        wiz_inner.addStretch()
 
         wiz_scroll.setWidget(wiz_scroll_content)
         layout_wiz.addWidget(wiz_scroll)
@@ -552,20 +554,46 @@ class SettingsView(QWidget):
         tag_desc.setObjectName("MutedText")
         tag_layout.addWidget(tag_desc)
 
-        tag_grid = QGridLayout()
-        tag_grid.setSpacing(15)
-        tag_grid.addWidget(QLabel("一级分类标签 (Primary):"), 0, 0)
+        tag_list_layout = QVBoxLayout()
+        tag_list_layout.setSpacing(24)
+
+        # Primary Group
+        primary_group = QWidget()
+        primary_layout = QVBoxLayout(primary_group)
+        primary_layout.setContentsMargins(0, 0, 0, 0)
+        primary_layout.setSpacing(8)
+        primary_lbl = QLabel("一级分类标签 (Primary):")
+        primary_lbl.setStyleSheet("font-weight: bold; color: #64748B;")
+        primary_layout.addWidget(primary_lbl)
         self.tag_pool_primary = VisualTagPool("primary")
-        tag_grid.addWidget(self.tag_pool_primary, 0, 1)
+        primary_layout.addWidget(self.tag_pool_primary)
+        tag_list_layout.addWidget(primary_group)
 
-        tag_grid.addWidget(QLabel("二级细分标签 (Secondary):"), 1, 0)
+        # Secondary Group
+        secondary_group = QWidget()
+        secondary_layout = QVBoxLayout(secondary_group)
+        secondary_layout.setContentsMargins(0, 0, 0, 0)
+        secondary_layout.setSpacing(8)
+        secondary_lbl = QLabel("二级细分标签 (Secondary):")
+        secondary_lbl.setStyleSheet("font-weight: bold; color: #64748B;")
+        secondary_layout.addWidget(secondary_lbl)
         self.tag_pool_secondary = VisualTagPool("secondary")
-        tag_grid.addWidget(self.tag_pool_secondary, 1, 1)
+        secondary_layout.addWidget(self.tag_pool_secondary)
+        tag_list_layout.addWidget(secondary_group)
 
-        tag_grid.addWidget(QLabel("状态属性标签 (Status):"), 2, 0)
+        # Status Group
+        status_group = QWidget()
+        status_layout = QVBoxLayout(status_group)
+        status_layout.setContentsMargins(0, 0, 0, 0)
+        status_layout.setSpacing(8)
+        status_lbl = QLabel("状态属性标签 (Status):")
+        status_lbl.setStyleSheet("font-weight: bold; color: #64748B;")
+        status_layout.addWidget(status_lbl)
         self.tag_pool_status = VisualTagPool("status")
-        tag_grid.addWidget(self.tag_pool_status, 2, 1)
-        tag_layout.addLayout(tag_grid)
+        status_layout.addWidget(self.tag_pool_status)
+        tag_list_layout.addWidget(status_group)
+
+        tag_layout.addLayout(tag_list_layout)
 
         tag_btn_layout = QHBoxLayout()
         self.btn_save_tags = QPushButton("保存标签字典")
@@ -629,12 +657,21 @@ class SettingsView(QWidget):
         self.rule_scroll.setWidget(self.rule_scroll_content)
         rule_layout.addWidget(self.rule_scroll)
 
+        rule_btn_layout = QHBoxLayout()
+        self.btn_add_rule = QPushButton("新增归类规则")
+        self.btn_add_rule.setIcon(line_icon("add", size=16))
+        self.btn_add_rule.setIconSize(QSize(16, 16))
+        self.btn_add_rule.clicked.connect(self.add_auto_rule)
+        rule_btn_layout.addWidget(self.btn_add_rule)
+
         self.btn_save_rules = QPushButton("保存归类规则")
         self.btn_save_rules.setObjectName("PrimaryBtn")
         self.btn_save_rules.setIcon(line_icon("success", "#FFFFFF", 16))
         self.btn_save_rules.setIconSize(QSize(16, 16))
         self.btn_save_rules.clicked.connect(self.save_auto_rules)
-        rule_layout.addWidget(self.btn_save_rules)
+        rule_btn_layout.addWidget(self.btn_save_rules)
+        
+        rule_layout.addLayout(rule_btn_layout)
         rules_scroll_inner.addWidget(rule_card)
 
         preset_card = QFrame()
@@ -1047,7 +1084,23 @@ class SettingsView(QWidget):
             self.lbl_dl_status.setStyleSheet("color: #94A3B8; font-size: 11px; font-weight: 500;")
 
     def update_theme_badge(self):
-        pass
+        theme = config.theme
+        if theme == "dark":
+            text = "🌙 赛博极光 (Cyber Dark)"
+            bg = "#1E293B"
+            color = "#818CF8"
+        elif theme == "light":
+            text = "☀️ 现代极简 (Slate Light)"
+            bg = "#F1F5F9"
+            color = "#6366F1"
+        else:
+            text = "🌿 温润国风 (Chinese Jade)"
+            bg = "#E6F4EA"
+            color = "#127A60"
+
+        if hasattr(self, "theme_badge"):
+            self.theme_badge.setText(text)
+            self.theme_badge.setStyleSheet(f"background-color: {bg}; color: {color}; padding: 4px 10px; border-radius: 10px; font-size: 11px; font-weight: bold;")
 
     def populate_rule_list(self):
         while self.rule_scroll_layout.count():
@@ -1057,38 +1110,94 @@ class SettingsView(QWidget):
 
         self.rule_widgets = []
         if not config.auto_rules:
-            empty = QLabel("暂无规则归类配置。\n可以先保存默认规则，或在这里添加关键词/后缀到目标目录的映射。")
+            empty = QLabel("暂无规则归类配置。\n点击下方新增按钮添加规则，或保留为空以使用默认。")
             empty.setObjectName("EmptyState")
             empty.setAlignment(Qt.AlignCenter)
             empty.setWordWrap(True)
             self.rule_scroll_layout.addWidget(empty)
+
         for rule in config.auto_rules:
-            row = QFrame()
-            row.setObjectName("CardPanel")
-            row_layout = QGridLayout(row)
-            row_layout.setContentsMargins(10, 10, 10, 10)
-            row_layout.setHorizontalSpacing(8)
-            row_layout.setVerticalSpacing(8)
-
-            name = QLineEdit(rule.get("name", ""))
-            keywords = QLineEdit(", ".join(rule.get("keywords", [])))
-            exts = QLineEdit(", ".join(rule.get("extensions", [])))
-            prefix = QLineEdit(rule.get("target_prefix", ""))
-
-            row_layout.addWidget(QLabel("名称"), 0, 0)
-            row_layout.addWidget(name, 0, 1)
-            row_layout.addWidget(QLabel("关键词"), 0, 2)
-            row_layout.addWidget(keywords, 0, 3)
-            row_layout.addWidget(QLabel("后缀"), 1, 0)
-            row_layout.addWidget(exts, 1, 1)
-            row_layout.addWidget(QLabel("前缀"), 1, 2)
-            row_layout.addWidget(prefix, 1, 3)
-
-            row.setProperty("rule_widgets", (name, keywords, exts, prefix))
-            self.rule_scroll_layout.addWidget(row)
-            self.rule_widgets.append(row)
+            self._add_rule_widget(rule)
 
         self.rule_scroll_layout.addStretch()
+
+    def _add_rule_widget(self, rule=None):
+        if rule is None:
+            rule = {"name": "", "keywords": [], "extensions": [], "target_prefix": ""}
+            
+        row = QFrame()
+        row.setObjectName("CardPanel")
+        row.setStyleSheet("#CardPanel { background-color: rgba(255, 255, 255, 0.03); border: 1px solid rgba(133, 179, 203, 0.2); border-radius: 8px; margin-bottom: 4px; }")
+        row_layout = QVBoxLayout(row)
+        row_layout.setContentsMargins(12, 12, 12, 12)
+        row_layout.setSpacing(10)
+
+        # Top bar: Name and Delete button
+        top_layout = QHBoxLayout()
+        name = QLineEdit(rule.get("name", ""))
+        name.setPlaceholderText("规则名称 (例如: 论文文档)")
+        name_lbl = QLabel("名称:")
+        name_lbl.setStyleSheet("font-weight: bold; color: #64748B;")
+        top_layout.addWidget(name_lbl)
+        top_layout.addWidget(name, 1)
+
+        btn_delete = QPushButton("删除")
+        btn_delete.setObjectName("DangerBtn")
+        btn_delete.setFixedWidth(60)
+        btn_delete.setStyleSheet("background-color: transparent; border: 1px solid #F43F5E; color: #F43F5E; padding: 2px; border-radius: 4px;")
+        btn_delete.clicked.connect(lambda _, r=row: self._delete_rule_widget(r))
+        top_layout.addWidget(btn_delete)
+        row_layout.addLayout(top_layout)
+
+        # Fields grid
+        grid = QGridLayout()
+        grid.setSpacing(8)
+        keywords = QLineEdit(", ".join(rule.get("keywords", [])))
+        keywords.setPlaceholderText("关键词 (英文逗号分隔)")
+        exts = QLineEdit(", ".join(rule.get("extensions", [])))
+        exts.setPlaceholderText("后缀 (例如: .pdf, .docx)")
+        prefix = QLineEdit(rule.get("target_prefix", ""))
+        prefix.setPlaceholderText("目标目录前缀 (例如: 05)")
+
+        kw_lbl = QLabel("关键词:")
+        kw_lbl.setStyleSheet("color: #64748B;")
+        ext_lbl = QLabel("文件后缀:")
+        ext_lbl.setStyleSheet("color: #64748B;")
+        prefix_lbl = QLabel("目标前缀:")
+        prefix_lbl.setStyleSheet("color: #64748B;")
+
+        grid.addWidget(kw_lbl, 0, 0)
+        grid.addWidget(keywords, 0, 1)
+        grid.addWidget(ext_lbl, 0, 2)
+        grid.addWidget(exts, 0, 3)
+        grid.addWidget(prefix_lbl, 1, 0)
+        grid.addWidget(prefix, 1, 1, 1, 3)
+
+        row_layout.addLayout(grid)
+        row.setProperty("rule_widgets", (name, keywords, exts, prefix))
+        
+        # Insert before stretch if it exists
+        count = self.rule_scroll_layout.count()
+        if count > 0 and self.rule_scroll_layout.itemAt(count - 1).spacerItem():
+            self.rule_scroll_layout.insertWidget(count - 1, row)
+        else:
+            self.rule_scroll_layout.addWidget(row)
+            
+        self.rule_widgets.append(row)
+
+    def _delete_rule_widget(self, row_widget):
+        if row_widget in self.rule_widgets:
+            self.rule_widgets.remove(row_widget)
+        row_widget.setParent(None)
+        row_widget.deleteLater()
+
+    def add_auto_rule(self):
+        # Remove empty state if present
+        for i in range(self.rule_scroll_layout.count()):
+            item = self.rule_scroll_layout.itemAt(i)
+            if item and item.widget() and item.widget().objectName() == "EmptyState":
+                item.widget().deleteLater()
+        self._add_rule_widget()
 
     def save_auto_rule_enabled(self, state):
         config.auto_rule_enabled = bool(state)
