@@ -1,8 +1,0 @@
-App started
-MainWindow created
-1. Setting config
-2. Setting stylesheet
-3. Updating btn text
-4. Refreshing nav icons
-5. Refreshing all views
-SUCCESS
