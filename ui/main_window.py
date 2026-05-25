@@ -78,20 +78,29 @@ class DownloadWatcher(FileSystemEventHandler):
 class WatcherThread(QThread):
     file_created_signal = Signal(str)
 
-    def __init__(self, path):
+    def __init__(self, paths):
         super().__init__()
-        self.path = path
+        if isinstance(paths, (str, Path)):
+            paths = [paths]
+        self.paths = [str(path) for path in paths]
         self.observer = None
 
     def run(self):
         try:
-            path_obj = Path(self.path)
-            if not path_obj.exists() or not path_obj.is_dir():
-                print(f"WatcherThread skipped: path '{self.path}' does not exist or is not a directory.")
-                return
             event_handler = DownloadWatcher(self.file_created_signal)
             self.observer = Observer()
-            self.observer.schedule(event_handler, path=self.path, recursive=False)
+            scheduled_count = 0
+            for path in self.paths:
+                path_obj = Path(path)
+                if not path_obj.exists() or not path_obj.is_dir():
+                    print(f"WatcherThread skipped: path '{path}' does not exist or is not a directory.")
+                    continue
+                self.observer.schedule(event_handler, path=str(path_obj), recursive=False)
+                scheduled_count += 1
+
+            if scheduled_count == 0:
+                return
+
             self.observer.start()
             self.exec()
         except Exception as e:
@@ -117,6 +126,7 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.is_first_run = is_first_run
         self.watcher_thread = None
+        self.watcher_paths = []
         self.sidebar_collapsed = False
         self.init_ui()
         self.setup_downloads_watcher()
@@ -366,22 +376,39 @@ class MainWindow(QMainWindow):
         self.setup_downloads_watcher()
 
     def setup_downloads_watcher(self):
-        """Sets up watchdog file watcher thread on the downloads folder."""
+        """Sets up watchdog file watcher thread on configured monitor folders."""
         # Stop previous if any
         if self.watcher_thread:
             self.watcher_thread.stop()
             self.watcher_thread = None
+        self.watcher_paths = []
 
         if not config.monitored_downloads:
             return
 
-        dl_path = config.downloads_dir
-        if not os.path.exists(dl_path):
-            print(f"Downloads folder '{dl_path}' does not exist, skipping watcher.")
+        monitor_paths = []
+        seen_paths = set()
+        for monitor_dir in config.normalize_monitored_dirs():
+            path_obj = Path(monitor_dir).expanduser()
+            try:
+                path_key = os.path.normcase(os.path.abspath(str(path_obj)))
+            except Exception:
+                path_key = str(path_obj).lower()
+            if path_key in seen_paths:
+                continue
+            seen_paths.add(path_key)
+
+            if not path_obj.exists() or not path_obj.is_dir():
+                print(f"Monitor folder '{monitor_dir}' does not exist or is not a directory, skipping watcher.")
+                continue
+            monitor_paths.append(str(path_obj))
+
+        if not monitor_paths:
             return
 
         # Start background watchdog thread
-        self.watcher_thread = WatcherThread(dl_path)
+        self.watcher_paths = monitor_paths
+        self.watcher_thread = WatcherThread(monitor_paths)
         self.watcher_thread.file_created_signal.connect(self.on_file_downloaded_detected)
         self.watcher_thread.start()
 

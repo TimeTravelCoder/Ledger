@@ -9,7 +9,7 @@ from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
                              QTabWidget, QLayout, QProgressBar)
 from PySide6.QtCore import Qt, Signal, QSize, QPoint, QRect
 from PySide6.QtGui import QIcon, QCursor
-from config import config, DEFAULT_TAGS, normalize_tags, display_tag, NAME_PRESET_BASES
+from config import config, DEFAULT_TAGS, MAX_MONITORED_DIRS, normalize_tags, display_tag, NAME_PRESET_BASES
 from file_manager import FileManager
 from ui.icon_utils import line_icon, format_bytes
 from ui.toast import show_toast
@@ -258,8 +258,23 @@ class SettingsView(QWidget):
         layout_paths.setContentsMargins(15, 15, 15, 15)
         layout_paths.setSpacing(15)
 
+        paths_scroll = QScrollArea()
+        paths_scroll.setWidgetResizable(True)
+        paths_scroll.setFrameShape(QFrame.NoFrame)
+        paths_scroll.setStyleSheet("QScrollArea { background: transparent; }")
+
+        paths_scroll_content = QWidget()
+        paths_scroll_content.setObjectName("PathsScrollContent")
+        paths_scroll_content.setStyleSheet("#PathsScrollContent { background: transparent; }")
+        path_content_layout = QVBoxLayout(paths_scroll_content)
+        path_content_layout.setContentsMargins(0, 0, 0, 0)
+        path_content_layout.setSpacing(15)
+        paths_scroll.setWidget(paths_scroll_content)
+        layout_paths.addWidget(paths_scroll)
+
         dir_card = QFrame()
         dir_card.setObjectName("CardPanel")
+        dir_card.setMinimumHeight(350)
         dir_layout = QVBoxLayout(dir_card)
         dir_layout.setContentsMargins(20, 20, 20, 20)
         dir_layout.setSpacing(15)
@@ -270,7 +285,7 @@ class SettingsView(QWidget):
         dir_title.setObjectName("SettingsCardTitle")
         title_vbox.addWidget(dir_title)
 
-        dir_subtitle = QLabel("配置您的文档整理主目录并激活智能 Downloads 下载监控。")
+        dir_subtitle = QLabel("配置您的文档整理主目录，并最多监听 3 个常用投递文件夹。")
         dir_subtitle.setStyleSheet("color: #94A3B8; font-size: 11px;")
         title_vbox.addWidget(dir_subtitle)
         dir_layout.addLayout(title_vbox)
@@ -280,45 +295,70 @@ class SettingsView(QWidget):
         grid.setContentsMargins(0, 5, 0, 5)
 
         # Row 0: Workspace Path
-        grid.addWidget(QLabel("主工作空间目录 (Workspace):"), 0, 0)
+        lbl_workspace_path = QLabel("主工作空间目录 (Workspace):")
+        lbl_workspace_path.setMinimumWidth(170)
+        grid.addWidget(lbl_workspace_path, 0, 0)
         self.input_ws_path = QLineEdit(config.workspace_dir)
         self.input_ws_path.setPlaceholderText("选择或输入标准文档工作空间存放根路径...")
+        self.input_ws_path.setMinimumHeight(36)
         grid.addWidget(self.input_ws_path, 0, 1)
         self.btn_browse_ws = QPushButton("浏览...")
         self.btn_browse_ws.setIcon(line_icon("folder", size=16))
         self.btn_browse_ws.setIconSize(QSize(16, 16))
+        self.btn_browse_ws.setMinimumHeight(36)
         self.btn_browse_ws.clicked.connect(self.browse_workspace)
         grid.addWidget(self.btn_browse_ws, 0, 2)
 
         # Row 1: Workspace Status
         self.lbl_ws_status = QLabel()
+        self.lbl_ws_status.setMinimumHeight(18)
         grid.addWidget(self.lbl_ws_status, 1, 1)
 
-        # Row 2: Downloads Path
-        grid.addWidget(QLabel("浏览器下载目录 (Downloads):"), 2, 0)
-        self.input_dl_path = QLineEdit(config.downloads_dir)
-        self.input_dl_path.setPlaceholderText("选择浏览器默认下载路径，用于自动监听导入功能...")
-        grid.addWidget(self.input_dl_path, 2, 1)
-        self.btn_browse_dl = QPushButton("浏览...")
-        self.btn_browse_dl.setIcon(line_icon("folder", size=16))
-        self.btn_browse_dl.setIconSize(QSize(16, 16))
-        self.btn_browse_dl.clicked.connect(self.browse_downloads)
-        grid.addWidget(self.btn_browse_dl, 2, 2)
+        monitor_dirs = config.normalize_monitored_dirs()
+        self.monitor_path_inputs = []
+        self.monitor_status_labels = []
+        self.monitor_browse_buttons = []
+        for idx in range(MAX_MONITORED_DIRS):
+            row = 2 + idx * 2
+            label_text = "监听文件夹 1 (Downloads):" if idx == 0 else f"监听文件夹 {idx + 1}:"
+            monitor_label = QLabel(label_text)
+            monitor_label.setMinimumWidth(170)
+            grid.addWidget(monitor_label, row, 0)
 
-        # Row 3: Downloads Status
-        self.lbl_dl_status = QLabel()
-        grid.addWidget(self.lbl_dl_status, 3, 1)
+            input_path = QLineEdit(monitor_dirs[idx] if idx < len(monitor_dirs) else "")
+            placeholder = "选择浏览器默认下载路径..." if idx == 0 else "可选：选择桌面、微信接收目录或常用投递文件夹..."
+            input_path.setPlaceholderText(placeholder)
+            input_path.setMinimumHeight(36)
+            grid.addWidget(input_path, row, 1)
+            self.monitor_path_inputs.append(input_path)
+
+            btn_browse = QPushButton("浏览...")
+            btn_browse.setIcon(line_icon("folder", size=16))
+            btn_browse.setIconSize(QSize(16, 16))
+            btn_browse.setMinimumHeight(36)
+            btn_browse.clicked.connect(lambda checked=False, i=idx: self.browse_downloads(i))
+            grid.addWidget(btn_browse, row, 2)
+            self.monitor_browse_buttons.append(btn_browse)
+
+            status_label = QLabel()
+            status_label.setMinimumHeight(18)
+            grid.addWidget(status_label, row + 1, 1)
+            self.monitor_status_labels.append(status_label)
+
+        self.input_dl_path = self.monitor_path_inputs[0]
+        self.lbl_dl_status = self.monitor_status_labels[0]
 
         dir_layout.addLayout(grid)
 
-        self.cb_monitor_dl = QCheckBox("自动监控 Downloads 文件夹的变化 (弹出智能整理提醒)")
+        self.cb_monitor_dl = QCheckBox("自动监控上述文件夹的变化 (弹出智能整理提醒)")
         self.cb_monitor_dl.setChecked(config.monitored_downloads)
         self.cb_monitor_dl.stateChanged.connect(self.save_monitored)
         dir_layout.addWidget(self.cb_monitor_dl)
 
         # Connect text changes to dynamic path validation
         self.input_ws_path.textChanged.connect(self.validate_paths_realtime)
-        self.input_dl_path.textChanged.connect(self.validate_paths_realtime)
+        for input_path in self.monitor_path_inputs:
+            input_path.textChanged.connect(self.validate_paths_realtime)
 
         # Bottom buttons with correct visual weight swap
         init_layout = QHBoxLayout()
@@ -329,6 +369,7 @@ class SettingsView(QWidget):
         self.btn_init_ws.setObjectName("SecondaryBtn")
         self.btn_init_ws.setIcon(line_icon("success", size=16))
         self.btn_init_ws.setIconSize(QSize(16, 16))
+        self.btn_init_ws.setMinimumHeight(36)
         self.btn_init_ws.clicked.connect(self.run_init_workspace)
         init_layout.addWidget(self.btn_init_ws)
 
@@ -340,6 +381,7 @@ class SettingsView(QWidget):
         self.btn_save_paths.setStyleSheet("background-color: #6366F1; color: #FFFFFF;")
         self.btn_save_paths.setIcon(line_icon("refresh", "#FFFFFF", size=16))
         self.btn_save_paths.setIconSize(QSize(16, 16))
+        self.btn_save_paths.setMinimumHeight(36)
         self.btn_save_paths.clicked.connect(self.save_paths)
         init_layout.addWidget(self.btn_save_paths)
         dir_layout.addLayout(init_layout)
@@ -349,7 +391,7 @@ class SettingsView(QWidget):
         # Initialize validation status
         self.validate_paths_realtime()
 
-        layout_paths.addWidget(dir_card)
+        path_content_layout.addWidget(dir_card)
 
         # Workspace Health & Disk Usage Meter Card
         stats_card = QFrame()
@@ -387,8 +429,8 @@ class SettingsView(QWidget):
         self.disk_bar.setTextVisible(False)
         stats_layout.addWidget(self.disk_bar)
 
-        layout_paths.addWidget(stats_card)
-        layout_paths.addStretch()
+        path_content_layout.addWidget(stats_card)
+        path_content_layout.addStretch()
 
         # ── Tab 2: 空间向导 (Workspace Wizard) ──────────────────────────────
         tab_wiz = QWidget()
@@ -697,22 +739,30 @@ class SettingsView(QWidget):
         if dir_path:
             self.input_ws_path.setText(dir_path)
 
-    def browse_downloads(self):
-        dir_path = QFileDialog.getExistingDirectory(self, "选择浏览器下载目录", config.downloads_dir)
+    def browse_downloads(self, index=0):
+        current_path = ""
+        if 0 <= index < len(self.monitor_path_inputs):
+            current_path = self.monitor_path_inputs[index].text().strip()
+        dir_path = QFileDialog.getExistingDirectory(self, "选择监听文件夹", current_path or config.downloads_dir)
         if dir_path:
-            self.input_dl_path.setText(dir_path)
+            self.monitor_path_inputs[index].setText(dir_path)
 
     def save_monitored(self, state):
         config.monitored_downloads = bool(state)
         config.save()
+        self.refresh_other_views_signal.emit()
 
     def save_paths(self):
         ws = self.input_ws_path.text().strip()
-        dl = self.input_dl_path.text().strip()
+        monitor_values = [input_path.text().strip() for input_path in self.monitor_path_inputs]
+        monitor_dirs = [path for path in monitor_values if path]
         from config import is_writable
 
-        if not ws or not dl:
+        if not ws:
             QMessageBox.warning(self, "错误", "路径不能为空！")
+            return
+        if not monitor_dirs:
+            QMessageBox.warning(self, "错误", "至少需要配置 1 个监听文件夹！")
             return
 
         # 1. Validate Workspace Path
@@ -730,17 +780,28 @@ class SettingsView(QWidget):
                 QMessageBox.warning(self, "错误", "主工作空间目录不存在且无法创建（父目录无写权限），请重新选择！")
                 return
 
-        # 2. Validate Downloads Path
-        dl_path = Path(dl)
-        if not dl_path.exists():
-            QMessageBox.warning(self, "错误", "浏览器下载目录在磁盘中不存在，请重新选择！")
-            return
-        if not dl_path.is_dir():
-            QMessageBox.warning(self, "错误", "浏览器下载目录指向了一个文件，请输入或选择有效目录！")
-            return
+        # 2. Validate monitored folders
+        seen_monitor_paths = set()
+        for idx, monitor_dir in enumerate(monitor_dirs, start=1):
+            monitor_path = Path(monitor_dir).expanduser()
+            try:
+                monitor_key = os.path.normcase(os.path.abspath(str(monitor_path)))
+            except Exception:
+                monitor_key = monitor_dir.lower()
+            if monitor_key in seen_monitor_paths:
+                QMessageBox.warning(self, "错误", f"监听文件夹 {idx} 与前面的路径重复，请重新选择！")
+                return
+            seen_monitor_paths.add(monitor_key)
+
+            if not monitor_path.exists():
+                QMessageBox.warning(self, "错误", f"监听文件夹 {idx} 在磁盘中不存在，请重新选择！")
+                return
+            if not monitor_path.is_dir():
+                QMessageBox.warning(self, "错误", f"监听文件夹 {idx} 指向了一个文件，请输入或选择有效目录！")
+                return
 
         config.workspace_dir = ws
-        config.downloads_dir = dl
+        config.set_monitored_dirs(monitor_dirs)
         config.save()
 
         # Reload database connection dynamically in db.py
@@ -918,7 +979,6 @@ class SettingsView(QWidget):
 
     def validate_paths_realtime(self):
         ws = self.input_ws_path.text().strip()
-        dl = self.input_dl_path.text().strip()
         from config import is_writable
 
         # Validate Workspace
@@ -944,20 +1004,47 @@ class SettingsView(QWidget):
                 self.lbl_ws_status.setText("✕ 路径不存在且无法创建 (父目录无写权限)")
                 self.lbl_ws_status.setStyleSheet("color: #F43F5E; font-size: 11px; font-weight: 500;")
 
-        # Validate Downloads
-        if not dl:
-            self.lbl_dl_status.setText("✕ 路径不能为空")
-            self.lbl_dl_status.setStyleSheet("color: #F43F5E; font-size: 11px; font-weight: 500;")
-        elif os.path.exists(dl):
-            if not os.path.isdir(dl):
-                self.lbl_dl_status.setText("✕ 路径指向文件，并非有效目录")
-                self.lbl_dl_status.setStyleSheet("color: #F43F5E; font-size: 11px; font-weight: 500;")
+        # Validate monitored folders
+        seen_monitor_paths = set()
+        active_count = 0
+        for idx, (input_path, status_label) in enumerate(zip(self.monitor_path_inputs, self.monitor_status_labels), start=1):
+            monitor_dir = input_path.text().strip()
+            if not monitor_dir:
+                if idx == 1:
+                    status_label.setText("✕ 至少配置 1 个监听文件夹")
+                    status_label.setStyleSheet("color: #F43F5E; font-size: 11px; font-weight: 500;")
+                else:
+                    status_label.setText("未启用")
+                    status_label.setStyleSheet("color: #94A3B8; font-size: 11px; font-weight: 500;")
+                continue
+
+            active_count += 1
+            monitor_path = Path(monitor_dir).expanduser()
+            try:
+                monitor_key = os.path.normcase(os.path.abspath(str(monitor_path)))
+            except Exception:
+                monitor_key = monitor_dir.lower()
+
+            if monitor_key in seen_monitor_paths:
+                status_label.setText("✕ 路径重复")
+                status_label.setStyleSheet("color: #F43F5E; font-size: 11px; font-weight: 500;")
+                continue
+            seen_monitor_paths.add(monitor_key)
+
+            if monitor_path.exists():
+                if not monitor_path.is_dir():
+                    status_label.setText("✕ 路径指向文件，并非有效目录")
+                    status_label.setStyleSheet("color: #F43F5E; font-size: 11px; font-weight: 500;")
+                else:
+                    status_label.setText("✓ 路径存在且可监听")
+                    status_label.setStyleSheet("color: #10B981; font-size: 11px; font-weight: 500;")
             else:
-                self.lbl_dl_status.setText("✓ 路径存在且可监听")
-                self.lbl_dl_status.setStyleSheet("color: #10B981; font-size: 11px; font-weight: 500;")
-        else:
-            self.lbl_dl_status.setText("✕ 路径在磁盘中不存在")
-            self.lbl_dl_status.setStyleSheet("color: #F43F5E; font-size: 11px; font-weight: 500;")
+                status_label.setText("✕ 路径在磁盘中不存在")
+                status_label.setStyleSheet("color: #F43F5E; font-size: 11px; font-weight: 500;")
+
+        if active_count and not self.input_dl_path.text().strip():
+            self.lbl_dl_status.setText("未启用")
+            self.lbl_dl_status.setStyleSheet("color: #94A3B8; font-size: 11px; font-weight: 500;")
 
     def update_theme_badge(self):
         pass

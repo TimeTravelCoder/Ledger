@@ -50,6 +50,8 @@ DEFAULT_TAGS = {
     "status": ["#待处理", "#进行中", "#已完成", "#非常重要"]
 }
 
+MAX_MONITORED_DIRS = 3
+
 
 def normalize_tag(tag):
     tag = str(tag or "").strip()
@@ -191,6 +193,7 @@ class AppConfig:
     def __init__(self):
         self.workspace_dir = ""
         self.downloads_dir = str(Path.home() / "Downloads")
+        self.monitored_dirs = [self.downloads_dir]
         self.backup_disk_dir = ""
         self.backup_cloud_dir = ""
         self.theme = "dark"  # "dark", "light", or "zhongguose"
@@ -227,6 +230,43 @@ class AppConfig:
             return self.custom_standard_dirs[0]
         return "00收集箱" if self.workspace_lang == "cn" else "00Inbox"
 
+    def normalize_monitored_dirs(self, paths=None):
+        raw_paths = paths if paths is not None else getattr(self, "monitored_dirs", [])
+        if isinstance(raw_paths, str):
+            raw_paths = [raw_paths]
+        if not raw_paths:
+            raw_paths = [self.downloads_dir]
+
+        normalized = []
+        seen = set()
+        for raw_path in raw_paths:
+            if not isinstance(raw_path, str):
+                continue
+            path_text = raw_path.strip()
+            if not path_text:
+                continue
+            try:
+                display_path = str(Path(path_text).expanduser())
+                key = os.path.normcase(os.path.abspath(display_path))
+            except Exception:
+                display_path = path_text
+                key = path_text.lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            normalized.append(display_path)
+            if len(normalized) >= MAX_MONITORED_DIRS:
+                break
+
+        if not normalized and self.downloads_dir:
+            normalized.append(self.downloads_dir)
+        return normalized
+
+    def set_monitored_dirs(self, paths):
+        self.monitored_dirs = self.normalize_monitored_dirs(paths)
+        if self.monitored_dirs:
+            self.downloads_dir = self.monitored_dirs[0]
+
     def load(self):
         if CONFIG_FILE.exists():
             try:
@@ -234,6 +274,7 @@ class AppConfig:
                     data = json.load(f)
                     self.workspace_dir = data.get("workspace_dir", self.workspace_dir)
                     self.downloads_dir = data.get("downloads_dir", self.downloads_dir)
+                    self.set_monitored_dirs(data.get("monitored_dirs", [self.downloads_dir]))
                     self.backup_disk_dir = data.get("backup_disk_dir", self.backup_disk_dir)
                     self.backup_cloud_dir = data.get("backup_cloud_dir", self.backup_cloud_dir)
                     self.theme = data.get("theme", self.theme)
@@ -259,9 +300,11 @@ class AppConfig:
 
     def save(self):
         try:
+            self.set_monitored_dirs(getattr(self, "monitored_dirs", [self.downloads_dir]))
             data = {
                 "workspace_dir": self.workspace_dir,
                 "downloads_dir": self.downloads_dir,
+                "monitored_dirs": self.monitored_dirs,
                 "backup_disk_dir": self.backup_disk_dir,
                 "backup_cloud_dir": self.backup_cloud_dir,
                 "theme": self.theme,
