@@ -55,8 +55,8 @@
 - **系统要求** Windows 10 / 11 (64-bit)
 
 ```bash
-# 激活虚拟环境并安装核心依赖
-pip install PySide6 watchdog
+# 安装系统运行核心依赖
+pip install -r requirements.txt
 # 运行主程序
 python main.py
 ```
@@ -64,6 +64,9 @@ python main.py
 ### 2. 编译为可独立执行的桌面程序 (EXE)
 
 ```bash
+# 安装打包构建依赖
+pip install -r requirements-build.txt
+
 # 1. 编译纯 EXE
 python -m PyInstaller --noconfirm --onefile --windowed --name Ledger --icon app_icon.ico "--add-data=app_icon.png;." "--add-data=app_icon.ico;." main.py
 

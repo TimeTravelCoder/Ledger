@@ -715,9 +715,34 @@ class SettingsView(QWidget):
     def save_paths(self):
         ws = self.input_ws_path.text().strip()
         dl = self.input_dl_path.text().strip()
+        from config import is_writable
 
         if not ws or not dl:
             QMessageBox.warning(self, "错误", "路径不能为空！")
+            return
+
+        # 1. Validate Workspace Path
+        ws_path = Path(ws)
+        if ws_path.exists():
+            if not ws_path.is_dir():
+                QMessageBox.warning(self, "错误", "主工作空间路径指向一个文件，请输入或选择有效目录！")
+                return
+            if not is_writable(ws_path):
+                QMessageBox.warning(self, "错误", "主工作空间路径无写入权限，请重新选择！")
+                return
+        else:
+            parent_dir = ws_path.parent
+            if not is_writable(parent_dir):
+                QMessageBox.warning(self, "错误", "主工作空间目录不存在且无法创建（父目录无写权限），请重新选择！")
+                return
+
+        # 2. Validate Downloads Path
+        dl_path = Path(dl)
+        if not dl_path.exists():
+            QMessageBox.warning(self, "错误", "浏览器下载目录在磁盘中不存在，请重新选择！")
+            return
+        if not dl_path.is_dir():
+            QMessageBox.warning(self, "错误", "浏览器下载目录指向了一个文件，请输入或选择有效目录！")
             return
 
         config.workspace_dir = ws
@@ -900,25 +925,42 @@ class SettingsView(QWidget):
     def validate_paths_realtime(self):
         ws = self.input_ws_path.text().strip()
         dl = self.input_dl_path.text().strip()
+        from config import is_writable
 
         # Validate Workspace
         if not ws:
             self.lbl_ws_status.setText("✕ 路径不能为空")
             self.lbl_ws_status.setStyleSheet("color: #F43F5E; font-size: 11px; font-weight: 500;")
         elif os.path.exists(ws):
-            self.lbl_ws_status.setText("✓ 路径存在且可读写")
-            self.lbl_ws_status.setStyleSheet("color: #10B981; font-size: 11px; font-weight: 500;")
+            if not os.path.isdir(ws):
+                self.lbl_ws_status.setText("✕ 路径指向文件，并非有效目录")
+                self.lbl_ws_status.setStyleSheet("color: #F43F5E; font-size: 11px; font-weight: 500;")
+            elif not is_writable(Path(ws)):
+                self.lbl_ws_status.setText("✕ 路径存在但无写入权限")
+                self.lbl_ws_status.setStyleSheet("color: #F43F5E; font-size: 11px; font-weight: 500;")
+            else:
+                self.lbl_ws_status.setText("✓ 路径存在且可读写")
+                self.lbl_ws_status.setStyleSheet("color: #10B981; font-size: 11px; font-weight: 500;")
         else:
-            self.lbl_ws_status.setText("⚠ 路径目前在磁盘中不存在 (应用后将自动创建)")
-            self.lbl_ws_status.setStyleSheet("color: #F59E0B; font-size: 11px; font-weight: 500;")
+            parent_dir = Path(ws).parent
+            if is_writable(parent_dir):
+                self.lbl_ws_status.setText("⚠ 路径目前在磁盘中不存在 (应用后将自动创建)")
+                self.lbl_ws_status.setStyleSheet("color: #F59E0B; font-size: 11px; font-weight: 500;")
+            else:
+                self.lbl_ws_status.setText("✕ 路径不存在且无法创建 (父目录无写权限)")
+                self.lbl_ws_status.setStyleSheet("color: #F43F5E; font-size: 11px; font-weight: 500;")
 
         # Validate Downloads
         if not dl:
             self.lbl_dl_status.setText("✕ 路径不能为空")
             self.lbl_dl_status.setStyleSheet("color: #F43F5E; font-size: 11px; font-weight: 500;")
         elif os.path.exists(dl):
-            self.lbl_dl_status.setText("✓ 路径存在且可监听")
-            self.lbl_dl_status.setStyleSheet("color: #10B981; font-size: 11px; font-weight: 500;")
+            if not os.path.isdir(dl):
+                self.lbl_dl_status.setText("✕ 路径指向文件，并非有效目录")
+                self.lbl_dl_status.setStyleSheet("color: #F43F5E; font-size: 11px; font-weight: 500;")
+            else:
+                self.lbl_dl_status.setText("✓ 路径存在且可监听")
+                self.lbl_dl_status.setStyleSheet("color: #10B981; font-size: 11px; font-weight: 500;")
         else:
             self.lbl_dl_status.setText("✕ 路径在磁盘中不存在")
             self.lbl_dl_status.setStyleSheet("color: #F43F5E; font-size: 11px; font-weight: 500;")

@@ -2564,8 +2564,13 @@ class WorkspaceView(QWidget):
                 if reply != QMessageBox.Yes:
                     return
 
-            # Gather absolute paths
-            abs_paths = [self.get_abs_path(p) for p in rel_paths]
+            # Gather absolute paths, excluding the destination ZIP file itself to prevent self-deletion
+            dest_resolved = dest_zip_path.resolve()
+            abs_paths = [self.get_abs_path(p) for p in rel_paths if self.get_abs_path(p).resolve() != dest_resolved]
+
+            if not abs_paths:
+                QMessageBox.warning(self, "警告", "归档文件列表中不能仅包含目标归档 ZIP 文件本身！")
+                return
 
             # Start background ZipWorker thread to prevent UI thread blocking
             self.zip_worker = ZipWorker(abs_paths, dest_zip_path, password, self)
@@ -2717,6 +2722,12 @@ class FileDetailsDialog(QDialog):
             if "/" in new_name or "\\" in new_name or ".." in new_name:
                 QMessageBox.warning(self, "警告", "文件名中不能包含路径分隔符、文件夹层级或穿越字符（如 /, \\, ..）。")
                 return
+
+            illegal_chars = ['<', '>', ':', '"', '|', '?', '*']
+            for char in illegal_chars:
+                if char in new_name:
+                    QMessageBox.warning(self, "警告", f"文件名中不能包含 Windows 系统非法文件名字符（如 {char}）。")
+                    return
 
             ws_root = Path(config.workspace_dir)
             src_abs = ws_root / self.info["filepath"]

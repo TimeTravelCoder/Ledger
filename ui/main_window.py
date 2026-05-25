@@ -84,18 +84,25 @@ class WatcherThread(QThread):
         self.observer = None
 
     def run(self):
-        event_handler = DownloadWatcher(self.file_created_signal)
-        self.observer = Observer()
-        self.observer.schedule(event_handler, path=self.path, recursive=False)
-        self.observer.start()
-
-        # QThread event loop keeps thread alive
-        self.exec()
-
-        # When thread exits
-        if self.observer:
-            self.observer.stop()
-            self.observer.join()
+        try:
+            path_obj = Path(self.path)
+            if not path_obj.exists() or not path_obj.is_dir():
+                print(f"WatcherThread skipped: path '{self.path}' does not exist or is not a directory.")
+                return
+            event_handler = DownloadWatcher(self.file_created_signal)
+            self.observer = Observer()
+            self.observer.schedule(event_handler, path=self.path, recursive=False)
+            self.observer.start()
+            self.exec()
+        except Exception as e:
+            print(f"Error starting WatcherThread observer: {e}")
+        finally:
+            if self.observer:
+                try:
+                    self.observer.stop()
+                    self.observer.join()
+                except Exception:
+                    pass
 
     def stop(self):
         if self.observer:

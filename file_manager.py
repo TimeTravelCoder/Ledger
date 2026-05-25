@@ -84,14 +84,27 @@ class FileManager:
     def delete_file(rel_path):
         """Delete a workspace file and its database record safely."""
         try:
+            if not rel_path or rel_path.strip() in ["", ".", "/"]:
+                raise ValueError("安全边界拦截：严禁传入空路径或工作空间根目录进行删除！")
+
             abs_path = FileManager.safe_workspace_path(rel_path)
+            ws_root = Path(config.workspace_dir).resolve()
+            if abs_path.resolve() == ws_root:
+                raise PermissionError("安全边界拦截：严禁删除工作区根目录本身！")
+
+            is_dir = False
             if abs_path.exists():
-                if abs_path.is_dir():
+                is_dir = abs_path.is_dir()
+                if is_dir:
                     shutil.rmtree(abs_path)
                 else:
                     abs_path.unlink()
-            # Only delete database record if physical deletion succeeded or file didn't exist
-            db.delete_file_record(rel_path)
+
+            # Cascade delete database records (sub-files as well if it's a folder)
+            if is_dir:
+                db.delete_folder_records(rel_path)
+            else:
+                db.delete_file_record(rel_path)
         except Exception as e:
             raise e
 
