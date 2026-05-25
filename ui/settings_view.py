@@ -264,8 +264,7 @@ class SettingsView(QWidget):
         dir_layout.setContentsMargins(20, 20, 20, 20)
         dir_layout.setSpacing(15)
 
-        # High-fidelity Title and Subtitle with integrated theme pill capsule
-        header_layout = QHBoxLayout()
+        # High-fidelity Title and Subtitle
         title_vbox = QVBoxLayout()
         dir_title = QLabel("路径参数配置")
         dir_title.setObjectName("SettingsCardTitle")
@@ -274,12 +273,7 @@ class SettingsView(QWidget):
         dir_subtitle = QLabel("配置您的文档整理主目录并激活智能 Downloads 下载监控。")
         dir_subtitle.setStyleSheet("color: #94A3B8; font-size: 11px;")
         title_vbox.addWidget(dir_subtitle)
-        header_layout.addLayout(title_vbox, 1)
-
-        self.theme_badge = QLabel()
-        self.theme_badge.setAlignment(Qt.AlignCenter)
-        header_layout.addWidget(self.theme_badge)
-        dir_layout.addLayout(header_layout)
+        dir_layout.addLayout(title_vbox)
 
         grid = QGridLayout()
         grid.setSpacing(10)
@@ -966,43 +960,7 @@ class SettingsView(QWidget):
             self.lbl_dl_status.setStyleSheet("color: #F43F5E; font-size: 11px; font-weight: 500;")
 
     def update_theme_badge(self):
-        theme_names = {
-            "dark": "✨ 赛博极光 (Cyber Dark)",
-            "zhongguose": "🌿 温润国风 (Chinese Jade)",
-            "light": "☀️ 现代极简 (Slate Light)"
-        }
-        theme_str = theme_names.get(config.theme, f"主题: {config.theme}")
-        self.theme_badge.setText(theme_str)
-        if config.theme == "zhongguose":
-            self.theme_badge.setStyleSheet("""
-                background-color: rgba(4, 120, 87, 0.08);
-                color: #047857;
-                border: 1px solid rgba(4, 120, 87, 0.2);
-                border-radius: 12px;
-                padding: 4px 12px;
-                font-size: 11px;
-                font-weight: 600;
-            """)
-        elif config.theme == "light":
-            self.theme_badge.setStyleSheet("""
-                background-color: rgba(79, 70, 229, 0.06);
-                color: #4F46E5;
-                border: 1px solid rgba(79, 70, 229, 0.15);
-                border-radius: 12px;
-                padding: 4px 12px;
-                font-size: 11px;
-                font-weight: 600;
-            """)
-        else: # dark
-            self.theme_badge.setStyleSheet("""
-                background-color: rgba(99, 102, 241, 0.08);
-                color: #6366F1;
-                border: 1px solid rgba(99, 102, 241, 0.2);
-                border-radius: 12px;
-                padding: 4px 12px;
-                font-size: 11px;
-                font-weight: 600;
-            """)
+        pass
 
     def populate_rule_list(self):
         while self.rule_scroll_layout.count():
