@@ -3,7 +3,7 @@ import sys
 from pathlib import Path
 from PySide6.QtWidgets import (QMainWindow, QWidget, QHBoxLayout, QVBoxLayout,
                              QPushButton, QStackedWidget, QLabel, QFrame,
-                             QMessageBox, QSystemTrayIcon, QStyle)
+                             QMessageBox, QSystemTrayIcon, QStyle, QMenu)
 from PySide6.QtCore import Qt, QThread, Signal, Slot, QTimer, QSize
 from PySide6.QtGui import QIcon
 from config import config
@@ -457,9 +457,37 @@ class MainWindow(QMainWindow):
     def setup_tray_icon(self):
         self.tray_icon = QSystemTrayIcon(self)
 
-        self.tray_icon.setIcon(line_icon("workspace", "#D1FFFF", 16))
+        tray_icon = self.app_icon if hasattr(self, "app_icon") and not self.app_icon.isNull() else line_icon("workspace", "#D1FFFF", 16)
+        self.tray_icon.setIcon(tray_icon)
         self.tray_icon.setToolTip("Ledger - 电脑文档规范分类与管理系统")
+        self.tray_icon.activated.connect(self.on_tray_icon_activated)
+
+        tray_menu = QMenu(self)
+        show_action = tray_menu.addAction("打开 Ledger")
+        show_action.triggered.connect(self.restore_from_tray)
+        tray_menu.addSeparator()
+        quit_action = tray_menu.addAction("退出")
+        quit_action.triggered.connect(self.close)
+        self.tray_icon.setContextMenu(tray_menu)
+
         self.tray_icon.show()
+
+    @Slot(QSystemTrayIcon.ActivationReason)
+    def on_tray_icon_activated(self, reason):
+        if reason in (QSystemTrayIcon.ActivationReason.Trigger, QSystemTrayIcon.ActivationReason.DoubleClick):
+            self.restore_from_tray()
+
+    @Slot()
+    def restore_from_tray(self):
+        if self.isMinimized():
+            self.showNormal()
+        else:
+            self.show()
+
+        self.raise_()
+        self.activateWindow()
+        QTimer.singleShot(0, self.raise_)
+        QTimer.singleShot(0, self.activateWindow)
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
