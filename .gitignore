@@ -1,4 +1,28 @@
-﻿*.pyc
+# ==========================================
+# LedgerOpen Git Ignore 规则
+# ==========================================
+
+# 1. PyInstaller 编译与打包生成产物 (排除开源版安装脚本本身)
+*.spec
+build/
+dist/
+dist_setup/
+
+# 2. Python 缓存与临时文件
 __pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# 3. 操作系统及编辑器文件
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# 4. 本地运行时数据与配置 (强烈建议隔离)
 .config.json
 Workspace/
+ledger.db
+*.db
+*.log
