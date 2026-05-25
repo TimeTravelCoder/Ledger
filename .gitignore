@@ -9,6 +9,9 @@ dist/
 dist_open/
 dist_setup/
 
+# 开源版专属配置 (Max 旗舰版忽略)
+installer_open.iss
+
 # 2. Python 缓存与临时文件
 __pycache__/
 *.pyc
