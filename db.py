@@ -52,7 +52,6 @@ def get_pinyin_initials(text):
 class DatabaseManager:
     def __init__(self):
         self._local = threading.local()
-        self._db_path = None
 
     def get_conn(self):
         # Dynamically connect to the database in the current workspace directory
@@ -66,16 +65,25 @@ class DatabaseManager:
 
         current_db_path = db_dir / ".docman.db"
 
-        # If database path changed, close old connection
-        if self._db_path != current_db_path:
-            self.close()
-            self._db_path = current_db_path
+        # Initialize thread-local storage for db_path if not exists
+        if not hasattr(self._local, "db_path"):
+            self._local.db_path = None
+
+        # If database path changed for this thread, close old connection
+        if self._local.db_path != current_db_path:
+            if hasattr(self._local, "conn") and self._local.conn is not None:
+                try:
+                    self._local.conn.close()
+                except Exception:
+                    pass
+                self._local.conn = None
+            self._local.db_path = current_db_path
 
         if not hasattr(self._local, "conn") or self._local.conn is None:
-            self._db_path = current_db_path
-            conn = sqlite3.connect(self._db_path, timeout=20.0)
+            conn = sqlite3.connect(current_db_path, timeout=20.0)
             conn.row_factory = sqlite3.Row
             self._local.conn = conn
+            self._local.db_path = current_db_path
             self._init_db(conn)
 
         return self._local.conn
@@ -400,7 +408,8 @@ class DatabaseManager:
             except Exception:
                 pass
             self._local.conn = None
-        self._db_path = None
+        if hasattr(self._local, "db_path"):
+            self._local.db_path = None
 
 # Global database manager instance
 db = DatabaseManager()

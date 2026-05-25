@@ -2863,7 +2863,8 @@ class ZipArchiveDialog(QDialog):
         layout.addWidget(self.input_zipname)
 
         # Encryption row
-        self.cb_encrypt = QCheckBox("启用安全保险密码保护 (Legacy Zip)")
+        self.cb_encrypt = QCheckBox("启用安全保险密码保护 (后续开发中...)")
+        self.cb_encrypt.setEnabled(False)
         layout.addWidget(self.cb_encrypt)
 
         self.row_password = QFrame()
@@ -2924,7 +2925,7 @@ class ZipWorker(QThread):
 
                     # Update database by deleting the file record
                     rel_path = str(filepath.resolve().relative_to(ws_root)).replace("\\", "/")
-                    db.delete_file(rel_path)
+                    db.delete_file_record(rel_path)
                 except Exception as e:
                     print(f"Error cascading clean up: {e}")
 
