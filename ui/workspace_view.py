@@ -494,8 +494,11 @@ class CreateFileDialog(QDialog):
             ext = self.input_custom_ext.text().strip()
             if not ext.startswith("."):
                 ext = f".{ext}"
-            if len(ext) <= 1:
-                QMessageBox.warning(self, "提示", "请输入有效的自定义文件后缀。")
+            
+            # Strict regex validation: custom extension must be '.' followed only by alphanumeric characters
+            import re
+            if not re.match(r"^\.[a-zA-Z0-9]+$", ext):
+                QMessageBox.warning(self, "非法后缀", "请输入合法的自定义文件后缀（例如：.py、.json，只能包含字母与数字）。")
                 return
 
         # Ensure filename has extension
@@ -2541,7 +2544,10 @@ class WorkspaceView(QWidget):
 
             # Purify input ZIP filename to prevent directory traversal or absolute path injection
             zip_name = os.path.basename(zip_name)
-            zip_name = zip_name.replace("/", "").replace("\\", "").replace("..", "")
+            # Filter out illegal Windows filename characters: \ / : * ? " < > |
+            import re
+            zip_name = re.sub(r'[\/:*?"<>|]', '', zip_name)
+            zip_name = zip_name.replace("..", "")
             if not zip_name or zip_name in [".zip", ""]:
                 today_str = datetime.datetime.now().strftime("%Y%m%d_%H%M")
                 zip_name = f"Ledger_Archive_{today_str}.zip"

@@ -3,12 +3,38 @@ import json
 import sys
 from pathlib import Path
 
+def is_writable(path: Path) -> bool:
+    """Test if a directory has physical write permission."""
+    try:
+        resolved_path = path.resolve()
+        resolved_path.mkdir(parents=True, exist_ok=True)
+        test_file = resolved_path / ".write_test"
+        test_file.touch(exist_ok=True)
+        test_file.unlink(missing_ok=True)
+        return True
+    except Exception:
+        return False
+
 # Under PyInstaller, Path(__file__).parent evaluates to temporary directory
 # sys.frozen identifies execution from compiled executable, sys.executable points to EXE path
 if getattr(sys, "frozen", False):
-    BASE_DIR = Path(sys.executable).parent
+    candidate_dir = Path(sys.executable).parent
 else:
-    BASE_DIR = Path(__file__).parent
+    candidate_dir = Path(__file__).parent
+
+# Write permission testing: if C:\Program Files or read-only directory, fallback to user home directory
+if is_writable(candidate_dir):
+    BASE_DIR = candidate_dir
+else:
+    # Safe writable fallback folder in user home directory (e.g. C:\Users\Ming\Ledger)
+    BASE_DIR = Path.home() / "Ledger"
+    try:
+        BASE_DIR.mkdir(parents=True, exist_ok=True)
+    except Exception:
+        # Extreme emergency fallback to temp directory
+        import tempfile
+        BASE_DIR = Path(tempfile.gettempdir()) / "Ledger"
+        BASE_DIR.mkdir(parents=True, exist_ok=True)
 
 CONFIG_FILE = BASE_DIR / ".config.json"
 
