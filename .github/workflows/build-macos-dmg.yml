@@ -3,6 +3,8 @@ name: Build macOS DMG
 on:
   workflow_dispatch:
   push:
+    branches:
+      - Max_Mac
     tags:
       - "v*"
 
@@ -92,6 +94,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1 || \
+          gh release create "${GITHUB_REF_NAME}" \
+            --title "Ledger ${GITHUB_REF_NAME}" \
+            --notes "Automated macOS DMG build for Ledger."
+
           gh release upload "${GITHUB_REF_NAME}" \
             "dist/Ledger-v${VERSION}-macos.dmg" \
             "dist/Ledger-v${VERSION}-macos.zip" \
