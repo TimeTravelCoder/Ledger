@@ -22,6 +22,9 @@ def get_stylesheet(theme="dark"):
         error_hover = "#EF4444"
         shadow_effect = "rgba(99, 102, 241, 0.25)"
         text_on_accent = "#FFFFFF"
+        tree_selected_bg = "rgba(99, 102, 241, 0.18)"
+        tree_selected_color = text_primary
+        tree_selected_border = f"3px solid {accent_color}"
     elif theme == "zhongguose":
         # Elegant Traditional Chinese Jade Green theme
         bg_primary = "#F4F7F5"
@@ -42,6 +45,9 @@ def get_stylesheet(theme="dark"):
         error_hover = "#EF4444"
         shadow_effect = "rgba(4, 120, 87, 0.12)"
         text_on_accent = "#FFFFFF"
+        tree_selected_bg = "rgba(16, 185, 129, 0.08)"
+        tree_selected_color = accent_color
+        tree_selected_border = "3px solid #059669"
     else:
         # Modern Premium Slate Light theme
         bg_primary = "#F8FAFC"
@@ -62,6 +68,9 @@ def get_stylesheet(theme="dark"):
         error_hover = "#DC2626"
         shadow_effect = "rgba(79, 70, 229, 0.12)"
         text_on_accent = "#FFFFFF"
+        tree_selected_bg = "rgba(99, 102, 241, 0.06)"
+        tree_selected_color = accent_color
+        tree_selected_border = "3px solid #6366F1"
 
     qss = f"""
     /* General Application Styling */
@@ -662,8 +671,10 @@ def get_stylesheet(theme="dark"):
     }}
 
     QTreeView::item:selected {{
-        background-color: {accent_color};
-        color: #FFFFFF;
+        background-color: {tree_selected_bg};
+        color: {tree_selected_color};
+        border-left: {tree_selected_border};
+        font-weight: 600;
     }}
 
     QListWidget#DuplicateList {{

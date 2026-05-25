@@ -403,8 +403,9 @@ class MainWindow(QMainWindow):
             dest = inbox_dir / filename
             try:
                 import shutil
-                from file_manager import FileManager
                 FileManager.move_replace(file_path, dest, replace=False)
+                # Sync database immediately to index the newly imported inbox file
+                FileManager.scan_workspace_files()
 
                 self.show_toast(
                     message=f"'{filename}' 已导入收集箱。",
@@ -482,7 +483,24 @@ class MainWindow(QMainWindow):
         box.exec()
 
     def closeEvent(self, event):
-        # Clean up background watcher threads on exit
+        # 1. Gracefully terminate backup worker if running
+        if hasattr(self, "view_backup") and hasattr(self.view_backup, "backup_worker") and self.view_backup.backup_worker:
+            if self.view_backup.backup_worker.isRunning():
+                reply = QMessageBox.question(self, "备份任务执行中", 
+                                             "系统检测到后台备份任务正在运行，强制退出可能会导致文件备份损坏。\n\n是否安全等待备份写入完成后再自动退出？",
+                                             QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
+                if reply == QMessageBox.Yes:
+                    self.view_backup.backup_worker.wait() # Wait for elegant write completion
+                else:
+                    self.view_backup.backup_worker.terminate()
+                    self.view_backup.backup_worker.wait()
+
+        # 2. Gracefully wait for zip archiver worker if running
+        if hasattr(self, "view_workspace") and hasattr(self.view_workspace, "zip_worker") and self.view_workspace.zip_worker:
+            if self.view_workspace.zip_worker.isRunning():
+                self.view_workspace.zip_worker.wait() # Ensure safe write completion
+
+        # 3. Clean up background watcher threads on exit
         if self.watcher_thread:
             self.watcher_thread.stop()
 
