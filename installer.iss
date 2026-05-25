@@ -3,7 +3,7 @@
 ; ============================================================
 
 #define MyAppName "Ledger"
-#define MyAppVersion "1.2.1"
+#define MyAppVersion "1.2.4"
 #define MyAppPublisher "TimeTravelCoder"
 #define MyAppURL "https://github.com/TimeTravelCoder/Ledger"
 #define MyAppExeName "Ledger.exe"
@@ -27,7 +27,7 @@ AllowNoIcons=yes
 
 ; 输出设置
 OutputDir=dist
-OutputBaseFilename=Ledger-Setup-v1.2.1-windows-x64
+OutputBaseFilename=Ledger-Setup-v1.2.4-windows-x64
 SetupIconFile=app_icon.ico
 Compression=lzma2/ultra64
 SolidCompression=yes

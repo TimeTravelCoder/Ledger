@@ -165,7 +165,11 @@ jobs:
         run: |
           gh release view $env:GITHUB_REF_NAME *> $null
           if ($LASTEXITCODE -ne 0) {
-            gh release create $env:GITHUB_REF_NAME --title "Ledger $env:GITHUB_REF_NAME" --generate-notes
+            if (Test-Path "RELEASE_NOTES.md") {
+              gh release create $env:GITHUB_REF_NAME --title "Ledger Max $env:GITHUB_REF_NAME" --notes-file "RELEASE_NOTES.md"
+            } else {
+              gh release create $env:GITHUB_REF_NAME --title "Ledger Max $env:GITHUB_REF_NAME" --generate-notes
+            }
           }
 
           gh release upload $env:GITHUB_REF_NAME `

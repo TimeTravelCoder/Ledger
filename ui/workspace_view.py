@@ -1789,7 +1789,7 @@ class WorkspaceView(QWidget):
         elif ext == ".docx":
             pdf_loaded = False
 
-            if os.name == 'nt':
+            if os.environ.get("LEDGER_ENABLE_WORD_COM_PREVIEW") == "1" and os.name == 'nt':
                 try:
                     import win32com.client
                     import pythoncom
@@ -1876,6 +1876,7 @@ class WorkspaceView(QWidget):
                 old_doc.deleteLater()
         except Exception:
             pass
+        self.preview_pdf_doc = None
         self.preview_pdf.hide()
         self.preview_image.hide()
         if not keep_label:
@@ -2573,9 +2574,11 @@ class WorkspaceView(QWidget):
                 return
 
             # Start background ZipWorker thread to prevent UI thread blocking
-            self.zip_worker = ZipWorker(abs_paths, dest_zip_path, password, self)
-            self.zip_worker.finished_signal.connect(self.on_zip_completed)
-            self.zip_worker.error_signal.connect(self.on_zip_error)
+            worker = ZipWorker(abs_paths, dest_zip_path, password, self)
+            self.zip_worker = worker
+            worker.finished_signal.connect(lambda zip_path_str, files_count, active_worker=worker: self.on_zip_completed(zip_path_str, files_count, active_worker))
+            worker.error_signal.connect(lambda err_msg, active_worker=worker: self.on_zip_error(err_msg, active_worker))
+            worker.finished.connect(worker.deleteLater)
 
             # Show a beautiful non-modal loading dialog
             self.zip_progress_dialog = QMessageBox(self)
@@ -2583,12 +2586,22 @@ class WorkspaceView(QWidget):
             self.zip_progress_dialog.setText("正在打包归档文件并清理数据库，请稍候...")
             self.zip_progress_dialog.setStandardButtons(QMessageBox.NoButton)
 
-            self.zip_worker.start()
+            worker.start()
             self.zip_progress_dialog.show()
 
-    def on_zip_completed(self, zip_path_str, files_count):
-        if hasattr(self, "zip_progress_dialog"):
+    def cleanup_zip_worker(self, active_worker=None):
+        if active_worker is not None and active_worker is not self.zip_worker:
+            return False
+        if hasattr(self, "zip_progress_dialog") and self.zip_progress_dialog:
             self.zip_progress_dialog.close()
+            self.zip_progress_dialog.deleteLater()
+            self.zip_progress_dialog = None
+        self.zip_worker = None
+        return True
+
+    def on_zip_completed(self, zip_path_str, files_count, active_worker=None):
+        if not self.cleanup_zip_worker(active_worker):
+            return
 
         # Register the new zipped archive in database
         try:
@@ -2611,9 +2624,9 @@ class WorkspaceView(QWidget):
         self.show_duplicates(activate=False)
         self.refresh_other_views_signal.emit()
 
-    def on_zip_error(self, err_msg):
-        if hasattr(self, "zip_progress_dialog"):
-            self.zip_progress_dialog.close()
+    def on_zip_error(self, err_msg, active_worker=None):
+        if not self.cleanup_zip_worker(active_worker):
+            return
         QMessageBox.critical(self, "归档错误", f"打包归档中途失败：\n{err_msg}")
 
 # Interactive Metadata/Tags Editor Dialog

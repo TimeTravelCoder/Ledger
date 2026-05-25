@@ -1,7 +1,7 @@
 import os
 import sys
 from pathlib import Path
-from PySide6.QtWidgets import (QMainWindow, QWidget, QHBoxLayout, QVBoxLayout,
+from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QHBoxLayout, QVBoxLayout,
                              QPushButton, QStackedWidget, QLabel, QFrame,
                              QMessageBox, QSystemTrayIcon, QStyle, QMenu)
 from PySide6.QtCore import Qt, QThread, Signal, Slot, QTimer, QSize
@@ -115,9 +115,12 @@ class WatcherThread(QThread):
 
     def stop(self):
         if self.observer:
-            self.observer.stop()
+            try:
+                self.observer.stop()
+            except Exception:
+                pass
         self.quit()
-        self.wait()
+        return self.wait(3000)
 
 class MainWindow(QMainWindow):
     file_downloaded_notifier = Signal(str)
@@ -128,6 +131,8 @@ class MainWindow(QMainWindow):
         self.watcher_thread = None
         self.watcher_paths = []
         self.sidebar_collapsed = False
+        self._is_quitting = False
+        self._tray_hint_shown = False
         self.init_ui()
         self.setup_downloads_watcher()
 
@@ -379,7 +384,9 @@ class MainWindow(QMainWindow):
         """Sets up watchdog file watcher thread on configured monitor folders."""
         # Stop previous if any
         if self.watcher_thread:
-            self.watcher_thread.stop()
+            if not self.watcher_thread.stop():
+                print("WatcherThread did not stop within timeout; keeping existing watcher active.")
+                return
             self.watcher_thread = None
         self.watcher_paths = []
 
@@ -467,10 +474,15 @@ class MainWindow(QMainWindow):
         show_action.triggered.connect(self.restore_from_tray)
         tray_menu.addSeparator()
         quit_action = tray_menu.addAction("退出")
-        quit_action.triggered.connect(self.close)
+        quit_action.triggered.connect(self.quit_application)
         self.tray_icon.setContextMenu(tray_menu)
 
         self.tray_icon.show()
+
+    @Slot()
+    def quit_application(self):
+        self._is_quitting = True
+        self.close()
 
     @Slot(QSystemTrayIcon.ActivationReason)
     def on_tray_icon_activated(self, reason):
@@ -488,6 +500,28 @@ class MainWindow(QMainWindow):
         self.activateWindow()
         QTimer.singleShot(0, self.raise_)
         QTimer.singleShot(0, self.activateWindow)
+
+    def _hide_to_tray(self, event):
+        event.ignore()
+        self.hide()
+        if (
+            hasattr(self, "tray_icon")
+            and self.tray_icon.isVisible()
+            and not self._tray_hint_shown
+        ):
+            self.tray_icon.showMessage(
+                "Ledger 仍在运行",
+                "窗口已最小化到通知区域。点击托盘图标可重新打开，右键选择“退出”可关闭程序。",
+                QSystemTrayIcon.Information,
+                3500,
+            )
+            self._tray_hint_shown = True
+
+    def _running_worker_message(self, worker_name):
+        return (
+            f"{worker_name}正在后台运行。为避免文件损坏或数据库锁定，Ledger 暂不强制退出。\n\n"
+            "请等待任务完成后，再从托盘菜单选择“退出”。"
+        )
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
@@ -545,29 +579,52 @@ class MainWindow(QMainWindow):
         box.exec()
 
     def closeEvent(self, event):
-        # 1. Gracefully terminate backup worker if running
+        if not self._is_quitting and hasattr(self, "tray_icon") and self.tray_icon.isVisible():
+            self._hide_to_tray(event)
+            return
+
+        # 1. Do not force-kill backup worker; keep the app alive until it is safe.
         if hasattr(self, "view_backup") and hasattr(self.view_backup, "backup_worker") and self.view_backup.backup_worker:
             if self.view_backup.backup_worker.isRunning():
-                reply = QMessageBox.question(self, "备份任务执行中", 
-                                             "系统检测到后台备份任务正在运行，强制退出可能会导致文件备份损坏。\n\n是否安全等待备份写入完成后再自动退出？",
-                                             QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
-                if reply == QMessageBox.Yes:
-                    self.view_backup.backup_worker.wait() # Wait for elegant write completion
-                else:
-                    self.view_backup.backup_worker.terminate()
-                    self.view_backup.backup_worker.wait()
+                if not self.view_backup.backup_worker.wait(3000):
+                    QMessageBox.information(self, "备份任务执行中", self._running_worker_message("备份任务"))
+                    self._is_quitting = False
+                    self.restore_from_tray()
+                    event.ignore()
+                    return
 
-        # 2. Gracefully wait for zip archiver worker if running
+        # 2. Do not close while zip archiver is still writing files.
         if hasattr(self, "view_workspace") and hasattr(self.view_workspace, "zip_worker") and self.view_workspace.zip_worker:
             if self.view_workspace.zip_worker.isRunning():
-                self.view_workspace.zip_worker.wait() # Ensure safe write completion
+                if not self.view_workspace.zip_worker.wait(3000):
+                    QMessageBox.information(self, "归档任务执行中", self._running_worker_message("归档任务"))
+                    self._is_quitting = False
+                    self.restore_from_tray()
+                    event.ignore()
+                    return
 
         # 3. Clean up background watcher threads on exit
         if self.watcher_thread:
-            self.watcher_thread.stop()
+            if not self.watcher_thread.stop():
+                QMessageBox.information(
+                    self,
+                    "文件监听仍在关闭中",
+                    "Ledger 正在关闭文件夹监听服务，请稍后再尝试退出。",
+                )
+                self._is_quitting = False
+                self.restore_from_tray()
+                event.ignore()
+                return
+            self.watcher_thread = None
 
         # Close SQLite database connection gracefully to prevent locks
         from db import db
         db.close()
 
+        if hasattr(self, "tray_icon"):
+            self.tray_icon.hide()
+
         event.accept()
+        app = QApplication.instance()
+        if app is not None:
+            QTimer.singleShot(0, app.quit)

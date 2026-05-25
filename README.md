@@ -118,8 +118,8 @@ dist/Ledger-Setup-v<version>-windows-x64.exe
 ```powershell
 git switch Max
 git pull
-git tag v1.2.3
-git push origin v1.2.3
+git tag v1.2.4
+git push origin v1.2.4
 ```
 
 详细说明见 [`WINDOWS_RELEASE_WORKFLOW.md`](WINDOWS_RELEASE_WORKFLOW.md)。

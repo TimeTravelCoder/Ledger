@@ -227,6 +227,10 @@ class BackupView(QWidget):
             self.refresh_other_views_signal.emit()
 
     def run_backup(self, backup_type):
+        if self.backup_worker and self.backup_worker.isRunning():
+            QMessageBox.information(self, "备份执行中", "当前已有备份任务正在运行，请等待完成后再启动新的备份。")
+            return
+
         # 1. Update config directories first
         if backup_type == "disk":
             config.backup_disk_dir = self.input_disk_path.text().strip()
@@ -261,11 +265,16 @@ class BackupView(QWidget):
         self.console_output.append(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] 启动增量镜像备份至 '{label}' (后台异步处理中)...")
 
         # Pass None to force BackupWorker thread to query dynamically after scan_workspace_files completes
-        self.backup_worker = BackupWorker(backup_type, None)
-        self.backup_worker.finished_signal.connect(lambda success, msg: self.on_backup_finished(backup_type, success, msg))
-        self.backup_worker.start()
+        worker = BackupWorker(backup_type, None)
+        self.backup_worker = worker
+        worker.finished_signal.connect(lambda success, msg, active_worker=worker: self.on_backup_finished(backup_type, success, msg, active_worker))
+        worker.finished.connect(worker.deleteLater)
+        worker.start()
 
-    def on_backup_finished(self, backup_type, success, msg):
+    def on_backup_finished(self, backup_type, success, msg, active_worker=None):
+        if active_worker is not None and active_worker is not self.backup_worker:
+            return
+
         label = "移动硬盘" if backup_type == "disk" else "云端同步盘"
         self.progress_bar.setValue(100)
 
