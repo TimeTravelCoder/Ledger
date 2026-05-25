@@ -967,7 +967,7 @@ class SettingsView(QWidget):
 
     def update_theme_badge(self):
         theme_names = {
-            "dark": "🌙 赛博极光 (Cyber Dark)",
+            "dark": "✨ 赛博极光 (Cyber Dark)",
             "zhongguose": "🌿 温润国风 (Chinese Jade)",
             "light": "☀️ 现代极简 (Slate Light)"
         }
