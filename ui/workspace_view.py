@@ -494,7 +494,7 @@ class CreateFileDialog(QDialog):
             ext = self.input_custom_ext.text().strip()
             if not ext.startswith("."):
                 ext = f".{ext}"
-            
+
             # Strict regex validation: custom extension must be '.' followed only by alphanumeric characters
             import re
             if not re.match(r"^\.[a-zA-Z0-9]+$", ext):

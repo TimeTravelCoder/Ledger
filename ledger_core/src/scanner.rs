@@ -19,24 +19,24 @@ pub fn scan_workspace_files(ws_root: &str) -> PyResult<Vec<(String, String, u64,
                     !(dir_entry.file_type().is_dir() && (file_name.starts_with('.') || file_name.starts_with('$')))
                 }).unwrap_or(true)
             });
-        }) 
+        })
     {
         if let Ok(dir_entry) = entry {
             if dir_entry.file_type().is_file() {
                 let file_name = dir_entry.file_name().to_string_lossy();
-                
+
                 // Skip internal config/database files
                 if file_name.starts_with('.') || file_name == ".docman.db" || file_name == ".config.json" || file_name.starts_with("~$") {
                     continue;
                 }
-                
+
                 let rel_path_res = dir_entry.path().strip_prefix(root_path)
                     .map(|p| p.to_string_lossy().replace("\\", "/"));
-                    
+
                 if let Ok(rel_path) = rel_path_res {
                     let mut size = 0;
                     let mut mtime = 0.0;
-                    
+
                     if let Ok(metadata) = dir_entry.metadata() {
                         size = metadata.len();
                         if let Ok(modified) = metadata.modified() {
@@ -47,12 +47,12 @@ pub fn scan_workspace_files(ws_root: &str) -> PyResult<Vec<(String, String, u64,
                             }
                         }
                     }
-                    
+
                     results.push((rel_path, file_name.to_string(), size, mtime));
                 }
             }
         }
     }
-    
+
     Ok(results)
 }

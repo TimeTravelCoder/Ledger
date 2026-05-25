@@ -1,6 +1,6 @@
 # Windows Release Workflow 使用说明
 
-本文档说明 `Max` 分支的 Windows 自动构建与发布流程。
+本文档说明 `Plus_Rust` 分支的 Windows 自动构建与发布流程。
 
 工作流文件：
 
@@ -30,14 +30,14 @@ https://github.com/TimeTravelCoder/Ledger/actions/workflows/build-windows-releas
 
 ## 触发方式
 
-### 方式 1：推送 Max 分支
+### 方式 1：推送 Plus_Rust 分支
 
 适合验证构建是否能通过。
 
 ```powershell
-git switch Max
+git switch Plus_Rust
 git pull
-git push origin Max
+git push origin Plus_Rust
 ```
 
 如果只是普通分支推送，产物只会出现在 Actions 的 artifact 中，不会上传到 Release。
@@ -60,7 +60,7 @@ Ledger-Setup-vdev-3f3450e-windows-x64.exe
 2. 进入 `Actions`。
 3. 选择 `Build Windows Release`。
 4. 点击 `Run workflow`。
-5. Branch 选择 `Max`。
+5. Branch 选择 `Plus_Rust`。
 6. 等待运行完成后，在该 run 页面底部下载 artifact。
 
 手动运行也只上传 Actions artifact，不会自动创建 Release。
@@ -80,7 +80,7 @@ v2.0.0
 本地发布命令：
 
 ```powershell
-git switch Max
+git switch Plus_Rust
 git pull
 git tag v2.0.0
 git push origin v2.0.0
@@ -139,7 +139,7 @@ Ledger-Setup-v<version>-windows-x64.exe
 也可以使用命令行：
 
 ```powershell
-gh release edit v2.0.0 --title "Ledger Max v2.0.0" --notes-file RELEASE_NOTES.md
+gh release edit v2.0.0 --title "Ledger Plus_Rust v2.0.0" --notes-file RELEASE_NOTES.md
 ```
 
 ## 重新发布或修复失败标签
@@ -157,7 +157,7 @@ git push --force origin v2.0.0
 
 ## 常见问题
 
-### 为什么普通 Max 分支推送没有 Release
+### 为什么普通 Plus_Rust 分支推送没有 Release
 
 这是正常行为。普通分支推送只做构建验证和 artifact 上传；只有 `v*` 标签触发才会上传到 Release。
 
@@ -193,8 +193,8 @@ choco install innosetup --no-progress -y
 
 ## 推荐发布流程
 
-1. 在 `Max` 分支完成代码修改。
-2. 推送 `Max`，等待 `Build Windows Release` 成功。
+1. 在 `Plus_Rust` 分支完成代码修改。
+2. 推送 `Plus_Rust`，等待 `Build Windows Release` 成功。
 3. 确认 artifact 能正常生成。
 4. 决定版本号，例如 `v2.0.0`。
 5. 推送版本标签。

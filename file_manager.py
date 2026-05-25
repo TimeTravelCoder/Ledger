@@ -220,7 +220,7 @@ class FileManager:
         Returns (success: bool, message: str)."""
         try:
             file_path = FileManager.safe_workspace_path(relative_path)
-            
+
             # Prevent 0-byte Office binary creations which MS Office/WPS flags as corrupt
             ext = file_path.suffix.lower()
             if ext in [".docx", ".xlsx", ".pptx"]:
@@ -339,7 +339,7 @@ class FileManager:
         ws_root = Path(config.workspace_dir)
         if not ws_root.exists():
             return 0
-            
+
         disk_files = set()
         scanned_count = 0
 
@@ -350,7 +350,7 @@ class FileManager:
                 rust_available = True
             except ImportError:
                 rust_available = False
-                
+
             if rust_available:
                 # Fast path using Rust parallel scanner
                 results = ledger_core.scan_workspace_files(str(ws_root.resolve()))
@@ -368,11 +368,11 @@ class FileManager:
                     for f in files:
                         if f.startswith(".") or f in [".docman.db", ".config.json"] or f.startswith("~$"):
                             continue
-                        
+
                         file_abs_path = Path(root) / f
                         rel_path = str(file_abs_path.relative_to(ws_root)).replace("\\", "/")
                         disk_files.add(rel_path)
-                        
+
                         try:
                             stat = file_abs_path.stat()
                             db.sync_file_metadata(rel_path, f, stat.st_size, stat.st_mtime)

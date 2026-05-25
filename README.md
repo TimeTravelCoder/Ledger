@@ -1,16 +1,16 @@
 <div align="center">
 
-# 👑 Ledger Max · Windows 旗舰版
+# 👑 Ledger Plus_Rust · Windows 旗舰版
 
 **本地桌面文档分类、智能命名、标签检索与安全备份工具**
 
-[![Branch](https://img.shields.io/badge/Branch-Max-6366F1)](https://github.com/TimeTravelCoder/Ledger/tree/Max)
+[![Branch](https://img.shields.io/badge/Branch-Plus_Rust-6366F1)](https://github.com/TimeTravelCoder/Ledger/tree/Plus_Rust)
 [![Platform](https://img.shields.io/badge/Platform-Windows-0078D6?logo=windows)](https://github.com/TimeTravelCoder/Ledger)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-blue?logo=python)](https://python.org)
 [![PySide6](https://img.shields.io/badge/UI-PySide6-41CD52?logo=qt)](https://doc.qt.io/qtforpython/)
 [![Release](https://img.shields.io/badge/Windows-Release-success)](https://github.com/TimeTravelCoder/Ledger/releases)
 
-✨ `Max` 是 Ledger 的 Windows 旗舰发布分支，负责稳定体验、Windows 自动构建、便携版 zip 与安装器发布。
+✨ `Plus_Rust` 是 Ledger 的 Windows 旗舰发布分支，负责稳定体验、Windows 自动构建、便携版 zip 与安装器发布。
 
 </div>
 
@@ -23,10 +23,10 @@
 | 📁 `master` | 基础开源版 | 学习、轻量使用、最小功能集 |
 | 🧩 `Plus` | 工作区增强版 | 删除、查重、批量工具验证 |
 | 🛡️ `pro` | 安全事务版 | 路径安全、备份、事务与性能修复 |
-| 👑 `Max` | Windows 旗舰发布版 | Windows zip、安装器、Release |
-| 🍎 `Max_Mac` | macOS DMG 分支 | macOS `.app` / `.dmg` 自动构建 |
+| 👑 `Plus_Rust` | Windows 旗舰发布版 | Windows zip、安装器、Release |
+| 🍎 `Plus_Rust_Mac` | macOS DMG 分支 | macOS `.app` / `.dmg` 自动构建 |
 
-> 需要 macOS DMG 请使用 `Max_Mac`；本分支专注 Windows 旗舰版发布。
+> 需要 macOS DMG 请使用 `Plus_Rust_Mac`；本分支专注 Windows 旗舰版发布。
 
 ---
 
@@ -101,7 +101,7 @@ dist/Ledger-Setup-v<version>-windows-x64.exe
 
 ## 🤖 GitHub Actions 发布
 
-`Max` 分支包含 Windows 专用 workflow：
+`Plus_Rust` 分支包含 Windows 专用 workflow：
 
 ```text
 .github/workflows/build-windows-release.yml
@@ -109,14 +109,14 @@ dist/Ledger-Setup-v<version>-windows-x64.exe
 
 | 触发方式 | 结果 |
 |---|---|
-| 🔁 推送 `Max` | 构建 EXE / zip / installer，并上传 Actions artifact |
+| 🔁 推送 `Plus_Rust` | 构建 EXE / zip / installer，并上传 Actions artifact |
 | 🖱️ 手动运行 workflow | 用于不发版的打包验证 |
 | 🏷️ 推送 `v*` 标签 | 自动创建或更新 Release，并上传 Windows zip 与安装器 |
 
 正式发布示例：
 
 ```powershell
-git switch Max
+git switch Plus_Rust
 git pull
 git tag v2.0.0
 git push origin v2.0.0

@@ -33,7 +33,7 @@ else:
     else:
         # Fallback for non-Windows or if APPDATA env is missing
         BASE_DIR = Path.home() / "Ledger"
-        
+
     try:
         BASE_DIR.mkdir(parents=True, exist_ok=True)
     except Exception:

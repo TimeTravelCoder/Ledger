@@ -22,9 +22,9 @@ fn get_semantic_synonyms() -> HashMap<&'static str, Vec<&'static str>> {
 fn extract_terms(text: &str) -> HashSet<String> {
     let mut terms = HashSet::new();
     let text = text.to_lowercase();
-    
+
     let mut current_eng_word = String::new();
-    
+
     for c in text.chars() {
         if c.is_ascii_alphanumeric() {
             current_eng_word.push(c);
@@ -38,11 +38,11 @@ fn extract_terms(text: &str) -> HashSet<String> {
             }
         }
     }
-    
+
     if !current_eng_word.is_empty() {
         terms.insert(current_eng_word);
     }
-    
+
     terms
 }
 
@@ -58,29 +58,29 @@ fn calculate_similarity(terms_a: &HashSet<String>, terms_b: &HashSet<String>) ->
 #[pyfunction]
 #[pyo3(signature = (filename, remark, db_tags, top_k))]
 pub fn recommend_tags(
-    filename: Option<&str>, 
-    remark: Option<&str>, 
-    db_tags: Vec<String>, 
+    filename: Option<&str>,
+    remark: Option<&str>,
+    db_tags: Vec<String>,
     top_k: usize
 ) -> PyResult<Vec<String>> {
     let filename_clean = filename.unwrap_or("");
     let remark_clean = remark.unwrap_or("");
     let combined_text = format!("{} {}", filename_clean, remark_clean).to_lowercase();
-    
+
     let combined_terms = extract_terms(&combined_text);
     let synonyms_map = get_semantic_synonyms();
-    
+
     let mut suggestions: Vec<(String, f64)> = Vec::new();
-    
+
     for tag in &db_tags {
         let tag_plain = tag.trim_start_matches('#');
         let mut score = 0.0;
-        
+
         // Category 1: Exact tag name substring match (Weight 5.0)
         if combined_text.contains(tag_plain) {
             score += 5.0;
         }
-        
+
         // Category 2: Synonym keyword matches (Weight 2.5 per match)
         if let Some(synonyms) = synonyms_map.get(tag_plain) {
             for &syn in synonyms {
@@ -89,22 +89,22 @@ pub fn recommend_tags(
                 }
             }
         }
-        
+
         // Category 3: Term-level Jaccard similarity (Weight 1.0)
         let tag_terms = extract_terms(tag_plain);
         let jaccard = calculate_similarity(&combined_terms, &tag_terms);
         score += jaccard * 1.5;
-        
+
         if score > 0.1 {
             suggestions.push((tag.clone(), score));
         }
     }
-    
+
     // Sort descending by score
     suggestions.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
-    
+
     let mut recommended: Vec<String> = suggestions.into_iter().take(top_k).map(|(tag, _)| tag).collect();
-    
+
     // Fallback to standard generic tags if no suggestions score high enough
     if recommended.len() < top_k {
         for tag in &db_tags {
@@ -116,6 +116,6 @@ pub fn recommend_tags(
             }
         }
     }
-    
+
     Ok(recommended.into_iter().take(top_k).collect())
 }

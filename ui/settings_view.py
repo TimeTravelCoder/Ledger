@@ -528,7 +528,7 @@ class SettingsView(QWidget):
         self.btn_save_custom_dirs.clicked.connect(self.save_custom_dirs)
         custom_layout.addWidget(self.btn_save_custom_dirs)
         wiz_inner.addWidget(custom_card)
-        
+
         wiz_inner.addStretch()
 
         wiz_scroll.setWidget(wiz_scroll_content)
@@ -670,7 +670,7 @@ class SettingsView(QWidget):
         self.btn_save_rules.setIconSize(QSize(16, 16))
         self.btn_save_rules.clicked.connect(self.save_auto_rules)
         rule_btn_layout.addWidget(self.btn_save_rules)
-        
+
         rule_layout.addLayout(rule_btn_layout)
         rules_scroll_inner.addWidget(rule_card)
 
@@ -1124,7 +1124,7 @@ class SettingsView(QWidget):
     def _add_rule_widget(self, rule=None):
         if rule is None:
             rule = {"name": "", "keywords": [], "extensions": [], "target_prefix": ""}
-            
+
         row = QFrame()
         row.setObjectName("CardPanel")
         row.setStyleSheet("#CardPanel { background-color: rgba(255, 255, 255, 0.03); border: 1px solid rgba(133, 179, 203, 0.2); border-radius: 8px; margin-bottom: 4px; }")
@@ -1175,14 +1175,14 @@ class SettingsView(QWidget):
 
         row_layout.addLayout(grid)
         row.setProperty("rule_widgets", (name, keywords, exts, prefix))
-        
+
         # Insert before stretch if it exists
         count = self.rule_scroll_layout.count()
         if count > 0 and self.rule_scroll_layout.itemAt(count - 1).spacerItem():
             self.rule_scroll_layout.insertWidget(count - 1, row)
         else:
             self.rule_scroll_layout.addWidget(row)
-            
+
         self.rule_widgets.append(row)
 
     def _delete_rule_widget(self, row_widget):
