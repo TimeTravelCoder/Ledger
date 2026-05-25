@@ -334,7 +334,6 @@ class FileManager:
         return moved_count, errors
 
     @staticmethod
-    @staticmethod
     def scan_workspace_files():
         """Scan workspace and sync file metadata with SQLite DB, cleaning up deleted items. Accelerated via Rust."""
         ws_root = Path(config.workspace_dir)

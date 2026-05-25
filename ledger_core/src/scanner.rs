@@ -42,6 +42,8 @@ pub fn scan_workspace_files(ws_root: &str) -> PyResult<Vec<(String, String, u64,
                         if let Ok(modified) = metadata.modified() {
                             if let Ok(duration) = modified.duration_since(UNIX_EPOCH) {
                                 mtime = duration.as_secs_f64();
+                            } else if let Ok(duration) = UNIX_EPOCH.duration_since(modified) {
+                                mtime = -duration.as_secs_f64();
                             }
                         }
                     }

@@ -96,7 +96,7 @@ pub fn recommend_tags(
         score += jaccard * 1.5;
         
         if score > 0.1 {
-            suggestions.append(&mut vec![(tag.clone(), score)]);
+            suggestions.push((tag.clone(), score));
         }
     }
     
