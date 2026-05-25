@@ -72,9 +72,9 @@ Ledger-Setup-vdev-3f3450e-windows-x64.exe
 推荐版本号使用纯数字版本，例如：
 
 ```text
-v2.0.0
+v2.1.0
 v1.3.0
-v2.0.0
+v2.1.0
 ```
 
 本地发布命令：
@@ -82,21 +82,21 @@ v2.0.0
 ```powershell
 git switch Plus_Rust
 git pull
-git tag v2.0.0
-git push origin v2.0.0
+git tag v2.1.0
+git push origin v2.1.0
 ```
 
 推送 `v*` 标签后，工作流会自动：
 
-- 创建或更新 `v2.0.0` Release。
+- 创建或更新 `v2.1.0` Release。
 - 生成 GitHub 自动更新说明。
-- 上传 `Ledger-v2.0.0-windows-x64.zip`。
-- 上传 `Ledger-Setup-v2.0.0-windows-x64.exe`。
+- 上传 `Ledger-v2.1.0-windows-x64.zip`。
+- 上传 `Ledger-Setup-v2.1.0-windows-x64.exe`。
 
 Release 下载页格式：
 
 ```text
-https://github.com/TimeTravelCoder/Ledger/releases/tag/v2.0.0
+https://github.com/TimeTravelCoder/Ledger/releases/tag/v2.1.0
 ```
 
 ## 输出文件说明
@@ -139,7 +139,7 @@ Ledger-Setup-v<version>-windows-x64.exe
 也可以使用命令行：
 
 ```powershell
-gh release edit v2.0.0 --title "Ledger Plus_Rust v2.0.0" --notes-file RELEASE_NOTES.md
+gh release edit v2.1.0 --title "Ledger Plus_Rust v2.1.0" --notes-file RELEASE_NOTES.md
 ```
 
 ## 重新发布或修复失败标签
@@ -147,8 +147,8 @@ gh release edit v2.0.0 --title "Ledger Plus_Rust v2.0.0" --notes-file RELEASE_NO
 如果标签已经推送，但构建失败，修复代码后可以把标签移动到新提交：
 
 ```powershell
-git tag -f v2.0.0
-git push --force origin v2.0.0
+git tag -f v2.1.0
+git push --force origin v2.1.0
 ```
 
 注意：这会改写远端标签指向。只有确认该版本还没有被大量用户下载时才建议这样做。
@@ -165,7 +165,7 @@ git push --force origin v2.0.0
 
 Inno Setup 的 `AppVersion` 需要数字版本。普通分支构建使用 `dev-提交号` 作为文件名版本，但安装器内部版本会回退为 `0.0.0`。
 
-正式发布请使用 `v2.0.0` 这类数字标签。
+正式发布请使用 `v2.1.0` 这类数字标签。
 
 ### 为什么 Release 没有中文更新说明
 
@@ -196,7 +196,7 @@ choco install innosetup --no-progress -y
 1. 在 `Plus_Rust` 分支完成代码修改。
 2. 推送 `Plus_Rust`，等待 `Build Windows Release` 成功。
 3. 确认 artifact 能正常生成。
-4. 决定版本号，例如 `v2.0.0`。
+4. 决定版本号，例如 `v2.1.0`。
 5. 推送版本标签。
 6. 等待 Release 自动生成。
 7. 编辑 Release Notes，补充正式中文更新说明。

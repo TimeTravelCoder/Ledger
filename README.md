@@ -118,8 +118,8 @@ dist/Ledger-Setup-v<version>-windows-x64.exe
 ```powershell
 git switch Plus_Rust
 git pull
-git tag v2.0.0
-git push origin v2.0.0
+git tag v2.1.0
+git push origin v2.1.0
 ```
 
 详细说明见 [`WINDOWS_RELEASE_WORKFLOW.md`](WINDOWS_RELEASE_WORKFLOW.md)。
