@@ -3,3 +3,6 @@
 
 # 用于将 python 源码打包为单文件可执行 EXE 程序
 pyinstaller>=6.0.0
+
+# 用于编译 Rust 原生扩展库
+maturin>=1.0.0

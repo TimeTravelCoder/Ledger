@@ -334,35 +334,52 @@ class FileManager:
         return moved_count, errors
 
     @staticmethod
+    @staticmethod
     def scan_workspace_files():
-        """Scan workspace and sync file metadata with SQLite DB, cleaning up deleted items."""
+        """Scan workspace and sync file metadata with SQLite DB, cleaning up deleted items. Accelerated via Rust."""
         ws_root = Path(config.workspace_dir)
         if not ws_root.exists():
             return 0
-
+            
         disk_files = set()
         scanned_count = 0
 
         try:
-            for root, dirs, files in os.walk(ws_root):
-                # Prune hidden or system directories
-                dirs[:] = [d for d in dirs if not d.startswith(".") and not d.startswith("$")]
-
-                for f in files:
-                    # Skip internal config/database files
-                    if f.startswith(".") or f in [".docman.db", ".config.json"] or f.startswith("~$"):
-                        continue
-
-                    file_abs_path = Path(root) / f
-                    rel_path = str(file_abs_path.relative_to(ws_root)).replace("\\", "/")
+            # Import our rust core extension locally to avoid top-level import errors
+            try:
+                import ledger_core
+                rust_available = True
+            except ImportError:
+                rust_available = False
+                
+            if rust_available:
+                # Fast path using Rust parallel scanner
+                results = ledger_core.scan_workspace_files(str(ws_root.resolve()))
+                for rel_path, filename, size, mtime in results:
                     disk_files.add(rel_path)
-
                     try:
-                        stat = file_abs_path.stat()
-                        db.sync_file_metadata(rel_path, f, stat.st_size, stat.st_mtime)
+                        db.sync_file_metadata(rel_path, filename, size, mtime)
                         scanned_count += 1
                     except Exception as e:
                         print(f"Error syncing metadata for {rel_path}: {e}")
+            else:
+                # Fallback path using standard Python os.walk
+                for root, dirs, files in os.walk(ws_root):
+                    dirs[:] = [d for d in dirs if not d.startswith(".") and not d.startswith("$")]
+                    for f in files:
+                        if f.startswith(".") or f in [".docman.db", ".config.json"] or f.startswith("~$"):
+                            continue
+                        
+                        file_abs_path = Path(root) / f
+                        rel_path = str(file_abs_path.relative_to(ws_root)).replace("\\", "/")
+                        disk_files.add(rel_path)
+                        
+                        try:
+                            stat = file_abs_path.stat()
+                            db.sync_file_metadata(rel_path, f, stat.st_size, stat.st_mtime)
+                            scanned_count += 1
+                        except Exception as e:
+                            print(f"Error syncing metadata for {rel_path}: {e}")
 
             # Clean up db records for files that are no longer on disk
             db_files = [row["filepath"] for row in db.search_files()]

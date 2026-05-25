@@ -1,6 +1,12 @@
 import re
 from db import db
 
+try:
+    import ledger_core
+    RUST_CORE_AVAILABLE = True
+except ImportError:
+    RUST_CORE_AVAILABLE = False
+
 # Predefined high-value semantic synonyms for standard tags to boost precision
 SEMANTIC_SYNONYMS = {
     "财务报表": ["发票", "财务", "报表", "账单", "费用", "报销", "支出", "收入", "税", "流水", "资产", "invoice", "receipt", "finance", "billing", "tax"],
@@ -20,6 +26,7 @@ class SemanticAnalyzer:
     Zero-dependency lightweight Semantic keyword classifier and recommender.
     Combines Jaccard character-level overlap, dictionary synonym mapping,
     and exact tag-name substring scanning for rapid Chinese tag suggestions.
+    Accelerated via Rust core when available.
     """
     @staticmethod
     def extract_terms(text):
@@ -52,12 +59,6 @@ class SemanticAnalyzer:
         """
         Analyze a filename and description to suggest the top_k most relevant tags.
         """
-        # Clean input text
-        filename_clean = filename or ""
-        remark_clean = remark or ""
-        combined_text = f"{filename_clean} {remark_clean}".lower()
-        combined_terms = cls.extract_terms(combined_text)
-
         # 1. Fetch active tags from config to ensure synchronization with user's customized tags
         db_tags = []
         try:
@@ -71,6 +72,19 @@ class SemanticAnalyzer:
         # Default tags if config tags load failed
         if not db_tags:
             db_tags = ["#财务报表", "#代码项目", "#合同协议", "#设计稿件", "#论文文献", "#个人证件", "#会议纪要", "#学习资料"]
+
+        if RUST_CORE_AVAILABLE:
+            try:
+                # Fast path using Rust native extension
+                return ledger_core.recommend_tags(filename, remark, db_tags, top_k)
+            except Exception as e:
+                print(f"Rust core semantic analyzer failed, falling back to Python: {e}")
+
+        # Fallback pure Python path
+        filename_clean = filename or ""
+        remark_clean = remark or ""
+        combined_text = f"{filename_clean} {remark_clean}".lower()
+        combined_terms = cls.extract_terms(combined_text)
 
         suggestions = []
         for tag in db_tags:

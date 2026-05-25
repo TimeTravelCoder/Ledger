@@ -25,6 +25,20 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build and install Rust core
+        shell: pwsh
+        run: |
+          pip install maturin
+          cd ledger_core
+          $env:PYO3_USE_ABI3_FORWARD_COMPATIBILITY="1"
+          python -m maturin build --release
+          $whl = Get-ChildItem target\wheels\*.whl | Select-Object -First 1
+          pip install --force-reinstall $whl.FullName
+          cd ..
+
       - name: Install Python dependencies
         shell: pwsh
         run: |
@@ -69,6 +83,7 @@ jobs:
             --icon app_icon.ico `
             --add-data "app_icon.png;." `
             --add-data "app_icon.ico;." `
+            --hidden-import ledger_core `
             main.py
 
       - name: Verify EXE

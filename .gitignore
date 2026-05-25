@@ -38,3 +38,4 @@ Workspace/
 ledger.db
 *.db
 *.log
+ledger_core/target/
