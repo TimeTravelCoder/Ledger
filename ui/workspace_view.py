@@ -1598,19 +1598,19 @@ class WorkspaceView(QWidget):
 
         primary = rel_paths[0]
         menu = QMenu(self)
-        self._add_menu_action(menu, "预览文件", lambda: self.preview_rel_path(primary), "info")
         self._add_menu_action(menu, "打开文件", lambda: self.open_rel_path(primary), "open")
         self._add_menu_action(menu, "编辑属性", lambda: self.open_file_details(primary), "file")
         menu.addSeparator()
         self._build_move_menu(menu, rel_paths)
-        self._add_menu_action(menu, f"打包安全归档并清理 ({len(rel_paths)})", lambda: self.safe_vault_zip(rel_paths), "move")
+        suffix = f" ({len(rel_paths)})" if len(rel_paths) > 1 else ""
+        self._add_menu_action(menu, f"打包安全归档并清理{suffix}", lambda: self.safe_vault_zip(rel_paths), "move")
         self._add_menu_action(menu, "定位到资源管理器", lambda: self.reveal_in_explorer(self.get_abs_path(primary)), "folder")
         self._add_menu_action(menu, "复制相对路径", lambda: self.copy_rel_path(primary), "tag")
         self._add_menu_action(menu, "复制完整路径", lambda: self.copy_abs_path(primary), "tag")
         menu.addSeparator()
         self._add_menu_action(
             menu,
-            f"删除选中项 ({len(rel_paths)})",
+            f"删除选中项{suffix}",
             lambda: self.delete_duplicate_paths(rel_paths, label="选中的文件"),
             "delete",
             "#DC2626",
@@ -1626,7 +1626,6 @@ class WorkspaceView(QWidget):
         primary = rel_paths[0]
         group_id = item.data(Qt.UserRole + 1)
         menu = QMenu(self)
-        self._add_menu_action(menu, "预览文件", lambda: self.preview_rel_path(primary), "info")
         self._add_menu_action(menu, "打开文件", lambda: self.open_rel_path(primary), "open")
         self._add_menu_action(menu, "复制相对路径", lambda: self.copy_rel_path(primary), "tag")
         self._add_menu_action(menu, "复制完整路径", lambda: self.copy_abs_path(primary), "tag")
@@ -1637,9 +1636,10 @@ class WorkspaceView(QWidget):
             menu.addSeparator()
             self._add_menu_action(menu, "保留首个并删除其余", lambda: self.delete_duplicate_group_except_first(group_id), "delete", "#DC2626")
         menu.addSeparator()
+        suffix = f" ({len(rel_paths)})" if len(rel_paths) > 1 else ""
         self._add_menu_action(
             menu,
-            f"删除选中重复项 ({len(rel_paths)})",
+            f"删除选中重复项{suffix}",
             lambda: self.delete_duplicate_paths(rel_paths, label="选中的重复文件"),
             "delete",
             "#DC2626",
@@ -1669,9 +1669,10 @@ class WorkspaceView(QWidget):
         selected_files = self.get_selected_rel_paths()
         if selected_files:
             menu.addSeparator()
+            suffix = f" ({len(selected_files)})" if len(selected_files) > 1 else ""
             self._add_menu_action(
                 menu,
-                f"将已选文件移到这里 ({len(selected_files)})",
+                f"将已选文件移到这里{suffix}",
                 lambda: self.move_paths_to_rel_folder(selected_files, rel_path),
                 "move",
             )
