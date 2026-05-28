@@ -988,6 +988,13 @@ class SettingsView(QWidget):
         total_size = 0
         try:
             for root, dirs, files in os.walk(ws_dir):
+                # Prune hidden, system, development, and massive directories to prevent UI hang
+                dirs[:] = [
+                    d for d in dirs
+                    if not d.startswith(".")
+                    and not d.startswith("$")
+                    and d not in ["Library", "AppData", "Local Settings", "Application Data", "System Volume Information", "node_modules", "venv", "env", "__pycache__"]
+                ]
                 for f in files:
                     fp = os.path.join(root, f)
                     try:

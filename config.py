@@ -32,7 +32,10 @@ else:
         BASE_DIR = Path(appdata) / "Ledger"
     else:
         # Fallback for non-Windows or if APPDATA env is missing
-        BASE_DIR = Path.home() / "Ledger"
+        if sys.platform == "darwin":
+            BASE_DIR = Path.home() / "Library" / "Application Support" / "Ledger"
+        else:
+            BASE_DIR = Path.home() / "Ledger"
         
     try:
         BASE_DIR.mkdir(parents=True, exist_ok=True)

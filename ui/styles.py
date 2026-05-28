@@ -72,10 +72,16 @@ def get_stylesheet(theme="dark"):
         tree_selected_color = accent_color
         tree_selected_border = "3px solid #6366F1"
 
+    import sys
+    if sys.platform == "darwin":
+        font_family = '"SF Pro", "PingFang SC", "Helvetica Neue", "Helvetica", "Arial", sans-serif'
+    else:
+        font_family = '"Segoe UI", "Microsoft YaHei", "Inter", sans-serif'
+
     qss = f"""
     /* General Application Styling */
     QWidget {{
-        font-family: "Segoe UI", "Microsoft YaHei", "Inter", sans-serif;
+        font-family: {font_family};
         font-size: 13px;
         color: {text_primary};
         background-color: transparent;

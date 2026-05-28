@@ -68,6 +68,28 @@ def main():
         # 5. Create and display the main window
         print("启动图形化主窗口...")
         window = MainWindow(is_first_run=is_first_run)
+
+        if sys.platform == "darwin":
+            from PySide6.QtCore import QEvent, QObject
+            class MacApplicationFilter(QObject):
+                def __init__(self, win):
+                    super().__init__()
+                    self.win = win
+                def eventFilter(self, obj, ev):
+                    if ev.type() == QEvent.ApplicationActivate:
+                        if self.win.isHidden():
+                            self.win.show()
+                        if self.win.isMinimized():
+                            self.win.showNormal()
+                        self.win.raise_()
+                        self.win.activateWindow()
+                        return True
+                    return False
+            
+            # Keep strong reference to avoid GC
+            app._mac_filter = MacApplicationFilter(window)
+            app.installEventFilter(app._mac_filter)
+
         window.show()
 
         # 6. Run event loop

@@ -268,7 +268,7 @@ class FileManager:
         file_list = []
         try:
             for entry in os.scandir(desktop):
-                if entry.is_file():
+                if entry.is_file(follow_symlinks=False) and not entry.is_symlink():
                     # Exclude desktop shortcuts and hidden system files
                     ext = Path(entry.name).suffix.lower()
                     if ext not in [".lnk", ".ini", ".url"] and not entry.name.startswith("~$"):
@@ -298,7 +298,10 @@ class FileManager:
 
         try:
             for entry in os.scandir(desktop):
-                if entry.is_dir():
+                if entry.is_symlink():
+                    summary["shortcuts"] += 1
+                    continue
+                if entry.is_dir(follow_symlinks=False):
                     summary["folders"] += 1
                     continue
                 ext = Path(entry.name).suffix.lower()
@@ -345,8 +348,13 @@ class FileManager:
 
         try:
             for root, dirs, files in os.walk(ws_root):
-                # Prune hidden or system directories
-                dirs[:] = [d for d in dirs if not d.startswith(".") and not d.startswith("$")]
+                # Prune hidden, system, development, and massive directories to prevent UI hang and database blow-ups
+                dirs[:] = [
+                    d for d in dirs
+                    if not d.startswith(".")
+                    and not d.startswith("$")
+                    and d not in ["Library", "AppData", "Local Settings", "Application Data", "System Volume Information", "node_modules", "venv", "env", "__pycache__"]
+                ]
 
                 for f in files:
                     # Skip internal config/database files

@@ -18,8 +18,24 @@ from PySide6.QtWidgets import (QApplication, QWidget, QVBoxLayout, QHBoxLayout, 
                              QTabWidget, QSizePolicy, QScrollArea, QMenu)
 from PySide6.QtCore import Qt, QModelIndex, Signal, QDir, QUrl, QSize, QTimer
 from PySide6.QtGui import QDesktopServices, QPixmap, QIcon, QColor, QPainter, QFont
-from PySide6.QtPdf import QPdfDocument
-from PySide6.QtPdfWidgets import QPdfView
+try:
+    from PySide6.QtPdf import QPdfDocument
+    from PySide6.QtPdfWidgets import QPdfView
+except ImportError:
+    from PySide6.QtCore import QObject
+    from PySide6.QtWidgets import QWidget
+    class QPdfDocument(QObject):
+        def __init__(self, parent=None):
+            super().__init__(parent)
+        def load(self, path):
+            pass
+        def close(self):
+            pass
+    class QPdfView(QWidget):
+        def __init__(self, parent=None):
+            super().__init__(parent)
+        def setDocument(self, doc):
+            pass
 from config import config, display_tag, normalize_tag
 from db import db
 from file_manager import FileManager
@@ -263,34 +279,57 @@ class WorkspaceDirModel(QFileSystemModel):
         root = self.workspace_root
         meta = {}
         if root.exists():
-            for current, dirs, files in os.walk(root, topdown=False):
-                dirs[:] = [d for d in dirs if not d.startswith(".") and not d.startswith("$")]
+            dir_list = []
+            # First pass: topdown=True to allow directory pruning
+            for current, dirs, files in os.walk(root, topdown=True):
+                # Prune hidden, system, development, and massive folders
+                dirs[:] = [
+                    d for d in dirs
+                    if not d.startswith(".")
+                    and not d.startswith("$")
+                    and d not in ["Library", "AppData", "Local Settings", "Application Data", "System Volume Information", "node_modules", "venv", "env", "__pycache__"]
+                ]
                 current_path = Path(current).resolve()
                 visible_files = [
                     name
                     for name in files
                     if not name.startswith(".") and not name.startswith("~$") and name not in IGNORED_TREE_FILES
                 ]
-                total_files = len(visible_files)
-                total_dirs = len(dirs)
-                for child_name in dirs:
-                    child_key = str((current_path / child_name).resolve())
-                    child_meta = meta.get(child_key, {})
-                    total_files += child_meta.get("total_files", 0)
-                    total_dirs += child_meta.get("total_dirs", 0)
                 try:
                     rel_parts = current_path.relative_to(root).parts
                 except ValueError:
                     rel_parts = ()
                 depth = len(rel_parts)
-                meta[str(current_path)] = {
+                current_str = str(current_path)
+                
+                # Pre-populate direct fields and child keys
+                meta[current_str] = {
                     "depth": depth,
                     "direct_files": len(visible_files),
-                    "total_files": total_files,
-                    "total_dirs": total_dirs,
+                    "total_files": len(visible_files),
+                    "total_dirs": len(dirs),
                     "is_warning": depth >= 4,
                     "rel_parts": rel_parts,
+                    "child_keys": [str((current_path / d).resolve()) for d in dirs]
                 }
+                dir_list.append(current_str)
+
+            # Second pass: compute recursive counts bottom-up by processing by depth descending
+            dir_list.sort(key=lambda p: meta[p]["depth"], reverse=True)
+            for current_str in dir_list:
+                m = meta[current_str]
+                total_files = m["direct_files"]
+                total_dirs = len(m["child_keys"])
+                for child_key in m["child_keys"]:
+                    child_meta = meta.get(child_key)
+                    if child_meta:
+                        total_files += child_meta.get("total_files", 0)
+                        total_dirs += child_meta.get("total_dirs", 0)
+                m["total_files"] = total_files
+                m["total_dirs"] = total_dirs
+                # Clean up temporary field to keep memory tidy
+                del m["child_keys"]
+
         self.directory_meta = meta
         self.layoutChanged.emit()
 

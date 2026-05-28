@@ -483,6 +483,7 @@ class MainWindow(QMainWindow):
     def quit_application(self):
         self._is_quitting = True
         self.close()
+        QApplication.quit()
 
     @Slot(QSystemTrayIcon.ActivationReason)
     def on_tray_icon_activated(self, reason):
@@ -579,9 +580,15 @@ class MainWindow(QMainWindow):
         box.exec()
 
     def closeEvent(self, event):
-        if not self._is_quitting and hasattr(self, "tray_icon") and self.tray_icon.isVisible():
-            self._hide_to_tray(event)
-            return
+        # On macOS, clicking the close button always hides the window instead of quitting
+        if not self._is_quitting:
+            if sys.platform == "darwin":
+                event.ignore()
+                self.hide()
+                return
+            elif hasattr(self, "tray_icon") and self.tray_icon.isVisible():
+                self._hide_to_tray(event)
+                return
 
         # 1. Do not force-kill backup worker; keep the app alive until it is safe.
         if hasattr(self, "view_backup") and hasattr(self.view_backup, "backup_worker") and self.view_backup.backup_worker:
