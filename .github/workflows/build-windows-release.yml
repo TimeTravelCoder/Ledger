@@ -1,10 +1,11 @@
-name: Build Windows Release
+name: Build Release
 
 on:
   workflow_dispatch:
   push:
     branches:
       - Max
+      - Max_Mac
     tags:
       - "v*"
 
@@ -12,13 +13,14 @@ permissions:
   contents: write
 
 jobs:
-  build:
+  build-windows:
     name: Build Windows EXE and Installer
     runs-on: windows-latest
-
     steps:
-      - name: Checkout
+      - name: Checkout Max Branch
         uses: actions/checkout@v4
+        with:
+          ref: Max
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -175,4 +177,82 @@ jobs:
           gh release upload $env:GITHUB_REF_NAME `
             "dist/$env:ZIP_BASENAME.zip" `
             "dist/$env:SETUP_BASENAME.exe" `
+            --clobber
+
+  build-macos:
+    name: Build macOS APP
+    runs-on: macos-latest
+    steps:
+      - name: Checkout Max_Mac Branch
+        uses: actions/checkout@v4
+        with:
+          ref: Max_Mac
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-build.txt
+
+      - name: Resolve package version
+        run: |
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            version="${{ github.ref_name }}"
+            version="${version#v}"
+          else
+            version="dev-${{ github.sha }}"
+            version="${version:0:7}"
+          fi
+          echo "VERSION=${version}" >> $GITHUB_ENV
+          echo "ZIP_BASENAME=Ledger-v${version}-macos-x64" >> $GITHUB_ENV
+
+      - name: Static syntax check
+        run: |
+          python -m py_compile main.py config.py file_manager.py db.py ui/workspace_view.py ui/main_window.py
+
+      - name: Build macOS APP
+        run: |
+          python -m PyInstaller \
+            --noconfirm \
+            --clean \
+            --windowed \
+            --name Ledger \
+            --icon app_icon.png \
+            --add-data "app_icon.png:." \
+            --add-data "app_icon.ico:." \
+            main.py
+
+      - name: Verify APP
+        run: |
+          if [ ! -d "dist/Ledger.app" ]; then
+            echo "Ledger.app was not generated."
+            exit 1
+          fi
+
+      - name: Package macOS ZIP
+        run: |
+          cd dist
+          zip -r "${ZIP_BASENAME}.zip" Ledger.app
+
+      - name: Upload workflow artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Ledger-macos-${{ env.VERSION }}
+          path: dist/${{ env.ZIP_BASENAME }}.zip
+
+      - name: Attach assets to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view ${{ github.ref_name }} || \
+          gh release create ${{ github.ref_name }} --title "Ledger Max ${{ github.ref_name }}" --generate-notes --draft=false || echo "Release already exists"
+
+          gh release upload ${{ github.ref_name }} \
+            "dist/${ZIP_BASENAME}.zip" \
             --clobber
