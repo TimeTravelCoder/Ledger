@@ -219,7 +219,6 @@ jobs:
         run: |
           python -m PyInstaller \
             --noconfirm \
-            --clean \
             --windowed \
             --name Ledger \
             --icon app_icon.png \
