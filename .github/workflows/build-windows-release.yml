@@ -221,7 +221,6 @@ jobs:
             --noconfirm \
             --windowed \
             --name Ledger \
-            --icon app_icon.png \
             --add-data "app_icon.png:." \
             --add-data "app_icon.ico:." \
             main.py
